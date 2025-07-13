@@ -8,6 +8,7 @@ import com.matchme.dto.EventBioDTO;
 import com.matchme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,22 +20,22 @@ public class UsersController {
     private UserService userService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserProfileDTO> getUserProfile(@PathVariable UUID id, @RequestHeader("User-Id") UUID currentUserId) {
+    public ResponseEntity<UserProfileDTO> getUserProfile(@PathVariable UUID id, @AuthenticationPrincipal UUID currentUserId) {
         return ResponseEntity.ok(userService.getUserProfile(id, currentUserId));
     }
 
     @GetMapping("/{id}/profile")
-    public ResponseEntity<DetailedProfileDTO> getDetailedProfile(@PathVariable UUID id, @RequestHeader("User-Id") UUID currentUserId) {
+    public ResponseEntity<DetailedProfileDTO> getDetailedProfile(@PathVariable UUID id, @AuthenticationPrincipal UUID currentUserId) {
         return ResponseEntity.ok(userService.getDetailedProfile(id, currentUserId));
     }
 
     @GetMapping("/{id}/bio")
-    public ResponseEntity<BioDTO> getBio(@PathVariable UUID id, @RequestHeader("User-Id") UUID currentUserId) {
+    public ResponseEntity<BioDTO> getBio(@PathVariable UUID id, @AuthenticationPrincipal UUID currentUserId) {
         return ResponseEntity.ok(userService.getBio(id, currentUserId));
     }
 
     @GetMapping("/{id}/event-bios/{eventId}")
-    public ResponseEntity<EventBioDTO> getEventBio(@PathVariable UUID id, @PathVariable Long eventId, @RequestHeader("User-Id") UUID currentUserId) {
+    public ResponseEntity<EventBioDTO> getEventBio(@PathVariable UUID id, @PathVariable Long eventId, @AuthenticationPrincipal UUID currentUserId) {
         return ResponseEntity.ok(userService.getEventBio(id, eventId, currentUserId));
     }
 }

@@ -6,6 +6,7 @@ import com.matchme.security.JwtService;
 import com.matchme.service.AuthService;
 import com.matchme.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 @RestController
@@ -33,7 +34,7 @@ public class AuthController {
         return new AuthResponseDTO(token);
     }
     @GetMapping("/profile/{userId}")
-    public UserProfileDTO getUserProfile(@PathVariable UUID userId, @RequestHeader("User-Id") UUID currentUserId) {
+    public UserProfileDTO getUserProfile(@PathVariable UUID userId, @AuthenticationPrincipal UUID currentUserId) {
         return userService.getUserProfile(userId, currentUserId);
     }
     
