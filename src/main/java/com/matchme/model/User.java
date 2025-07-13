@@ -26,5 +26,8 @@ public class User {
     @Builder.Default
     @Column(nullable = false)
     private boolean profileComplete = false;
+    
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserProfile userProfile;
   
 }
