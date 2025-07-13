@@ -16,5 +16,5 @@ public interface ConnectionsRepository extends JpaRepository<Connections, Long> 
     List<Connections> findByUser2IdAndUser2Status(UUID user2Id, String user2Status);
     Optional<Connections> findByUser1IdAndUser2Id(UUID user1Id, UUID user2Id);
     Optional<Connections> findByUser1IdAndUser2IdAndUser1Status(UUID user1Id, UUID user2Id, String user1Status);
-    Optional<Connections> findByUser1IdAndUser2IdAndStatus(UUID user1Id, UUID user2Id, String status);
+    Optional<Connections> findByUser1IdAndUser2IdAndUser1StatusAndUser2Status(UUID user1Id, UUID user2Id, String user1Status, String user2Status);
 }

@@ -65,7 +65,7 @@ public class ChatService {
     }
 
     private boolean isConnected(UUID user1Id, UUID user2Id) {
-        return connectionsRepository.findByUser1IdAndUser2IdAndStatus(user1Id, user2Id, "ACCEPTED")
-                .isPresent();
+        return connectionsRepository.findByUser1IdAndUser2IdAndUser1StatusAndUser2Status(user1Id, user2Id, "ACCEPTED", "ACCEPTED")
+            .isPresent();
     }
 }

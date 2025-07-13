@@ -21,9 +21,6 @@ public class EventBio {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    @Column
-    private String goal;
-
     @Enumerated(EnumType.STRING)
     private CommitmentLevel commitmentLevel;
 

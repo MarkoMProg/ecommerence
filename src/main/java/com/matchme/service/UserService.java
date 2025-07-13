@@ -40,6 +40,7 @@ public class UserService {
     private BioRepository bioRepository;
     @Autowired
     private EventBioRepository eventBioRepository;
+    
 
     public UserProfileDTO getUserProfile(UUID id, UUID currentUserId) {
         User user = userRepository.findById(id)

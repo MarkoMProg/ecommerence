@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface EventBioRepository extends JpaRepository<EventBio, Long> {
     Optional<EventBio> findByUserProfileUserIdAndEventId(UUID userId, Long eventId);
+    List<EventBio> findByEventId(Long eventId);
 
     @Query("SELECT eb FROM EventBio eb WHERE eb.userProfile.user.id = :userId")
     List<EventBio> findByUserProfileUserId(UUID userId);

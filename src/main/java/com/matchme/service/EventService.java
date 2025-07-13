@@ -36,7 +36,7 @@ public class EventService {
     public EventDTO updateEvent(Long id, EventInputDTO dto) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
-        event = eventMapper.updateEntity(dto, event);
+        eventMapper.updateEntity(dto, event);
         eventRepository.save(event);
         return eventMapper.toDTO(event);
     }

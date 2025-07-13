@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
-
+import java.time.LocalDateTime;
 @Service
 public class MeService {
     @Autowired
@@ -99,13 +99,19 @@ public class MeService {
     }
 
     @Transactional
-    public DetailedProfileDTO updateProfilePicture(UUID userId, ProfilePictureDTO dto) {
-        UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
-        profile = userProfileMapper.toEntity(dto, profile);
-        userProfileRepository.save(profile);
-        return userProfileMapper.toDTO(profile);
-    }
+public DetailedProfileDTO updateProfilePicture(UUID userId, ProfilePictureDTO dto) {
+    UserProfile profile = userProfileRepository.findByUserId(userId)
+            .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
+    
+    // Remove the "profile =" assignment
+    userProfileMapper.toEntity(dto, profile);
+    
+    // Add this line
+    profile.setUpdatedAt(LocalDateTime.now());
+    
+    userProfileRepository.save(profile);
+    return userProfileMapper.toDTO(profile);
+}
 
     @Transactional
     public void deleteProfilePicture(UUID userId) {

@@ -48,8 +48,8 @@ public class RecommendationService {
                 .collect(Collectors.toList());
 
         List<UUID> recommendedUserIds = userEventBios.stream()
-                .flatMap(eventBio -> userRepository.findByEventId(eventBio.getEvent().getId()).stream())
-                .map(User::getId)
+                .flatMap(eventBio -> eventBioRepository.findByEventId(eventBio.getEvent().getId()).stream())
+                .map(eventBio -> eventBio.getUserProfile().getUser().getId())
                 .filter(id -> !id.equals(userId) && !connectedUserIds.contains(id))
                 .filter(otherUserId -> isGoodMatch(user, userRepository.findById(otherUserId).orElse(null)))
                 .distinct()

@@ -1,22 +1,10 @@
-
--- Drop tables if they exist to ensure a clean setup
-DROP TABLE IF EXISTS chat;
-DROP TABLE IF EXISTS connections;
-DROP TABLE IF EXISTS event_bio;
-DROP TABLE IF EXISTS bio;
-DROP TABLE IF EXISTS user_profiles;
-DROP TABLE IF EXISTS events;
-DROP TABLE IF EXISTS users;
-
--- Create users table
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     profile_complete BOOLEAN NOT NULL DEFAULT FALSE
 );
 
--- Create user_profiles table
 CREATE TABLE user_profiles (
     id BIGSERIAL PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE,
@@ -24,7 +12,6 @@ CREATE TABLE user_profiles (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Create bio table
 CREATE TABLE bio (
     id BIGSERIAL PRIMARY KEY,
     user_profile_id BIGINT NOT NULL,
@@ -34,7 +21,6 @@ CREATE TABLE bio (
     FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE
 );
 
--- Create events table
 CREATE TABLE events (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -42,13 +28,12 @@ CREATE TABLE events (
     time TIMESTAMP
 );
 
--- Create event_bio table
 CREATE TABLE event_bio (
     id BIGSERIAL PRIMARY KEY,
     user_profile_id BIGINT NOT NULL,
     event_id BIGINT NOT NULL,
     motivation VARCHAR(50) CHECK (motivation IN ('Learning', 'Achievement', 'Social', 'Career', 'Innovation')),
-    commitment_level VARCHAR(50) CHECK (motivation IN ('Casual', 'Moderate', 'Intense')),
+    commitment_level VARCHAR(50) CHECK (commitment_level IN ('Casual', 'Moderate', 'Intense')),
     roles VARCHAR(255),
     looking_roles VARCHAR(255),
     FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -56,7 +41,6 @@ CREATE TABLE event_bio (
     UNIQUE (user_profile_id, event_id)
 );
 
--- Create connections table
 CREATE TABLE connections (
     id BIGSERIAL PRIMARY KEY,
     user1_id UUID NOT NULL,
@@ -69,7 +53,6 @@ CREATE TABLE connections (
     UNIQUE (user1_id, user2_id)
 );
 
--- Create chat table
 CREATE TABLE chat (
     id BIGSERIAL PRIMARY KEY,
     user1_id UUID NOT NULL,
@@ -83,44 +66,37 @@ CREATE TABLE chat (
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Insert sample data for testing
--- Users
+-- Insert sample data
 INSERT INTO users (id, email, password_hash, profile_complete) VALUES
 ('11111111-1111-1111-1111-111111111111', 'alice@example.com', 'hashed_password1', TRUE),
 ('22222222-2222-2222-2222-222222222222', 'bob@example.com', 'hashed_password2', TRUE),
 ('33333333-3333-3333-3333-333333333333', 'charlie@example.com', 'hashed_password3', TRUE),
 ('44444444-4444-4444-4444-444444444444', 'dave@example.com', 'hashed_password4', TRUE);
 
--- User Profiles
 INSERT INTO user_profiles (user_id, is_furry) VALUES
 ('11111111-1111-1111-1111-111111111111', TRUE),
 ('22222222-2222-2222-2222-222222222222', TRUE),
 ('33333333-3333-3333-3333-333333333333', FALSE),
 ('44444444-4444-4444-4444-444444444444', FALSE);
 
--- Bios
 INSERT INTO bio (user_profile_id, role, skill, skill_level) VALUES
 (1, 'Frontend Developer', 'React', 'Intermediate'),
 (2, 'Backend Developer', 'Python', 'Advanced'),
 (3, 'UI/UX Designer', 'Figma', 'Beginner'),
 (4, 'Product Manager', 'Agile', 'Expert');
 
--- Events
 INSERT INTO events (name, location, time) VALUES
 ('Hackathon 2025', 'San Francisco', '2025-08-01 09:00:00'),
 ('Tech Meetup', 'New York', '2025-08-15 18:00:00');
 
--- Event Bios
 INSERT INTO event_bio (user_profile_id, event_id, motivation, commitment_level, roles, looking_roles) VALUES
 (1, 1, 'Learning', 'Moderate', 'Frontend Developer', 'Backend Developer, Product Manager'),
 (2, 1, 'Achievement', 'Intense', 'Backend Developer', 'Frontend Developer, UI/UX Designer'),
 (3, 1, 'Social', 'Casual', 'UI/UX Designer', 'Product Manager, Pitcher/Presenter'),
 (4, 2, 'Career', 'Moderate', 'Product Manager', 'Frontend Developer, Data Analyst');
 
--- Connections
 INSERT INTO connections (user1_id, user2_id, user1_status, user2_status, datetime) VALUES
 ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'ACCEPTED', 'ACCEPTED', '2025-07-13 09:00:00');
 
--- Chat (optional, for testing chat functionality)
 INSERT INTO chat (user1_id, user2_id, message, timestamp, is_read, sender_id) VALUES
 ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Hi, let’s collaborate!', '2025-07-13 09:05:00', FALSE, '11111111-1111-1111-1111-111111111111');
