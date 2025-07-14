@@ -8,12 +8,13 @@ import com.matchme.dto.ProfilePictureDTO;
 import com.matchme.dto.EventSelectionDTO;
 import com.matchme.service.MeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
+import java.util.List;
 @RestController
 @RequestMapping("/me")
 public class MeController {
@@ -30,9 +31,9 @@ public class MeController {
         return ResponseEntity.ok(meService.getMyProfile(userId));
     }
 
-    @GetMapping("/bio")
-    public ResponseEntity<BioDTO> getMyBio(@AuthenticationPrincipal UUID userId) {
-        return ResponseEntity.ok(meService.getMyBio(userId));
+    @GetMapping("/bios")
+    public ResponseEntity<List<BioDTO>> getMyBios(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(meService.getMyBios(userId));
     }
 
     @GetMapping("/event-bios/{eventId}")
@@ -40,9 +41,14 @@ public class MeController {
         return ResponseEntity.ok(meService.getMyEventBio(userId, eventId));
     }
 
-    @PutMapping("/bio")
-    public ResponseEntity<BioDTO> updateBio(@AuthenticationPrincipal UUID userId, @RequestBody BioDTO dto) {
-        return ResponseEntity.ok(meService.updateBio(userId, dto));
+    @PostMapping("/bios")
+    public ResponseEntity<BioDTO> createBio(@AuthenticationPrincipal UUID userId, @RequestBody BioDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(meService.createBio(userId, dto));
+    }
+
+    @PutMapping("/bios/{bioId}")
+    public ResponseEntity<BioDTO> updateBio(@AuthenticationPrincipal UUID userId, @PathVariable Long bioId, @RequestBody BioDTO dto) {
+        return ResponseEntity.ok(meService.updateBio(userId, bioId, dto));
     }
 
     @PutMapping("/event-bios/{eventId}")
@@ -64,6 +70,12 @@ public class MeController {
     @PutMapping("/event")
     public ResponseEntity<Void> setEvent(@AuthenticationPrincipal UUID userId, @RequestBody EventSelectionDTO dto) {
         meService.setEvent(userId, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/active-event/{eventId}")
+    public ResponseEntity<Void> setActiveEvent(@AuthenticationPrincipal UUID userId, @PathVariable Long eventId) {
+        meService.setActiveEvent(userId, eventId);
         return ResponseEntity.noContent().build();
     }
 }

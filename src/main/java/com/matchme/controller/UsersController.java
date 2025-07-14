@@ -1,6 +1,5 @@
 package com.matchme.controller;
 
-
 import com.matchme.dto.UserProfileDTO;
 import com.matchme.dto.DetailedProfileDTO;
 import com.matchme.dto.BioDTO;
@@ -11,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,9 +29,9 @@ public class UsersController {
         return ResponseEntity.ok(userService.getDetailedProfile(id, currentUserId));
     }
 
-    @GetMapping("/{id}/bio")
-    public ResponseEntity<BioDTO> getBio(@PathVariable UUID id, @AuthenticationPrincipal UUID currentUserId) {
-        return ResponseEntity.ok(userService.getBio(id, currentUserId));
+    @GetMapping("/{id}/bios")
+    public ResponseEntity<List<BioDTO>> getBios(@PathVariable UUID id, @AuthenticationPrincipal UUID currentUserId) {
+        return ResponseEntity.ok(userService.getBios(id, currentUserId));
     }
 
     @GetMapping("/{id}/event-bios/{eventId}")

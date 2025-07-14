@@ -1,6 +1,8 @@
 package com.matchme.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -37,7 +39,18 @@ public class UserProfile {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne(mappedBy = "userProfile", cascade = CascadeType.ALL)
-    private Bio bio;
+    @OneToMany(mappedBy = "userProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Bio> bios = new ArrayList<>();
 
+    @ManyToMany
+    @JoinTable(
+        name = "user_profile_events",
+        joinColumns = @JoinColumn(name = "user_profile_id"),
+        inverseJoinColumns = @JoinColumn(name = "event_id")
+    )
+    private List<Event> events = new ArrayList<>();
+
+    @ManyToOne
+    @JoinColumn(name = "active_event_id")
+    private Event activeEvent;
 }

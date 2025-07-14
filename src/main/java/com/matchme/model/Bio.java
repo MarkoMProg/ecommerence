@@ -13,7 +13,7 @@ public class Bio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private UserProfile userProfile;
 
@@ -22,10 +22,7 @@ public class Bio {
 
     @Column
     private String skill;
-/* 
-    @Column(name = "skill_level")
-    private String skillLevel;
-*/
+
     @Enumerated(EnumType.STRING)
     private SkillLevel skillLevel;
 }
