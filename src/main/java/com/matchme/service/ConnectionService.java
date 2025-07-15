@@ -3,16 +3,15 @@ package com.matchme.service;
 import com.matchme.dto.ConnectionActionDTO;
 import com.matchme.dto.UserIdListDTO;
 import com.matchme.model.Connections;
-import com.matchme.model.User;
 import com.matchme.mapper.ConnectionMapper;
 import com.matchme.repository.ConnectionsRepository;
-import com.matchme.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class ConnectionService {
@@ -20,8 +19,7 @@ public class ConnectionService {
     private ConnectionMapper connectionMapper;
     @Autowired
     private ConnectionsRepository connectionsRepository;
-    @Autowired
-    private UserRepository userRepository;
+
 
     public UserIdListDTO getConnections(UUID userId) {
         List<Connections> connections = connectionsRepository.findByUserIdAndStatus(userId, "ACCEPTED");
@@ -40,10 +38,11 @@ public class ConnectionService {
 
     @Transactional
     public void sendConnectionRequest(UUID userId, ConnectionActionDTO dto) {
-        User sender = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        User recipient = userRepository.findById(dto.userId())
-                .orElseThrow(() -> new IllegalArgumentException("Recipient not found"));
+        Optional<Connections> existingConnection = connectionsRepository.findByUser1IdAndUser2Id(userId, dto.userId())
+                .or(() -> connectionsRepository.findByUser1IdAndUser2Id(dto.userId(), userId));
+        if (existingConnection.isPresent()) {
+            throw new IllegalStateException("Connection already exists");
+        }
         Connections connection = connectionMapper.toConnectionEntity(dto, userId);
         connectionsRepository.save(connection);
     }
