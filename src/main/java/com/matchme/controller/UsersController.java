@@ -4,6 +4,7 @@ import com.matchme.dto.UserProfileDTO;
 import com.matchme.dto.DetailedProfileDTO;
 import com.matchme.dto.BioDTO;
 import com.matchme.dto.EventBioDTO;
+import com.matchme.service.PresenceService;
 import com.matchme.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,13 @@ import java.util.UUID;
 public class UsersController {
     @Autowired
     private UserService userService;
+    @Autowired
+    private PresenceService presenceService;
+
+    @GetMapping("/{id}/status")
+    public ResponseEntity<Boolean> getUserStatus(@PathVariable UUID id) {
+        return ResponseEntity.ok(presenceService.isUserOnline(id));
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileDTO> getUserProfile(@PathVariable UUID id, @AuthenticationPrincipal UUID currentUserId) {

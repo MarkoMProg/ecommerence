@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -133,9 +132,7 @@ public class MeService {
     }
 
     @Transactional
-    public void setEvent(UUID userId, EventSelectionDTO dto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        public void setEvent(UUID userId, EventSelectionDTO dto) {
         Event event = eventRepository.findById(dto.eventId())
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
         UserProfile userProfile = userProfileRepository.findByUserId(userId)
@@ -143,7 +140,7 @@ public class MeService {
 
         // Check if event is already associated
         if (userProfile.getEvents().stream().anyMatch(e -> e.getId().equals(dto.eventId()))) {
-            throw new IllegalArgumentException("User is already associated with this event");
+                throw new IllegalArgumentException("User is already associated with this event");
         }
 
         // Add event to user profile

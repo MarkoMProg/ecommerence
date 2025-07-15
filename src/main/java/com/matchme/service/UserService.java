@@ -4,6 +4,7 @@ import com.matchme.dto.UserProfileDTO;
 import com.matchme.dto.DetailedProfileDTO;
 import com.matchme.dto.BioDTO;
 import com.matchme.dto.EventBioDTO;
+import com.matchme.dto.RecommendationsDTO;
 import com.matchme.model.User;
 import com.matchme.model.UserProfile;
 import com.matchme.model.Bio;
@@ -15,6 +16,7 @@ import com.matchme.mapper.EventBioMapper;
 import com.matchme.repository.UserRepository;
 import com.matchme.repository.UserProfileRepository;
 import com.matchme.repository.BioRepository;
+import com.matchme.repository.ConnectionsRepository;
 import com.matchme.repository.EventBioRepository;
 import com.matchme.repository.EventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,10 @@ public class UserService {
     private EventBioRepository eventBioRepository;
     @Autowired
     private EventRepository eventRepository;
+    @Autowired
+private ConnectionsRepository connectionsRepository;
+@Autowired
+private RecommendationService recommendationService;
 
     public UserProfileDTO getUserProfile(UUID id, UUID currentUserId) {
         User user = userRepository.findById(id)
@@ -109,12 +115,28 @@ public class UserService {
     }
 
     private boolean isProfileAccessible(UUID targetId, UUID currentUserId) {
-        // Implement logic: self, connected, recommended, or pending connection
-        return targetId.equals(currentUserId) || isConnected(targetId, currentUserId);
+        if (targetId.equals(currentUserId)) {
+            return true;
+        }
+        // Check if connected
+        if (connectionsRepository.findByUser1IdAndUser2IdAndUser1StatusAndUser2Status(currentUserId, targetId, "ACCEPTED", "ACCEPTED")
+                .isPresent()) {
+            return true;
+        }
+        // Check pending request
+        if (connectionsRepository.findByUser1IdAndUser2IdAndUser1Status(currentUserId, targetId, "REQUESTED")
+                .isPresent() ||
+            connectionsRepository.findByUser1IdAndUser2IdAndUser1Status(targetId, currentUserId, "REQUESTED")
+                .isPresent()) {
+            return true;
+        }
+        // Check if recommended
+        RecommendationsDTO recommendations = recommendationService.getRecommendations(currentUserId);
+        return recommendations.userIds().contains(targetId);
     }
 
     private boolean isConnected(UUID user1Id, UUID user2Id) {
-        // Check connection status in Connections table
-        return false; // Placeholder
+        return connectionsRepository.findByUser1IdAndUser2IdAndUser1StatusAndUser2Status(user1Id, user2Id, "ACCEPTED", "ACCEPTED")
+                .isPresent();
     }
 }
