@@ -66,7 +66,7 @@ AI agents must generate code compatible with the existing stack.
 * Next.js App Router
 * React components
 * Tailwind CSS
-* shadcn/ui components
+* shadcn/ui components (Button, Input, Label, Card, Alert, etc.)
 * better-auth client integration
 
 ---

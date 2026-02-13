@@ -3,6 +3,10 @@
 import { useState, useRef, useCallback } from "react";
 import { authClient } from "../lib/auth-client";
 import ReCAPTCHA from "react-google-recaptcha";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const RECAPTCHA_SITEKEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY || "";
 
@@ -27,7 +31,7 @@ function validatePassword(password: string): string | null {
 function ErrorMessage({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p className="text-red-600 text-sm mt-1" role="alert">
+    <p className="text-destructive text-sm mt-1" role="alert">
       {message}
     </p>
   );
@@ -36,21 +40,18 @@ function ErrorMessage({ message }: { message: string | null }) {
 function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div
-      className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm"
-      role="alert"
-    >
-      {message}
-    </div>
+    <Alert variant="destructive" role="alert">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
 function FormSuccess({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
-      {message}
-    </div>
+    <Alert className="border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-400">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -71,10 +72,11 @@ function OAuthButtons() {
 
   return (
     <div className="space-y-3">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        className="w-full"
         onClick={handleGoogle}
-        className="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path
@@ -95,18 +97,19 @@ function OAuthButtons() {
           />
         </svg>
         Continue with Google
-      </button>
+      </Button>
 
-      <button
+      <Button
         type="button"
+        variant="outline"
+        className="w-full"
         onClick={handleFacebook}
-        className="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
         </svg>
         Continue with Facebook
-      </button>
+      </Button>
 
       <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
@@ -211,11 +214,9 @@ export function LoginForm({
           Enter the 6-digit code from your authenticator app.
         </p>
         <FormError message={formError} />
-        <div>
-          <label htmlFor="2fa-code" className="block text-sm font-medium">
-            Verification Code
-          </label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="2fa-code">Verification Code</Label>
+          <Input
             id="2fa-code"
             type="text"
             inputMode="numeric"
@@ -227,24 +228,25 @@ export function LoginForm({
               setTwoFactorCode(e.target.value.replace(/\D/g, ""))
             }
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-center text-2xl tracking-widest"
+            className="text-center text-2xl tracking-widest"
             placeholder="000000"
           />
         </div>
-        <button
+        <Button
           type="submit"
+          className="w-full"
           disabled={isLoading || twoFactorCode.length !== 6}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {isLoading ? "Verifying..." : "Verify"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          className="w-full"
           onClick={() => setTwoFactorRequired(false)}
-          className="w-full text-sm text-gray-600 hover:text-gray-800"
         >
           Back to login
-        </button>
+        </Button>
       </form>
     );
   }
@@ -254,11 +256,9 @@ export function LoginForm({
       <h2 className="text-2xl font-bold">Sign In</h2>
       <OAuthButtons />
       <FormError message={formError} />
-      <div>
-        <label htmlFor="login-email" className="block text-sm font-medium">
-          Email
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="login-email">Email</Label>
+        <Input
           id="login-email"
           type="email"
           value={email}
@@ -268,15 +268,12 @@ export function LoginForm({
           }}
           required
           autoComplete="email"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         />
         <ErrorMessage message={fieldErrors.email ?? null} />
       </div>
-      <div>
-        <label htmlFor="login-password" className="block text-sm font-medium">
-          Password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="login-password">Password</Label>
+        <Input
           id="login-password"
           type="password"
           value={password}
@@ -286,27 +283,23 @@ export function LoginForm({
           }}
           required
           autoComplete="current-password"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         />
         <ErrorMessage message={fieldErrors.password ?? null} />
       </div>
       <div className="flex items-center justify-end">
-        <button
+        <Button
           type="button"
+          variant="link"
+          className="text-sm px-0"
           onClick={onForgotPassword}
-          className="text-sm text-blue-600 hover:text-blue-800"
         >
           Forgot your password?
-        </button>
+        </Button>
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Signing in..." : "Sign In"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -396,11 +389,9 @@ export function SignUpForm() {
       <OAuthButtons />
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
-      <div>
-        <label htmlFor="signup-name" className="block text-sm font-medium">
-          Name
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="signup-name">Name</Label>
+        <Input
           id="signup-name"
           type="text"
           value={name}
@@ -410,15 +401,12 @@ export function SignUpForm() {
           }}
           required
           autoComplete="name"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         />
         <ErrorMessage message={fieldErrors.name ?? null} />
       </div>
-      <div>
-        <label htmlFor="signup-email" className="block text-sm font-medium">
-          Email
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="signup-email">Email</Label>
+        <Input
           id="signup-email"
           type="email"
           value={email}
@@ -428,15 +416,12 @@ export function SignUpForm() {
           }}
           required
           autoComplete="email"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         />
         <ErrorMessage message={fieldErrors.email ?? null} />
       </div>
-      <div>
-        <label htmlFor="signup-password" className="block text-sm font-medium">
-          Password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="signup-password">Password</Label>
+        <Input
           id="signup-password"
           type="password"
           value={password}
@@ -446,10 +431,9 @@ export function SignUpForm() {
           }}
           required
           autoComplete="new-password"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         />
         <ErrorMessage message={fieldErrors.password ?? null} />
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground">
           Min 8 chars, with uppercase, lowercase, and a number.
         </p>
       </div>
@@ -465,13 +449,13 @@ export function SignUpForm() {
         <ErrorMessage message={fieldErrors.captcha ?? null} />
       </div>
 
-      <button
+      <Button
         type="submit"
+        className="w-full"
         disabled={isLoading}
-        className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
       >
         {isLoading ? "Signing up..." : "Sign Up"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -521,35 +505,29 @@ export function ForgotPasswordForm({ onBack }: { onBack?: () => void }) {
       </p>
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
-      <div>
-        <label htmlFor="forgot-email" className="block text-sm font-medium">
-          Email
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="forgot-email">Email</Label>
+        <Input
           id="forgot-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Sending..." : "Send Reset Link"}
-      </button>
+      </Button>
       {onBack && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          className="w-full"
           onClick={onBack}
-          className="w-full text-sm text-gray-600 hover:text-gray-800"
         >
           Back to login
-        </button>
+        </Button>
       )}
     </form>
   );
@@ -599,44 +577,34 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <h2 className="text-2xl font-bold">Reset Password</h2>
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
-      <div>
-        <label htmlFor="reset-password" className="block text-sm font-medium">
-          New Password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="reset-password">New Password</Label>
+        <Input
           id="reset-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="new-password"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
         />
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground">
           Min 8 chars, with uppercase, lowercase, and a number.
         </p>
       </div>
-      <div>
-        <label htmlFor="reset-confirm" className="block text-sm font-medium">
-          Confirm Password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="reset-confirm">Confirm Password</Label>
+        <Input
           id="reset-confirm"
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           autoComplete="new-password"
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
         />
       </div>
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Resetting..." : "Reset Password"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -722,20 +690,21 @@ export function TwoFactorSetupForm() {
         <FormError message={formError} />
         <FormSuccess message={formSuccess} />
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={handleEnable}
             disabled={isLoading}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex-1"
           >
             {isLoading ? "Setting up..." : "Enable 2FA"}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleDisable}
             disabled={isLoading}
-            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+            variant="destructive"
+            className="flex-1"
           >
             Disable 2FA
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -779,11 +748,9 @@ export function TwoFactorSetupForm() {
           </div>
         )}
 
-        <div>
-          <label htmlFor="totp-code" className="block text-sm font-medium">
-            Verification Code
-          </label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="totp-code">Verification Code</Label>
+          <Input
             id="totp-code"
             type="text"
             inputMode="numeric"
@@ -792,18 +759,18 @@ export function TwoFactorSetupForm() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-center text-2xl tracking-widest"
+            className="text-center text-2xl tracking-widest"
             placeholder="000000"
           />
         </div>
 
-        <button
+        <Button
           type="submit"
+          className="w-full"
           disabled={isLoading || code.length !== 6}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {isLoading ? "Verifying..." : "Verify & Enable"}
-        </button>
+        </Button>
       </form>
     );
   }

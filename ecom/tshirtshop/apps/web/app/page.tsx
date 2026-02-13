@@ -7,6 +7,8 @@ import {
   SignUpForm,
   ForgotPasswordForm,
 } from "../components/auth-forms";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function Home() {
   const { session, isLoading, signOut } = useAuth();
@@ -25,27 +27,27 @@ export default function Home() {
   if (session?.user) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-4">Welcome!</h1>
-          <p className="mb-2">You are signed in as: {session.user.email}</p>
-          <p className="mb-6 text-gray-500 text-sm">
-            Session managed by Better Auth
-          </p>
-          <div className="flex flex-col gap-3">
-            <a
-              href="/auth/two-factor/setup"
-              className="inline-block bg-gray-100 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Two-Factor Authentication Settings
-            </a>
-            <button
-              onClick={signOut}
-              className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
-            >
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <h1 className="text-3xl font-bold">Welcome!</h1>
+            <p className="text-muted-foreground text-sm">
+              You are signed in as: {session.user.email}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Session managed by Better Auth
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button variant="secondary" asChild>
+              <a href="/auth/two-factor/setup">
+                Two-Factor Authentication Settings
+              </a>
+            </Button>
+            <Button variant="destructive" onClick={signOut}>
               Sign Out
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -54,27 +56,21 @@ export default function Home() {
     <div className="container mx-auto px-4 py-8">
       {activeForm !== "forgot" && (
         <div className="flex justify-center mb-8">
-          <div className="bg-gray-100 p-1 rounded-lg">
-            <button
+          <div className="inline-flex rounded-lg border bg-muted p-1">
+            <Button
+              variant={activeForm === "login" ? "secondary" : "ghost"}
+              size="sm"
               onClick={() => setActiveForm("login")}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeForm === "login"
-                  ? "bg-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
             >
               Sign In
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={activeForm === "signup" ? "secondary" : "ghost"}
+              size="sm"
               onClick={() => setActiveForm("signup")}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeForm === "signup"
-                  ? "bg-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
             >
               Sign Up
-            </button>
+            </Button>
           </div>
         </div>
       )}

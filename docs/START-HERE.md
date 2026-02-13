@@ -85,7 +85,7 @@ Docker is planned (FND-006) but not yet implemented.
 * **Next.js (App Router)**
 * **React**
 * **Tailwind CSS**
-* **shadcn/ui** (planned; not yet implemented)
+* **shadcn/ui**
 * **better-auth client**
 
 ---
