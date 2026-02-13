@@ -1,42 +1,37 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
-import { AuthGuard, AuthModule } from '@thallesp/nestjs-better-auth';
-import { betterAuth } from 'better-auth';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres/driver';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { DATABASE_CONNECTION } from './database/database-connection';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { BETTER_AUTH_INSTANCE } from './auth/constants';
+import { BetterAuthCoreModule } from './auth/better-auth-core.module';
+import { AuthExtModule } from './auth/auth-ext.module';
 import { UsersModule } from './users/users.module';
-import { config } from 'process';
+import { betterAuth } from 'better-auth';
+import * as express from 'express';
+
+type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
 @Module({
   imports: [
-    UsersModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({ isGlobal: true }),
+    DatabaseModule,
+    BetterAuthCoreModule,
     AuthModule.forRootAsync({
-      imports: [DatabaseModule, ConfigModule],
-      useFactory: (database: NodePgDatabase, configService: ConfigService) => ({
-        auth:betterAuth({
-          database: drizzleAdapter(database, {
-            provider: 'pg',
-          }),
-          emailAndPassword: {
-              enabled: true,
-          },
-          trustedOrigins: [
-            configService.getOrThrow('UI_URL'),
-          ]
-        }),
-      }),
-      inject: [DATABASE_CONNECTION, ConfigService]
+      imports: [BetterAuthCoreModule],
+      useFactory: (auth: BetterAuthInstance) => ({ auth }),
+      inject: [BETTER_AUTH_INSTANCE],
     }),
+    AuthExtModule,
+    UsersModule,
   ],
   controllers: [],
-  providers: [
-    {
-      provide: 'AUTH_GUARD',
-      useClass: AuthGuard
-      },
-  ],
+  providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Parse JSON body for our custom endpoints (not Better Auth — it handles its own body)
+    consumer
+      .apply(express.json(), express.urlencoded({ extended: true }))
+      .forRoutes('api/v1/*');
+  }
+}

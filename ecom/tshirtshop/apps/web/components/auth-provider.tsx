@@ -1,11 +1,20 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, useMemo, ReactNode } from "react";
 import { authClient } from "../lib/auth-client";
 
+interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  image?: string | null;
+  twoFactorEnabled?: boolean;
+}
+
 interface AuthContextType {
-  session: { user?: { id: string; email: string; name: string } } | null;
+  session: { user?: AuthUser } | null;
   isLoading: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -13,11 +22,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, isPending: isLoading } = authClient.useSession();
 
-  return (
-    <AuthContext.Provider value={{ session, isLoading }}>
-      {children}
-    </AuthContext.Provider>
+  const signOut = async () => {
+    try {
+      await authClient.signOut();
+    } finally {
+      window.location.href = "/";
+    }
+  };
+
+  const value = useMemo(
+    () => ({
+      session,
+      isLoading,
+      signOut,
+    }),
+    [session, isLoading],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

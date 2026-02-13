@@ -6,24 +6,23 @@ import { Pool } from 'pg';
 import * as authSchema from '../auth/schema';
 
 @Module({
-    imports:[ConfigModule],
-    providers: [
-        {
-            provide: DATABASE_CONNECTION,
-            useFactory: (configService: ConfigService) => {
-                const pool = new Pool({
-                    connectionString: configService.getOrThrow('DATABASE_URL'),
-                });
-                return drizzle(pool, { 
-                    schema: {
-                       ...authSchema 
-                    }
-                 });
-            },
-            inject: [ConfigService],
-        },
-    ],
-    exports: [DATABASE_CONNECTION]
-    })
-
+  imports: [ConfigModule],
+  providers: [
+    {
+      provide: DATABASE_CONNECTION,
+      useFactory: (configService: ConfigService) => {
+        const pool = new Pool({
+          connectionString: configService.getOrThrow('DATABASE_URL'),
+        });
+        return drizzle(pool, {
+          schema: {
+            ...authSchema,
+          },
+        });
+      },
+      inject: [ConfigService],
+    },
+  ],
+  exports: [DATABASE_CONNECTION],
+})
 export class DatabaseModule {}
