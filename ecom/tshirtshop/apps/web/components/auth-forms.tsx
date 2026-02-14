@@ -326,7 +326,8 @@ export function SignUpForm() {
       : "Name is required";
     errors.email = validateEmail(email);
     errors.password = validatePassword(password);
-    errors.captcha = captchaToken ? null : "Please complete the CAPTCHA";
+    errors.captcha =
+      RECAPTCHA_SITEKEY && !captchaToken ? "Please complete the CAPTCHA" : null;
     setFieldErrors(errors);
     return !Object.values(errors).some(Boolean);
   };
@@ -353,11 +354,14 @@ export function SignUpForm() {
         name: name.trim(),
         email,
         password,
-        fetchOptions: {
-          headers: {
-            "x-captcha-response": captchaToken!,
-          },
-        },
+        ...(RECAPTCHA_SITEKEY &&
+          captchaToken && {
+            fetchOptions: {
+              headers: {
+                "x-captcha-response": captchaToken,
+              },
+            },
+          }),
       });
 
       if (result?.error) {
@@ -439,15 +443,17 @@ export function SignUpForm() {
       </div>
 
       {/* Google reCAPTCHA */}
-      <div>
-        <ReCAPTCHA
-          sitekey={RECAPTCHA_SITEKEY}
-          onChange={handleCaptchaVerify}
-          onExpired={handleCaptchaExpire}
-          ref={captchaRef}
-        />
-        <ErrorMessage message={fieldErrors.captcha ?? null} />
-      </div>
+      {RECAPTCHA_SITEKEY && (
+        <div>
+          <ReCAPTCHA
+            sitekey={RECAPTCHA_SITEKEY}
+            onChange={handleCaptchaVerify}
+            onExpired={handleCaptchaExpire}
+            ref={captchaRef}
+          />
+          <ErrorMessage message={fieldErrors.captcha ?? null} />
+        </div>
+      )}
 
       <Button
         type="submit"

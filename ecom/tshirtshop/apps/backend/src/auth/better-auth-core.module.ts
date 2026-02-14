@@ -15,8 +15,31 @@ import { BETTER_AUTH_INSTANCE } from './constants';
     {
       provide: BETTER_AUTH_INSTANCE,
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
-        const resend = new Resend(configService.getOrThrow('RESEND_API_KEY'));
-        const uiUrl = configService.getOrThrow('UI_URL');
+        const resendApiKey = configService.get('RESEND_API_KEY');
+        /** Minimal interface for email sending; stub used when RESEND_API_KEY is missing */
+        type EmailSender = { emails: { send: (opts: object) => Promise<unknown> } };
+        const resend: EmailSender = resendApiKey
+          ? new Resend(resendApiKey)
+          : {
+              emails: {
+                send: async () => {
+                  throw new Error(
+                    'RESEND_API_KEY is required for email sending. Add it to .env (see .env.example). Get a free key at https://resend.com',
+                  );
+                },
+              },
+            };
+        if (!resendApiKey) {
+          console.warn(
+            '[BetterAuth] RESEND_API_KEY not set. Email verification and password reset will fail. Add it to .env for production.',
+          );
+        }
+        if (!configService.get('RECAPTCHA_SECRET_KEY')) {
+          console.warn(
+            '[BetterAuth] RECAPTCHA_SECRET_KEY not set. Sign-up captcha disabled. Add it to .env for production.',
+          );
+        }
+        const uiUrl = configService.get('UI_URL') ?? 'http://localhost:3001';
         const port = configService.get('PORT') ?? '3000';
         const baseURL = `http://localhost:${port}`;
 
@@ -123,11 +146,15 @@ import { BETTER_AUTH_INSTANCE } from './constants';
               issuer: 'TShirtShop',
             }),
             bearer(),
-            captcha({
-              provider: 'google-recaptcha',
-              secretKey: configService.getOrThrow('RECAPTCHA_SECRET_KEY'),
-              endpoints: ['sign-up'],
-            }),
+            ...(configService.get('RECAPTCHA_SECRET_KEY')
+              ? [
+                  captcha({
+                    provider: 'google-recaptcha',
+                    secretKey: configService.get('RECAPTCHA_SECRET_KEY')!,
+                    endpoints: ['sign-up'],
+                  }),
+                ]
+              : []),
           ],
 
           trustedOrigins: [uiUrl],
