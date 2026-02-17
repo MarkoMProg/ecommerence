@@ -17,7 +17,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "db:push": "node scripts/db-push.mjs",
+    "db:generate": "node -r dotenv/config ../../node_modules/drizzle-kit/bin.cjs generate"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -31,6 +33,7 @@
     "@types/speakeasy": "^2.0.10",
     "better-auth": "^1.4.17",
     "cookie-parser": "^1.4.7",
+    "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.17.2",
