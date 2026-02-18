@@ -1,7 +1,20 @@
 import Link from "next/link";
-import { FEATURED_PRODUCTS, MOCK_CATEGORIES } from "@/lib/mock-data";
+import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 
-export default function HomePage() {
+export default async function HomePage() {
+  let featuredProducts: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
+  let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
+
+  try {
+    const [productsRes, categoriesData] = await Promise.all([
+      fetchProducts({ limit: 4 }),
+      fetchCategories(),
+    ]);
+    featuredProducts = productsRes.products.slice(0, 4);
+    categories = categoriesData;
+  } catch (err) {
+    console.error("[HomePage] API fetch failed:", err);
+  }
   return (
     <>
       {/* 1. Hero Section */}
@@ -47,7 +60,7 @@ export default function HomePage() {
             Featured Drops
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
-            {FEATURED_PRODUCTS.map((product) => (
+            {featuredProducts.map((product) => (
               <Link
                 key={product.id}
                 href={`/shop/${product.id}`}
@@ -59,22 +72,6 @@ export default function HomePage() {
                     alt={product.name}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  {product.tag && (
-                    <span
-                      className="absolute left-3 top-3 rounded px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
-                      style={{
-                        backgroundColor:
-                          product.tag === "SOLD OUT"
-                            ? "#666"
-                            : product.tag === "LIMITED"
-                              ? "#7A5FFF"
-                              : "#FF4D00",
-                        color: "#fff",
-                      }}
-                    >
-                      {product.tag}
-                    </span>
-                  )}
                 </div>
                 <div className="mt-2 sm:mt-4">
                   <p className="truncate text-xs font-medium text-white sm:text-base">{product.name}</p>
@@ -135,7 +132,7 @@ export default function HomePage() {
             Shop by Category
           </h2>
           <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
-            {MOCK_CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <Link
                 key={category.id}
                 href={`/shop?category=${category.slug}`}

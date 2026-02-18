@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MOCK_PRODUCTS, MOCK_CATEGORIES } from "@/lib/mock-data";
+import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 
 export default async function ShopPage({
   searchParams,
@@ -9,12 +9,19 @@ export default async function ShopPage({
   const { category: categoryParam } = await searchParams;
   const categoryFilter = categoryParam ?? "all";
 
-  const filteredProducts =
-    categoryFilter === "all"
-      ? MOCK_PRODUCTS
-      : MOCK_PRODUCTS.filter(
-          (p) => p.category.toLowerCase() === categoryFilter.toLowerCase(),
-        );
+  let products: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
+  let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
+
+  try {
+    const [productsRes, categoriesData] = await Promise.all([
+      fetchProducts({ category: categoryFilter === "all" ? undefined : categoryFilter }),
+      fetchCategories(),
+    ]);
+    products = productsRes.products;
+    categories = categoriesData;
+  } catch (err) {
+    console.error("[ShopPage] API fetch failed:", err);
+  }
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-16">
@@ -37,7 +44,7 @@ export default async function ShopPage({
         >
           All
         </Link>
-        {MOCK_CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <Link
             key={cat.id}
             href={`/shop?category=${cat.slug}`}
@@ -54,7 +61,7 @@ export default async function ShopPage({
 
       {/* Product Grid */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredProducts.map((product) => (
+        {products.map((product) => (
           <Link
             key={product.id}
             href={`/shop/${product.id}`}
@@ -71,22 +78,6 @@ export default async function ShopPage({
                   View
                 </span>
               </div>
-              {product.tag && (
-                <span
-                  className="absolute left-3 top-3 rounded px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
-                  style={{
-                    backgroundColor:
-                      product.tag === "SOLD OUT"
-                        ? "#666"
-                        : product.tag === "LIMITED"
-                          ? "#7A5FFF"
-                          : "#FF4D00",
-                    color: "#fff",
-                  }}
-                >
-                  {product.tag}
-                </span>
-              )}
             </div>
             <div className="mt-2 sm:mt-4">
               <p className="truncate text-xs font-medium text-white sm:text-base">{product.name}</p>
@@ -96,7 +87,7 @@ export default async function ShopPage({
         ))}
       </div>
 
-      {filteredProducts.length === 0 && (
+      {products.length === 0 && (
         <p className="py-20 text-center text-white/60">
           No products in this category.
         </p>
