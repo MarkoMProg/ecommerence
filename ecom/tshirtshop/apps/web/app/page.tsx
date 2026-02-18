@@ -6,13 +6,17 @@ export default function HomePage() {
     <>
       {/* 1. Hero Section */}
       <section className="relative flex min-h-[70vh] min-w-0 items-center justify-center overflow-hidden bg-[#0A0A0A] sm:min-h-[85vh]">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-40"
-          style={{
-            backgroundImage:
-              "url(https://placehold.co/1920x1080/1a1a1a/ffffff?text=INFERNAL+COLLECTION)",
-          }}
-        />
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 h-full w-full object-cover opacity-40"
+          aria-hidden
+        >
+          <source src="/dragon-hero.webm" type="video/webm" />
+        </video>
         <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
         <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-8 text-center sm:px-6">
           <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-[#FF4D00] sm:mb-4 sm:text-xs sm:tracking-[0.3em]">
