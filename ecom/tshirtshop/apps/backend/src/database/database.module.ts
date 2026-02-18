@@ -4,6 +4,7 @@ import { DATABASE_CONNECTION } from './database-connection';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as authSchema from '../auth/schema';
+import * as catalogSchema from '../catalog/schema';
 
 @Module({
   imports: [ConfigModule],
@@ -17,6 +18,7 @@ import * as authSchema from '../auth/schema';
         return drizzle(pool, {
           schema: {
             ...authSchema,
+            ...catalogSchema,
           },
         });
       },
