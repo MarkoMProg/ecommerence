@@ -131,14 +131,24 @@ import { BETTER_AUTH_INSTANCE } from './constants';
           },
 
           socialProviders: {
-            google: {
-              clientId: configService.get('GOOGLE_CLIENT_ID') ?? '',
-              clientSecret: configService.get('GOOGLE_CLIENT_SECRET') ?? '',
-            },
-            facebook: {
-              clientId: configService.get('FACEBOOK_CLIENT_ID') ?? '',
-              clientSecret: configService.get('FACEBOOK_CLIENT_SECRET') ?? '',
-            },
+            ...(configService.get('GOOGLE_CLIENT_ID') &&
+            configService.get('GOOGLE_CLIENT_SECRET')
+              ? {
+                  google: {
+                    clientId: configService.get('GOOGLE_CLIENT_ID')!,
+                    clientSecret: configService.get('GOOGLE_CLIENT_SECRET')!,
+                  },
+                }
+              : {}),
+            ...(configService.get('FACEBOOK_CLIENT_ID') &&
+            configService.get('FACEBOOK_CLIENT_SECRET')
+              ? {
+                  facebook: {
+                    clientId: configService.get('FACEBOOK_CLIENT_ID')!,
+                    clientSecret: configService.get('FACEBOOK_CLIENT_SECRET')!,
+                  },
+                }
+              : {}),
           },
 
           plugins: [

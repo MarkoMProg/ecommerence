@@ -34,6 +34,6 @@ export class AppModule implements NestModule {
     // Parse JSON body for our custom endpoints (not Better Auth — it handles its own body)
     consumer
       .apply(express.json(), express.urlencoded({ extended: true }))
-      .forRoutes('api/v1/*');
+      .forRoutes('api/v1/*path');
   }
 }
