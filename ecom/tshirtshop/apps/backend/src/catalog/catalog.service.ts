@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, desc, sql, and, type SQL } from 'drizzle-orm';
+import { eq, desc, sql, and, or, ilike, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -40,6 +40,13 @@ export interface ListProductsQuery {
   page?: number;
   limit?: number;
   category?: string;
+  /** Search query: case-insensitive match on name and description */
+  q?: string;
+}
+
+/** Escape %, _, \ for safe use in ILIKE pattern */
+function escapeIlikePattern(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
 @Injectable()
@@ -78,6 +85,12 @@ export class CatalogService {
       if (cat) {
         conditions.push(eq(product.categoryId, cat.id));
       }
+    }
+    if (query.q && query.q.trim().length > 0) {
+      const pattern = `%${escapeIlikePattern(query.q.trim())}%`;
+      conditions.push(
+        or(ilike(product.name, pattern), ilike(product.description, pattern))!,
+      );
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

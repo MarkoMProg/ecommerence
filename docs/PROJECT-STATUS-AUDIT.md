@@ -96,7 +96,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 |------|--------|-------|
 | CAT-001 | **DONE** | Product CRUD API: `ProductsController`, `CatalogService`, DTOs; list, getById, create, update, delete |
 | CAT-002 | **DONE** | Category browsing: `CategoriesController` list + getById |
-| CAT-003 | NOT STARTED | No search |
+| CAT-003 | **DONE** | ILIKE search on name + description; `q` query param; shop page search form |
 | CAT-004 | NOT STARTED | No faceted filtering |
 | CAT-005 | NOT STARTED | No sorting (category filter exists) |
 | CAT-006 | NOT STARTED | No suggestions |

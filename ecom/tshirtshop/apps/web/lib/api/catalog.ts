@@ -87,11 +87,14 @@ export async function fetchProducts(options?: {
   page?: number;
   limit?: number;
   category?: string;
+  /** Search query: case-insensitive match on name and description */
+  q?: string;
 }): Promise<{ products: ProductDisplay[]; pagination: { page: number; limit: number; total: number } }> {
   const params = new URLSearchParams();
   if (options?.page) params.set('page', String(options.page));
   if (options?.limit) params.set('limit', String(options.limit));
   if (options?.category) params.set('category', options.category);
+  if (options?.q?.trim()) params.set('q', options.q.trim());
   const qs = params.toString();
   const url = apiUrl(`/api/v1/products${qs ? `?${qs}` : ''}`);
   const res = await fetch(url, { cache: 'no-store' });

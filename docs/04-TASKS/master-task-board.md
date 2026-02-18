@@ -82,7 +82,7 @@ Each task must have one of the following statuses:
 | ------- | ------------------------------ | ----------- |
 | CAT-001 | Implement product CRUD API     | DONE        |
 | CAT-002 | Implement category browsing    | DONE        |
-| CAT-003 | Implement search functionality | NOT STARTED |
+| CAT-003 | Implement search functionality | DONE        |
 | CAT-004 | Implement faceted filtering    | NOT STARTED |
 | CAT-005 | Implement sorting options      | NOT STARTED |
 | CAT-006 | Implement search suggestions   | NOT STARTED |

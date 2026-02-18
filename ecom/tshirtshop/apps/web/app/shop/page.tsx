@@ -4,17 +4,21 @@ import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; q?: string }>;
 }) {
-  const { category: categoryParam } = await searchParams;
+  const { category: categoryParam, q: qParam } = await searchParams;
   const categoryFilter = categoryParam ?? "all";
+  const searchQuery = qParam?.trim() || undefined;
 
   let products: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
 
   try {
     const [productsRes, categoriesData] = await Promise.all([
-      fetchProducts({ category: categoryFilter === "all" ? undefined : categoryFilter }),
+      fetchProducts({
+        category: categoryFilter === "all" ? undefined : categoryFilter,
+        q: searchQuery,
+      }),
       fetchCategories(),
     ]);
     products = productsRes.products;
@@ -26,16 +30,43 @@ export default async function ShopPage({
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-16">
       <h1
-        className="mb-8 text-2xl font-bold uppercase tracking-tight text-white sm:mb-12 sm:text-4xl md:text-5xl"
+        className="mb-6 text-2xl font-bold uppercase tracking-tight text-white sm:mb-8 sm:text-4xl md:text-5xl"
         style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
       >
-        All Items
+        {searchQuery ? `Search: "${searchQuery}"` : "All Items"}
       </h1>
+
+      {/* Search */}
+      <form
+        action="/shop"
+        method="get"
+        className="mb-6 sm:mb-8"
+      >
+        {categoryFilter !== "all" && (
+          <input type="hidden" name="category" value={categoryFilter} />
+        )}
+        <div className="flex gap-2">
+          <input
+            type="search"
+            name="q"
+            placeholder="Search products..."
+            defaultValue={searchQuery}
+            className="min-h-[44px] flex-1 rounded-md border border-white/20 bg-[#1A1A1A] px-4 py-2 text-sm text-white placeholder:text-white/50 focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00]"
+            aria-label="Search products"
+          />
+          <button
+            type="submit"
+            className="min-h-[44px] min-w-[44px] rounded-md bg-[#FF4D00] px-4 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90"
+          >
+            Search
+          </button>
+        </div>
+      </form>
 
       {/* Filters — text links */}
       <div className="mb-8 flex flex-wrap gap-3 border-b border-white/10 pb-4 sm:mb-12 sm:gap-6 sm:pb-6">
         <Link
-          href="/shop"
+          href={searchQuery ? `/shop?q=${encodeURIComponent(searchQuery)}` : "/shop"}
           className={`min-h-[44px] py-2 text-xs uppercase tracking-wider transition-colors sm:text-sm ${
             categoryFilter === "all"
               ? "text-[#FF4D00]"
@@ -47,7 +78,7 @@ export default async function ShopPage({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/shop?category=${cat.slug}`}
+            href={`/shop?category=${cat.slug}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`min-h-[44px] py-2 text-xs uppercase tracking-wider transition-colors sm:text-sm ${
               categoryFilter === cat.slug
                 ? "text-[#FF4D00]"
@@ -89,7 +120,7 @@ export default async function ShopPage({
 
       {products.length === 0 && (
         <p className="py-20 text-center text-white/60">
-          No products in this category.
+          {searchQuery ? `No products found for "${searchQuery}".` : "No products in this category."}
         </p>
       )}
     </div>

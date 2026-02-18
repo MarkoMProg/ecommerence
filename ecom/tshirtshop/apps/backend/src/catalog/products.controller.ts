@@ -31,11 +31,13 @@ export class ProductsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('category') category?: string,
+    @Query('q') q?: string,
   ) {
     const result = await this.catalogService.listProducts({
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       category,
+      q: q?.trim() || undefined,
     });
     return {
       success: true,
