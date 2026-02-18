@@ -75,8 +75,21 @@ function mapProduct(p: ApiProduct): ProductDisplay {
   };
 }
 
+async function fetchApi(url: string): Promise<Response> {
+  try {
+    return await fetch(url, { cache: "no-store" });
+  } catch (err) {
+    const cause = err instanceof Error ? err.cause ?? err.message : String(err);
+    throw new Error(
+      `Catalog API unreachable at ${url}. Is the backend running? (${cause})`,
+      { cause: err instanceof Error ? err : undefined },
+    );
+  }
+}
+
 export async function fetchCategories(): Promise<ApiCategory[]> {
-  const res = await fetch(apiUrl("/api/v1/categories"), { cache: "no-store" });
+  const url = apiUrl("/api/v1/categories");
+  const res = await fetchApi(url);
   if (!res.ok) throw new Error(`Categories fetch failed: ${res.status}`);
   const json = (await res.json()) as ApiCategoriesResponse;
   if (!json.success) throw new Error(json.error?.message ?? 'Categories fetch failed');
@@ -97,7 +110,7 @@ export async function fetchProducts(options?: {
   if (options?.q?.trim()) params.set('q', options.q.trim());
   const qs = params.toString();
   const url = apiUrl(`/api/v1/products${qs ? `?${qs}` : ''}`);
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetchApi(url);
   if (!res.ok) throw new Error(`Products fetch failed: ${res.status}`);
   const json = (await res.json()) as ApiProductsResponse;
   if (!json.success) throw new Error(json.error?.message ?? 'Products fetch failed');
@@ -108,7 +121,8 @@ export async function fetchProducts(options?: {
 }
 
 export async function fetchProduct(id: string): Promise<ProductDisplay | null> {
-  const res = await fetch(apiUrl(`/api/v1/products/${id}`), { cache: 'no-store' });
+  const url = apiUrl(`/api/v1/products/${id}`);
+  const res = await fetchApi(url);
   if (!res.ok) {
     if (res.status === 404) return null;
     throw new Error(`Product fetch failed: ${res.status}`);
