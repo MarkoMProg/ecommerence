@@ -54,7 +54,7 @@ import { BETTER_AUTH_INSTANCE } from './constants';
               try {
                 const from =
                   configService.get('EMAIL_FROM') ??
-                  'Darkloom <noreply@darkloom.com>';
+                  'Darkloom <noreply@lugriv.com>';
                 console.log(
                   `[Resend] Attempting to send password reset email to ${user.email} from ${from}`,
                 );
@@ -97,7 +97,7 @@ import { BETTER_AUTH_INSTANCE } from './constants';
               try {
                 const from =
                   configService.get('EMAIL_FROM') ??
-                  'DND Store <noreply@dndstore.com>';
+                  'Darkloom <noreply@lugriv.com>';
                 console.log(
                   `[Resend] Attempting to send verification email to ${user.email} from ${from}`,
                 );
