@@ -4,7 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Brand accent colors — use sparingly per design spec */
 @theme inline {
+  --color-brand-accent: #FF4D00;
+  --color-brand-purple: #7A5FFF;
+  --color-brand-gold: #E6C068;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -80,25 +84,26 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Design spec: Premium DnD Apparel — dark mode dominant */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
+  --card: #1A1A1A;
+  --card-foreground: #FFFFFF;
+  --popover: #121212;
+  --popover-foreground: #FFFFFF;
+  --primary: #FF4D00;
+  --primary-foreground: #FFFFFF;
+  --secondary: #121212;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1A1A1A;
+  --muted-foreground: #AAAAAA;
+  --accent: #FF4D00;
+  --accent-foreground: #FFFFFF;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #FF4D00;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -118,7 +123,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    min-width: 0;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-space-grotesk), var(--font-inter), sans-serif;
   }
 }

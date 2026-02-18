@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../components/auth-provider";
+import { SiteLayout } from "../components/layout/site-layout";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
 });
 
 export const metadata: Metadata = {
-  title: "TShirtShop",
-  description: "Premium t-shirts for everyone",
+  title: "TShirtShop — Premium DnD Apparel",
+  description: "Elite tabletop culture meets high-fashion streetwear.",
 };
 
 export default function RootLayout({
@@ -23,9 +24,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <AuthProvider>{children}</AuthProvider>
+    <html lang="en" className="dark">
+      <body
+        className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased`}
+        style={{ fontFamily: "var(--font-inter), sans-serif" }}
+      >
+        <AuthProvider>
+          <SiteLayout>{children}</SiteLayout>
+        </AuthProvider>
       </body>
     </html>
   );

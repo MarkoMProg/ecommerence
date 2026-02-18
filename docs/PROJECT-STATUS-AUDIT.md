@@ -1,19 +1,20 @@
 # Project Status Audit — tshirtshop
 
-**Generated:** 2026-02-14  
+**Generated:** 2026-02-18  
+**Previous:** 2026-02-14  
 **Purpose:** Correlate implementation with documentation and provide recommended next steps.
 
 ---
 
 ## 1. Executive Summary
 
-The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authentication and core infrastructure are largely implemented. Product catalog, commerce workflows, and most frontend pages are not yet built.
+The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. A **frontend mockup** (homepage, shop, product detail) is complete with mock data. Product catalog backend, commerce workflows, and real API integration remain to be built.
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1 — Foundation | In Progress | ~60% |
+| Phase 1 — Foundation | In Progress | ~70% |
 | Phase 2 — Commerce | Not Started | 0% |
-| Phase 3 — Experience | Not Started | 0% |
+| Phase 3 — Experience | In Progress | ~20% |
 
 ---
 
@@ -29,11 +30,13 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authe
 | `03-ARCHITECTURE/authentication-architecture.md` | Auth flows, tokens, 2FA |
 | `04-TASKS/master-task-board.md` | Task tracking |
 | `07-DEVOPS/environment-setup.md` | Local setup, env vars |
+| `DESIGN-SPEC.md` | Premium DnD Apparel visual design, brand, layout |
 
 ### 2.2 Alignment
 
 - **Architecture:** Implementation follows modular monolith (NestJS modules, Drizzle, better-auth).
 - **Auth:** Matches auth architecture (better-auth, JWT, 2FA, password reset).
+- **Design:** Frontend mockup implements `DESIGN-SPEC.md` (dark mode, brand colors, typography, layout).
 - **Task Board:** Some task statuses are outdated; see Section 4.
 
 ---
@@ -71,6 +74,8 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authe
 - `RESEND_API_KEY`, `UI_URL`, `RECAPTCHA_SECRET_KEY` made optional for local dev.
 - Frontend ReCAPTCHA only renders when `NEXT_PUBLIC_RECAPTCHA_SITEKEY` is set.
 
+**2026-02-18:** Auth forms moved from homepage to `/auth/login`. Homepage now serves e-commerce content.
+
 ### 3.3 Database Design (DB-001 to DB-007)
 
 | Task | Doc Status | Actual Status | Notes |
@@ -89,30 +94,44 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authe
 
 | Task | Status | Notes |
 |------|--------|-------|
-| CAT-001 | NOT STARTED | No product CRUD |
-| CAT-002 | NOT STARTED | No category browsing |
+| CAT-001 | NOT STARTED | No product CRUD API |
+| CAT-002 | NOT STARTED | No category browsing API |
 | CAT-003 | NOT STARTED | No search |
 | CAT-004 | NOT STARTED | No faceted filtering |
 | CAT-005 | NOT STARTED | No sorting |
 | CAT-006 | NOT STARTED | No suggestions |
 
+**Note:** Frontend mockup uses `lib/mock-data.ts` for products/categories. Replace with API calls when CAT-001+ are implemented.
+
 ### 3.5 Frontend Pages
 
-| Page | Status | Location |
-|------|--------|----------|
-| Home | Partial | Auth-focused (login/signup/forgot) |
-| Product listing | NOT STARTED | — |
-| Product detail | NOT STARTED | — |
-| Cart | NOT STARTED | — |
-| Checkout | NOT STARTED | — |
-| User account | Partial | `/users/profile` API, no dedicated page |
-| Admin dashboard | NOT STARTED | — |
-| Auth flows | Done | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
+| Page | Status | Location | Notes |
+|------|--------|----------|-------|
+| Home | **DONE (mockup)** | `/` | Hero, Featured Drops, Editorial, Category nav |
+| Product listing | **DONE (mockup)** | `/shop` | Filters, product grid, mock data |
+| Product detail | **DONE (mockup)** | `/shop/[id]` | Gallery, size selector, accordion, related products |
+| Cart | NOT STARTED | — | — |
+| Checkout | NOT STARTED | — | — |
+| User account | Partial | `/auth/login` when logged in | Profile card; no dedicated account page |
+| Admin dashboard | NOT STARTED | — | — |
+| Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
 
-### 3.6 Commerce & Experience
+**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu.
+
+### 3.6 Design & UX (New)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| DESIGN-SPEC.md | DONE | Premium DnD Apparel design document |
+| Design tokens | DONE | Colors (#0A0A0A, #FF4D00, #7A5FFF, #E6C068), typography (Inter, Space Grotesk) |
+| Responsive layout | DONE | Mobile-first, hamburger nav, touch targets (min 44px), small-screen optimizations |
+| Dark mode | DONE | Default; design spec compliant |
+
+### 3.7 Commerce & Experience
 
 - **Cart, Checkout, Payments, Orders, Reviews, Admin:** All NOT STARTED.
 - **Tests:** Auth unit tests exist (`jwt-auth.guard`, `auth.controller`, `auth.service`, `dto`). No product/catalog tests.
+- **Build:** Known type error in `auth-provider.tsx` (twoFactorEnabled: `null` vs `boolean | undefined`) prevents full production build. Dev server runs.
 
 ---
 
@@ -156,40 +175,50 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authe
    - Implement create, read, update, delete for products.
    - Follow `docs/06-STANDARDS/api-guidelines.md`.
 
-4. **Update master-task-board.md**
+4. **Wire frontend mockup to API**
+   - Replace `lib/mock-data.ts` with API calls when CAT-001 is done.
+   - Add loading/error states.
+
+5. **Fix auth-provider type error**
+   - Resolve `twoFactorEnabled` type mismatch to unblock production build.
+
+6. **Update master-task-board.md**
    - AUTH-008: PARTIAL (CAPTCHA optional)
    - AUTH-009: DONE
    - AUTH-010: DONE
+   - UI-001: DONE (mockup)
+   - UI-002: DONE (mockup)
+   - UI-003: DONE (mockup)
 
 ### 5.2 Short-Term (Complete Phase 1)
 
-5. **CAT-002 to CAT-006:** Category browsing, search, faceted filtering, sorting, suggestions.
+7. **CAT-002 to CAT-006:** Category browsing, search, faceted filtering, sorting, suggestions.
 
-6. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
+8. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
 
-7. **AUTH-007:** OAuth (Google/Facebook) — credentials in `.env.example` are placeholders.
+9. **AUTH-007:** OAuth (Google/Facebook) — credentials in `.env.example` are placeholders.
 
-8. **FND-006:** Docker setup (per project-overview DevOps requirements).
+10. **FND-006:** Docker setup (per project-overview DevOps requirements).
 
 ### 5.3 Medium-Term (Phase 2)
 
-9. **CART-001 to CART-006:** Cart schema and APIs.
+11. **CART-001 to CART-006:** Cart schema and APIs.
 
-10. **ORD-001 to ORD-005:** Order schema and lifecycle.
+12. **ORD-001 to ORD-005:** Order schema and lifecycle.
 
-11. **CHK-001 to CHK-004:** Checkout flow.
+13. **CHK-001 to CHK-004:** Checkout flow.
 
-12. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox).
+14. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox).
 
 ### 5.4 Long-Term (Phase 3)
 
-13. **UI-001 to UI-007:** Full frontend pages (product listing, detail, cart, checkout, account, admin).
+15. **UI-004 to UI-007:** Cart page, checkout page, user account page, admin dashboard.
 
-14. **REV-001 to REV-004:** Reviews system.
+16. **REV-001 to REV-004:** Reviews system.
 
-15. **ADM-001 to ADM-004:** Admin RBAC and tools.
+17. **ADM-001 to ADM-004:** Admin RBAC and tools.
 
-16. **SEC-001 to SEC-003, PERF-001 to PERF-002:** Security and performance hardening.
+18. **SEC-001 to SEC-003, PERF-001 to PERF-002:** Security and performance hardening.
 
 ---
 
@@ -201,6 +230,7 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authe
 | Data | No card storage | Maintain as-is |
 | Tests | Auth only | Add tests before new features |
 | Docker | Not implemented | Required for final deliverable |
+| Build | Type error in auth-provider | Fix before production deploy |
 
 ---
 
@@ -212,14 +242,24 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)**. Authe
 - [system-architecture.md](./03-ARCHITECTURE/system-architecture.md) — Architecture
 - [authentication-architecture.md](./03-ARCHITECTURE/authentication-architecture.md) — Auth design
 - [environment-setup.md](./07-DEVOPS/environment-setup.md) — Setup guide
+- [DESIGN-SPEC.md](./DESIGN-SPEC.md) — Premium DnD Apparel design spec
 
 ---
 
 ## 8. Summary
 
-**Current state:** Phase 1 authentication and infrastructure are largely done. Product catalog and database schema are the main gaps. Phase 2 and 3 are not started.
+**Current state:** Phase 1 authentication and infrastructure are largely done. A **frontend mockup** (homepage, shop, product detail) is implemented per DESIGN-SPEC.md with responsive layout and mock data. Product catalog backend (DB-003, CAT-001) remains the main gap to wire real data. Phase 2 and most of Phase 3 are not started.
 
-**Recommended next step:** Implement **DB-003 (Products schema)** and **CAT-001 (Product CRUD API)** to unblock catalog and frontend product pages.
+**Recommended next step:** Implement **DB-003 (Products schema)** and **CAT-001 (Product CRUD API)**, then replace mock data with API calls in the frontend.
+
+---
+
+## 9. Changelog (Audit Updates)
+
+| Date | Changes |
+|------|---------|
+| 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
+| 2026-02-14 | Initial audit |
 
 ---
 
