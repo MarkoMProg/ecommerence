@@ -8,11 +8,11 @@
 
 ## 1. Executive Summary
 
-The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. **Product catalog** (DB-003, DB-004, DB-006, CAT-001, CAT-002) is implemented: schema, CRUD API, category browsing, seed script, and **frontend wired to live API**. Homepage, shop, and product detail pages fetch from the backend. Commerce workflows (cart, checkout, payments) remain to be built.
+The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. **Product catalog** (DB-003, DB-004, DB-006, CAT-001, CAT-002, CAT-003) is implemented: schema, CRUD API, category browsing, **search** (ILIKE on name/description), seed script, and **frontend wired to live API**. Homepage, shop (with search form), and product detail pages fetch from the backend. Commerce workflows (cart, checkout, payments) remain to be built.
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1 — Foundation | In Progress | ~85% |
+| Phase 1 — Foundation | In Progress | ~88% |
 | Phase 2 — Commerce | Not Started | 0% |
 | Phase 3 — Experience | In Progress | ~25% |
 
@@ -66,15 +66,15 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | AUTH-006 | DONE | DONE | Token revocation (logout) |
 | AUTH-007 | NOT STARTED | NOT STARTED | OAuth (Google/Facebook) wired but empty credentials |
 | AUTH-008 | NOT STARTED | **PARTIAL** | CAPTCHA optional for dev; works when keys set |
-| AUTH-009 | IN PROGRESS | **DONE** | Password reset flow implemented |
-| AUTH-010 | IN PROGRESS | **DONE** | 2FA (TOTP) setup page exists |
+| AUTH-009 | DONE | DONE | Password reset flow implemented |
+| AUTH-010 | DONE | DONE | 2FA (TOTP) setup page exists |
 
 **Recent changes (2026-02-14):**
 
 - `RESEND_API_KEY`, `UI_URL`, `RECAPTCHA_SECRET_KEY` made optional for local dev.
 - Frontend ReCAPTCHA only renders when `NEXT_PUBLIC_RECAPTCHA_SITEKEY` is set.
 
-**2026-02-18:** Auth forms moved from homepage to `/auth/login`. Homepage now serves e-commerce content.
+**2026-02-18:** Auth forms moved from homepage to `/auth/login`. Homepage now serves e-commerce content. OAuth providers (Google/Facebook) only registered when credentials are set — avoids CLIENT_ID_AND_SECRET_REQUIRED in dev. Middleware route updated to `api/v1/*path` (path-to-regexp v7).
 
 ### 3.3 Database Design (DB-001 to DB-007)
 
@@ -82,10 +82,10 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 |------|------------|----------------|-------|
 | DB-001 | NOT STARTED | NOT STARTED | No ERD |
 | DB-002 | DONE | DONE | Users schema (better-auth: user, session, account, verification, two_factor) |
-| DB-003 | NOT STARTED | **DONE** | Products table in `apps/backend/src/catalog/schema.ts` |
-| DB-004 | NOT STARTED | **DONE** | Categories table in same file |
+| DB-003 | DONE | DONE | Products table in `apps/backend/src/catalog/schema.ts` |
+| DB-004 | DONE | DONE | Categories table in same file |
 | DB-005 | NOT STARTED | **PARTIAL** | Brand as column on product; no separate brands table |
-| DB-006 | NOT STARTED | **DONE** | product_image table in catalog schema |
+| DB-006 | DONE | DONE | product_image table in catalog schema |
 | DB-007 | NOT STARTED | NOT STARTED | No extra indexes on catalog tables yet |
 
 **Current schema:** `apps/backend/src/auth/schema.ts` (auth) + `apps/backend/src/catalog/schema.ts` (category, product, product_image). Drizzle config and DatabaseModule include both. **Run `npx drizzle-kit push` from apps/backend to create catalog tables** if not yet applied.
@@ -108,7 +108,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | Page | Status | Location | Notes |
 |------|--------|----------|-------|
 | Home | **DONE (API)** | `/` | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API) |
-| Product listing | **DONE (API)** | `/shop` | Category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
+| Product listing | **DONE (API)** | `/shop` | Search form, category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
 | Product detail | **DONE (API)** | `/shop/[id]` | Gallery, size selector, accordion, related products; fetches from API |
 | Cart | NOT STARTED | — | — |
 | Checkout | NOT STARTED | — | — |
@@ -170,46 +170,38 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
    - Create ERD for auth + catalog (and future cart/orders).
    - Store in `docs/` or a dedicated diagrams folder.
 
-3. **Update master-task-board.md**
-   - DB-003, DB-004, DB-006: DONE; DB-005: PARTIAL
-   - CAT-001, CAT-002: DONE
-   - AUTH-008: PARTIAL (CAPTCHA optional)
-   - AUTH-009: DONE
-   - AUTH-010: DONE
-   - UI-001, UI-002, UI-003: DONE (API-driven)
-
-4. **Optional: Remove `lib/mock-data.ts`**
+3. **Optional: Remove `lib/mock-data.ts`**
    - No longer used by homepage, shop, or product detail. Can deprecate or delete.
 
 ### 5.2 Short-Term (Complete Phase 1)
 
-7. **CAT-003 to CAT-006:** Search, faceted filtering, sorting, suggestions (category filter exists).
+4. **CAT-004 to CAT-006:** Faceted filtering, sorting, suggestions (search and category filter exist).
 
-8. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
+5. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
 
-9. **AUTH-007:** OAuth (Google/Facebook) — credentials in `.env.example` are placeholders.
+6. **AUTH-007:** OAuth (Google/Facebook) — credentials in `.env.example` are placeholders.
 
-10. **FND-006:** Docker setup (per project-overview DevOps requirements).
+7. **FND-006:** Docker setup (per project-overview DevOps requirements).
 
 ### 5.3 Medium-Term (Phase 2)
 
-11. **CART-001 to CART-006:** Cart schema and APIs.
+8. **CART-001 to CART-006:** Cart schema and APIs.
 
-12. **ORD-001 to ORD-005:** Order schema and lifecycle.
+9. **ORD-001 to ORD-005:** Order schema and lifecycle.
 
-13. **CHK-001 to CHK-004:** Checkout flow.
+10. **CHK-001 to CHK-004:** Checkout flow.
 
-14. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox).
+11. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox).
 
 ### 5.4 Long-Term (Phase 3)
 
-15. **UI-004 to UI-007:** Cart page, checkout page, user account page, admin dashboard.
+12. **UI-004 to UI-007:** Cart page, checkout page, user account page, admin dashboard.
 
-16. **REV-001 to REV-004:** Reviews system.
+13. **REV-001 to REV-004:** Reviews system.
 
-17. **ADM-001 to ADM-004:** Admin RBAC and tools.
+14. **ADM-001 to ADM-004:** Admin RBAC and tools.
 
-18. **SEC-001 to SEC-003, PERF-001 to PERF-002:** Security and performance hardening.
+15. **SEC-001 to SEC-003, PERF-001 to PERF-002:** Security and performance hardening.
 
 ---
 
@@ -222,6 +214,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | Tests | Auth only | Add tests before new features |
 | Docker | Not implemented | Required for final deliverable |
 | Build | Type error in auth-provider | Fix before production deploy |
+| OAuth | Conditional registration | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev |
 
 ---
 
@@ -240,9 +233,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ## 8. Summary
 
-**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog** is implemented: schema (DB-003, DB-004, DB-006), CRUD API (CAT-001), category browsing (CAT-002), seed script, and **frontend wired to live API**. Homepage, shop, and product detail fetch from `/api/v1/products` and `/api/v1/categories`. Catalog routes use `@AllowAnonymous()` for public access. Phase 2 (cart, checkout, payments) and most of Phase 3 are not started.
+**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog** is implemented: schema (DB-003, DB-004, DB-006), CRUD API (CAT-001), category browsing (CAT-002), **search** (CAT-003), seed script, and **frontend wired to live API**. Homepage, shop (with search), and product detail fetch from `/api/v1/products` and `/api/v1/categories`. Catalog routes use `@AllowAnonymous()`. OAuth providers only registered when credentials are set (avoids CLIENT_ID_AND_SECRET_REQUIRED). Phase 2 (cart, checkout, payments) and most of Phase 3 are not started.
 
-**Recommended next step:** Fix **auth-provider type error** to unblock production build, then update **master-task-board.md** and proceed to CAT-003 (search) or Phase 2 (cart).
+**Recommended next step:** Fix **auth-provider type error** to unblock production build, then proceed to CAT-004 (faceted filtering) or Phase 2 (cart).
 
 ---
 
@@ -250,7 +243,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Date | Changes |
 |------|---------|
-| 2026-02-18 (current) | CAT-001, CAT-002 DONE (Product CRUD, category browsing); frontend wired to API (lib/api/catalog.ts); homepage, shop, product detail fetch from backend; @AllowAnonymous on catalog; seed script; API_URL for RSC; Phase 1 ~85% |
+| 2026-02-18 (current) | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88%; recommended next: CAT-004 or Phase 2 |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
 | 2026-02-14 | Initial audit |
 
