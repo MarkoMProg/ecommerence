@@ -57,8 +57,8 @@ Each task must have one of the following statuses:
 | AUTH-006 | Implement token revocation            | DONE        |
 | AUTH-007 | Add OAuth login support               | NOT STARTED |
 | AUTH-008 | Integrate CAPTCHA                     | NOT STARTED |
-| AUTH-009 | Implement password reset flow         | IN PROGRESS |
-| AUTH-010 | Implement 2FA support                 | IN PROGRESS |
+| AUTH-009 | Implement password reset flow         | DONE        |
+| AUTH-010 | Implement 2FA support                | DONE        |
 
 ---
 
@@ -68,10 +68,10 @@ Each task must have one of the following statuses:
 | ------ | --------------------------- | ----------- |
 | DB-001 | Create ERD documentation    | NOT STARTED |
 | DB-002 | Define users schema         | DONE        |
-| DB-003 | Define products schema      | NOT STARTED |
-| DB-004 | Define categories schema    | NOT STARTED |
+| DB-003 | Define products schema      | DONE        |
+| DB-004 | Define categories schema    | DONE        |
 | DB-005 | Define brands schema        | NOT STARTED |
-| DB-006 | Define images schema        | NOT STARTED |
+| DB-006 | Define images schema        | DONE        |
 | DB-007 | Add indexes and constraints | NOT STARTED |
 
 ---
@@ -80,8 +80,8 @@ Each task must have one of the following statuses:
 
 | ID      | Task                           | Status      |
 | ------- | ------------------------------ | ----------- |
-| CAT-001 | Implement product CRUD API     | NOT STARTED |
-| CAT-002 | Implement category browsing    | NOT STARTED |
+| CAT-001 | Implement product CRUD API     | DONE        |
+| CAT-002 | Implement category browsing    | DONE        |
 | CAT-003 | Implement search functionality | NOT STARTED |
 | CAT-004 | Implement faceted filtering    | NOT STARTED |
 | CAT-005 | Implement sorting options      | NOT STARTED |
@@ -159,9 +159,9 @@ Each task must have one of the following statuses:
 
 | ID     | Task                           | Status      |
 | ------ | ------------------------------ | ----------- |
-| UI-001 | Implement home page            | NOT STARTED |
-| UI-002 | Implement product listing page | NOT STARTED |
-| UI-003 | Implement product detail page  | NOT STARTED |
+| UI-001 | Implement home page            | DONE        |
+| UI-002 | Implement product listing page | DONE        |
+| UI-003 | Implement product detail page  | DONE        |
 | UI-004 | Implement cart page            | NOT STARTED |
 | UI-005 | Implement checkout page        | NOT STARTED |
 | UI-006 | Implement user account page    | NOT STARTED |

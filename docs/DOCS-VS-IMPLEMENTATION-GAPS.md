@@ -9,6 +9,8 @@
 
 This document cross-references the project documentation against the current implementation. Items listed are **required or specified in docs** but **not yet implemented** or only partially addressed.
 
+**Recent (2026-02-18):** Product catalog schema, CAT-001 (Product CRUD), CAT-002 (category browsing), seed script, and frontend API wiring are now implemented. Category, Product, and ProductImage domain models exist.
+
 ---
 
 ## 2. Requirements Gaps (project-overview.md, foundation-requirements.md)
@@ -18,9 +20,9 @@ This document cross-references the project documentation against the current imp
 | Doc Requirement | Status | Notes |
 |-----------------|--------|-------|
 | **ERD creation** | ❌ NOT DONE | DB-001: No ERD exists. Required per project-overview and foundation-requirements. |
-| **Product catalog schema** | ❌ NOT DONE | DB-003 to DB-006: No product, category, brand, image tables. |
-| **Product attributes** | ❌ NOT DONE | Docs require: description, stock quantity, dimensions/weight. Mock data has only basic fields. |
-| **Category browsing API** | ❌ NOT DONE | CAT-002. |
+| **Product catalog schema** | ✅ DONE | DB-003 to DB-006: category, product, product_image in `apps/backend/src/catalog/schema.ts`. |
+| **Product attributes** | ✅ DONE | description, stock_quantity, dimensions/weight in schema; API returns full product. |
+| **Category browsing API** | ✅ DONE | CAT-002: CategoriesController list + getById. |
 | **Faceted search** | ❌ NOT DONE | CAT-004: Filter by price, brand, ratings. |
 | **Dynamic search suggestions** | ❌ NOT DONE | CAT-006. |
 | **Sorting options** | ❌ NOT DONE | CAT-005: Relevance, price, ratings. |
@@ -51,14 +53,14 @@ All of Project 2 (Cart, Checkout, Payments, Orders) is NOT STARTED per docs.
 
 ## 3. Domain Model Gaps (domain-modules.md)
 
-The domain-modules doc defines models that **do not exist** in the schema:
+The domain-modules doc defines models. Current status:
 
 | Domain Model | Status | Notes |
 |--------------|--------|-------|
 | **Address** | ❌ | Schema not defined. |
-| **Category** | ❌ | Schema not defined. |
-| **Product** | ❌ | Schema not defined. |
-| **ProductImage** | ❌ | Schema not defined. |
+| **Category** | ✅ | In `catalog/schema.ts`. |
+| **Product** | ✅ | In `catalog/schema.ts`. |
+| **ProductImage** | ✅ | In `catalog/schema.ts` as product_image. |
 | **Cart** | ❌ | Schema not defined. |
 | **CartItem** | ❌ | Schema not defined. |
 | **Order** | ❌ | Schema not defined. |
@@ -76,10 +78,10 @@ The domain-modules doc defines models that **do not exist** in the schema:
 
 | API Standard | Status | Notes |
 |--------------|--------|-------|
-| **Version prefix** | ⚠️ | Docs require `/api/v1/`. Auth endpoints may not follow. |
-| **Standard response format** | ⚠️ | `{ success, data, message }` — need to verify auth endpoints. |
-| **Error response format** | ⚠️ | `{ success: false, error: { code, message } }` — not verified. |
-| **Pagination** | ❌ | No list endpoints yet; pagination required when implemented. |
+| **Version prefix** | ✅ | Catalog uses `/api/v1/products`, `/api/v1/categories`. |
+| **Standard response format** | ✅ | Catalog: `{ success, data, message }`; pagination on list. |
+| **Error response format** | ✅ | Catalog: `{ success: false, error: { code, message } }` on 404/validation. |
+| **Pagination** | ✅ | Products list returns `pagination: { page, limit, total }`. |
 | **Filtering/sorting query params** | ❌ | Not implemented for product catalog. |
 | **Rate limiting** | ❌ | Not implemented per security-standards. |
 | **Documentation** | ❌ | No OpenAPI/Swagger or endpoint docs. |
@@ -166,16 +168,13 @@ The domain-modules doc defines models that **do not exist** in the schema:
 
 ### Critical (Blocks Phase 1 completion)
 
-1. DB-001: Create ERD
-2. DB-003 to DB-006: Product catalog schema
-3. CAT-001: Product CRUD API
-4. Fix auth-provider type error (blocks build)
+1. Fix auth-provider type error (blocks build)
+2. DB-001: Create ERD
 
 ### High (Doc compliance)
 
-5. TEST-001 to TEST-004: Tests per testing-standards
-6. master-task-board.md: Update AUTH-008, AUTH-009, AUTH-010, UI-001/002/003
-7. API versioning and response format verification
+3. TEST-001 to TEST-004: Tests per testing-standards
+4. master-task-board.md: Update DB-003/004/006, CAT-001/002, AUTH-008/009/010, UI-001/002/003
 
 ### Medium (Phase 2)
 

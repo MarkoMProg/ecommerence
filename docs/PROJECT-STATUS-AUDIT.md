@@ -8,13 +8,13 @@
 
 ## 1. Executive Summary
 
-The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. **Product catalog schema** (DB-003, DB-004, DB-006) is implemented in the backend; catalog APIs (CAT-001) are not yet built. A **frontend mockup** (homepage with hero video, shop, product detail) is complete with mock data and responsive layout. Commerce workflows and real API integration remain to be built.
+The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. **Product catalog** (DB-003, DB-004, DB-006, CAT-001, CAT-002) is implemented: schema, CRUD API, category browsing, seed script, and **frontend wired to live API**. Homepage, shop, and product detail pages fetch from the backend. Commerce workflows (cart, checkout, payments) remain to be built.
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1 — Foundation | In Progress | ~75% |
+| Phase 1 — Foundation | In Progress | ~85% |
 | Phase 2 — Commerce | Not Started | 0% |
-| Phase 3 — Experience | In Progress | ~20% |
+| Phase 3 — Experience | In Progress | ~25% |
 
 ---
 
@@ -94,29 +94,29 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Task | Status | Notes |
 |------|--------|-------|
-| CAT-001 | NOT STARTED | No product CRUD API |
-| CAT-002 | NOT STARTED | No category browsing API |
+| CAT-001 | **DONE** | Product CRUD API: `ProductsController`, `CatalogService`, DTOs; list, getById, create, update, delete |
+| CAT-002 | **DONE** | Category browsing: `CategoriesController` list + getById |
 | CAT-003 | NOT STARTED | No search |
 | CAT-004 | NOT STARTED | No faceted filtering |
-| CAT-005 | NOT STARTED | No sorting |
+| CAT-005 | NOT STARTED | No sorting (category filter exists) |
 | CAT-006 | NOT STARTED | No suggestions |
 
-**Note:** Frontend mockup uses `lib/mock-data.ts` for products/categories. Replace with API calls when CAT-001+ are implemented.
+**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct) with absolute URLs for RSC; `lib/mock-data.ts` is unused.
 
 ### 3.5 Frontend Pages
 
 | Page | Status | Location | Notes |
 |------|--------|----------|-------|
-| Home | **DONE (mockup)** | `/` | Hero video (dragon-hero.webm), Featured Drops, Editorial, Category nav |
-| Product listing | **DONE (mockup)** | `/shop` | Filters, product grid, mock data |
-| Product detail | **DONE (mockup)** | `/shop/[id]` | Gallery, size selector, accordion, related products |
+| Home | **DONE (API)** | `/` | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API) |
+| Product listing | **DONE (API)** | `/shop` | Category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
+| Product detail | **DONE (API)** | `/shop/[id]` | Gallery, size selector, accordion, related products; fetches from API |
 | Cart | NOT STARTED | — | — |
 | Checkout | NOT STARTED | — | — |
 | User account | Partial | `/auth/login` when logged in | Profile card; no dedicated account page |
 | Admin dashboard | NOT STARTED | — | — |
 | Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
 
-**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Branding:** Darkloom (site name in header, footer, layout title).
+**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Branding:** Darkloom. **API client:** `lib/api/catalog.ts` — uses `API_URL` (default `http://localhost:3000`) for server-side fetch; Next.js rewrites `/api/v1/*` for client.
 
 ### 3.6 Design & UX (New)
 
@@ -154,6 +154,8 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 - `DATABASE_URL` and `BETTER_AUTH_SECRET` are required.
 - Backend and frontend can run without Resend, reCAPTCHA, or OAuth.
+- **Catalog:** Run `npm run db:seed` from apps/backend to populate products/categories.
+- **Frontend API:** Set `API_URL` in `apps/web/.env.local` if backend runs on a different port (default: `http://localhost:3000`).
 
 ---
 
@@ -161,37 +163,27 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ### 5.1 Immediate (Unblock Phase 1 Completion)
 
-1. **Apply catalog schema to database**
-   - From `apps/backend`: run `npx drizzle-kit push` (or `npm run db:push`) to create category, product, product_image tables.
-
-2. **CAT-001: Product CRUD API**
-   - Create `CatalogModule` with products (and categories) controller/service.
-   - Implement create, read, update, delete for products; list categories.
-   - Follow `docs/06-STANDARDS/api-guidelines.md`.
-
-3. **Wire frontend mockup to API**
-   - Replace `lib/mock-data.ts` with API calls when CAT-001 is done.
-   - Add loading/error states.
-
-4. **Fix auth-provider type error**
+1. **Fix auth-provider type error**
    - Resolve `twoFactorEnabled` type mismatch to unblock production build.
 
-5. **DB-001: ERD**
+2. **DB-001: ERD**
    - Create ERD for auth + catalog (and future cart/orders).
    - Store in `docs/` or a dedicated diagrams folder.
 
-6. **Update master-task-board.md**
+3. **Update master-task-board.md**
    - DB-003, DB-004, DB-006: DONE; DB-005: PARTIAL
+   - CAT-001, CAT-002: DONE
    - AUTH-008: PARTIAL (CAPTCHA optional)
    - AUTH-009: DONE
    - AUTH-010: DONE
-   - UI-001: DONE (mockup)
-   - UI-002: DONE (mockup)
-   - UI-003: DONE (mockup)
+   - UI-001, UI-002, UI-003: DONE (API-driven)
+
+4. **Optional: Remove `lib/mock-data.ts`**
+   - No longer used by homepage, shop, or product detail. Can deprecate or delete.
 
 ### 5.2 Short-Term (Complete Phase 1)
 
-7. **CAT-002 to CAT-006:** Category browsing, search, faceted filtering, sorting, suggestions.
+7. **CAT-003 to CAT-006:** Search, faceted filtering, sorting, suggestions (category filter exists).
 
 8. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
 
@@ -248,9 +240,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ## 8. Summary
 
-**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog schema (DB-003, DB-004, DB-006)** is implemented in code (`apps/backend/src/catalog/schema.ts`); run `db:push` to create tables. A **frontend mockup** (homepage with hero video, shop, product detail) is implemented per DESIGN-SPEC.md with responsive layout, Darkloom branding, and mock data. **CAT-001 (Product CRUD API)** is the main gap to wire real data. Phase 2 and most of Phase 3 are not started.
+**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog** is implemented: schema (DB-003, DB-004, DB-006), CRUD API (CAT-001), category browsing (CAT-002), seed script, and **frontend wired to live API**. Homepage, shop, and product detail fetch from `/api/v1/products` and `/api/v1/categories`. Catalog routes use `@AllowAnonymous()` for public access. Phase 2 (cart, checkout, payments) and most of Phase 3 are not started.
 
-**Recommended next step:** Run **`npx drizzle-kit push`** from apps/backend to apply catalog tables, then implement **CAT-001 (Product CRUD API)** and wire the frontend to it.
+**Recommended next step:** Fix **auth-provider type error** to unblock production build, then update **master-task-board.md** and proceed to CAT-003 (search) or Phase 2 (cart).
 
 ---
 
@@ -258,7 +250,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Date | Changes |
 |------|---------|
-| 2026-02-18 (current) | DB-003, DB-004, DB-006 DONE (catalog schema); DB-005 PARTIAL (brand on product); FND-005 note (dual schema); hero video + Darkloom branding; recommended steps reordered (db:push, then CAT-001) |
+| 2026-02-18 (current) | CAT-001, CAT-002 DONE (Product CRUD, category browsing); frontend wired to API (lib/api/catalog.ts); homepage, shop, product detail fetch from backend; @AllowAnonymous on catalog; seed script; API_URL for RSC; Phase 1 ~85% |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
 | 2026-02-14 | Initial audit |
 
