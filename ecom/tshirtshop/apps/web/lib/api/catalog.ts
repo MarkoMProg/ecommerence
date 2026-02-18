@@ -1,15 +1,13 @@
 /**
  * Catalog API client.
- * Fetches from backend. Server components require absolute URLs.
- * WARNING: Relative URLs fail in RSC — server has no host context.
+ * Fetches from backend. Always uses absolute URLs (required for Node fetch).
  */
-const API_BASE =
-  typeof window !== "undefined"
-    ? "" // Client: use same origin (rewrite proxies to backend)
-    : process.env.API_URL || "http://localhost:3000";
-
 function apiUrl(path: string): string {
-  return API_BASE ? `${API_BASE}${path}` : path;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path}`;
+  }
+  const base = process.env.API_URL || "http://localhost:3000";
+  return `${base}${path}`;
 }
 
 export interface ApiCategory {
@@ -75,13 +73,23 @@ function mapProduct(p: ApiProduct): ProductDisplay {
   };
 }
 
+function getFetchErrorDetail(err: unknown): string {
+  if (err instanceof AggregateError && err.errors?.length) {
+    return err.errors.map((e) => (e instanceof Error ? e.message : String(e))).join("; ");
+  }
+  if (err instanceof Error) {
+    return err.cause instanceof Error ? err.cause.message : err.message;
+  }
+  return String(err);
+}
+
 async function fetchApi(url: string): Promise<Response> {
   try {
     return await fetch(url, { cache: "no-store" });
   } catch (err) {
-    const cause = err instanceof Error ? err.cause ?? err.message : String(err);
+    const detail = getFetchErrorDetail(err);
     throw new Error(
-      `Catalog API unreachable at ${url}. Is the backend running? (${cause})`,
+      `Catalog API unreachable at ${url}. Is the backend running? (${detail})`,
       { cause: err instanceof Error ? err : undefined },
     );
   }
