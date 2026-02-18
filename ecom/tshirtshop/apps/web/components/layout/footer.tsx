@@ -11,7 +11,7 @@ export function Footer() {
               className="font-bold uppercase tracking-wider text-white"
               style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
             >
-              TShirtShop
+              Darkloom
             </Link>
           </div>
           <div>
@@ -99,7 +99,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-white/10 pt-6 text-center text-[10px] uppercase tracking-widest text-white/40 sm:mt-12 sm:pt-8 sm:text-xs">
-          © {new Date().getFullYear()} TShirtShop. Elite tabletop culture.
+          © {new Date().getFullYear()} Darkloom. Elite tabletop culture.
         </div>
       </div>
     </footer>

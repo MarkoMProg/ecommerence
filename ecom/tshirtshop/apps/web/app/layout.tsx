@@ -14,7 +14,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "TShirtShop — Premium DnD Apparel",
+  title: "Darkloom — Premium DnD Apparel",
   description: "Elite tabletop culture meets high-fashion streetwear.",
 };
 

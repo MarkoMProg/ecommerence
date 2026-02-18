@@ -54,7 +54,7 @@ import { BETTER_AUTH_INSTANCE } from './constants';
               try {
                 const from =
                   configService.get('EMAIL_FROM') ??
-                  'TShirtShop <noreply@tshirtshop.com>';
+                  'Darkloom <noreply@darkloom.com>';
                 console.log(
                   `[Resend] Attempting to send password reset email to ${user.email} from ${from}`,
                 );
@@ -143,7 +143,7 @@ import { BETTER_AUTH_INSTANCE } from './constants';
 
           plugins: [
             twoFactor({
-              issuer: 'TShirtShop',
+              issuer: 'Darkloom',
             }),
             bearer(),
             ...(configService.get('RECAPTCHA_SECRET_KEY')

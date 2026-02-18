@@ -20,7 +20,7 @@ export function Header() {
           className="text-sm font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-80 sm:text-base"
           style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
         >
-          TShirtShop
+          Darkloom
         </Link>
         {/* Desktop nav */}
         <nav className="hidden items-center gap-6 sm:flex sm:gap-8">
