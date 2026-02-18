@@ -1,18 +1,18 @@
 # Project Status Audit — tshirtshop
 
-**Generated:** 2026-02-18  
-**Previous:** 2026-02-14  
+**Generated:** 2026-02-18 (current state audit)  
+**Previous:** 2026-02-18  
 **Purpose:** Correlate implementation with documentation and provide recommended next steps.
 
 ---
 
 ## 1. Executive Summary
 
-The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. A **frontend mockup** (homepage, shop, product detail) is complete with mock data. Product catalog backend, commerce workflows, and real API integration remain to be built.
+The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. **Product catalog schema** (DB-003, DB-004, DB-006) is implemented in the backend; catalog APIs (CAT-001) are not yet built. A **frontend mockup** (homepage with hero video, shop, product detail) is complete with mock data and responsive layout. Commerce workflows and real API integration remain to be built.
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1 — Foundation | In Progress | ~70% |
+| Phase 1 — Foundation | In Progress | ~75% |
 | Phase 2 — Commerce | Not Started | 0% |
 | Phase 3 — Experience | In Progress | ~20% |
 
@@ -51,7 +51,7 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 | FND-002 | DONE | DONE | NestJS backend configured |
 | FND-003 | DONE | DONE | Next.js 16, App Router |
 | FND-004 | DONE | DONE | PostgreSQL + Drizzle |
-| FND-005 | DONE | DONE | Drizzle ORM, schema in `auth/schema.ts` |
+| FND-005 | DONE | DONE | Drizzle ORM; schema in `auth/schema.ts` + `catalog/schema.ts` |
 | FND-006 | NOT STARTED | NOT STARTED | No Dockerfiles |
 
 ### 3.2 Authentication (AUTH-001 to AUTH-010)
@@ -82,13 +82,13 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 |------|------------|----------------|-------|
 | DB-001 | NOT STARTED | NOT STARTED | No ERD |
 | DB-002 | DONE | DONE | Users schema (better-auth: user, session, account, verification, two_factor) |
-| DB-003 | NOT STARTED | NOT STARTED | No products table |
-| DB-004 | NOT STARTED | NOT STARTED | No categories |
-| DB-005 | NOT STARTED | NOT STARTED | No brands |
-| DB-006 | NOT STARTED | NOT STARTED | No images table |
-| DB-007 | NOT STARTED | NOT STARTED | No indexes beyond auth |
+| DB-003 | NOT STARTED | **DONE** | Products table in `apps/backend/src/catalog/schema.ts` |
+| DB-004 | NOT STARTED | **DONE** | Categories table in same file |
+| DB-005 | NOT STARTED | **PARTIAL** | Brand as column on product; no separate brands table |
+| DB-006 | NOT STARTED | **DONE** | product_image table in catalog schema |
+| DB-007 | NOT STARTED | NOT STARTED | No extra indexes on catalog tables yet |
 
-**Current schema:** `apps/backend/src/auth/schema.ts` — auth-only. Drizzle config points only to this file.
+**Current schema:** `apps/backend/src/auth/schema.ts` (auth) + `apps/backend/src/catalog/schema.ts` (category, product, product_image). Drizzle config and DatabaseModule include both. **Run `npx drizzle-kit push` from apps/backend to create catalog tables** if not yet applied.
 
 ### 3.4 Product Catalog (CAT-001 to CAT-006)
 
@@ -107,7 +107,7 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 
 | Page | Status | Location | Notes |
 |------|--------|----------|-------|
-| Home | **DONE (mockup)** | `/` | Hero, Featured Drops, Editorial, Category nav |
+| Home | **DONE (mockup)** | `/` | Hero video (dragon-hero.webm), Featured Drops, Editorial, Category nav |
 | Product listing | **DONE (mockup)** | `/shop` | Filters, product grid, mock data |
 | Product detail | **DONE (mockup)** | `/shop/[id]` | Gallery, size selector, accordion, related products |
 | Cart | NOT STARTED | — | — |
@@ -116,7 +116,7 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 | Admin dashboard | NOT STARTED | — | — |
 | Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
 
-**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu.
+**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Branding:** Darkloom (site name in header, footer, layout title).
 
 ### 3.6 Design & UX (New)
 
@@ -161,28 +161,27 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 
 ### 5.1 Immediate (Unblock Phase 1 Completion)
 
-1. **DB-003: Products schema**
-   - Add `product`, `category`, `brand`, `image` tables per project-overview.
-   - Extend `drizzle.config.ts` to include new schema files.
-   - Run `db:push` or migrations.
+1. **Apply catalog schema to database**
+   - From `apps/backend`: run `npx drizzle-kit push` (or `npm run db:push`) to create category, product, product_image tables.
 
-2. **DB-001: ERD**
-   - Create ERD for auth + catalog (and future cart/orders).
-   - Store in `docs/` or a dedicated diagrams folder.
-
-3. **CAT-001: Product CRUD API**
-   - Create `CatalogModule` with products controller/service.
-   - Implement create, read, update, delete for products.
+2. **CAT-001: Product CRUD API**
+   - Create `CatalogModule` with products (and categories) controller/service.
+   - Implement create, read, update, delete for products; list categories.
    - Follow `docs/06-STANDARDS/api-guidelines.md`.
 
-4. **Wire frontend mockup to API**
+3. **Wire frontend mockup to API**
    - Replace `lib/mock-data.ts` with API calls when CAT-001 is done.
    - Add loading/error states.
 
-5. **Fix auth-provider type error**
+4. **Fix auth-provider type error**
    - Resolve `twoFactorEnabled` type mismatch to unblock production build.
 
+5. **DB-001: ERD**
+   - Create ERD for auth + catalog (and future cart/orders).
+   - Store in `docs/` or a dedicated diagrams folder.
+
 6. **Update master-task-board.md**
+   - DB-003, DB-004, DB-006: DONE; DB-005: PARTIAL
    - AUTH-008: PARTIAL (CAPTCHA optional)
    - AUTH-009: DONE
    - AUTH-010: DONE
@@ -243,14 +242,15 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 - [authentication-architecture.md](./03-ARCHITECTURE/authentication-architecture.md) — Auth design
 - [environment-setup.md](./07-DEVOPS/environment-setup.md) — Setup guide
 - [DESIGN-SPEC.md](./DESIGN-SPEC.md) — Premium DnD Apparel design spec
+- [DOCS-VS-IMPLEMENTATION-GAPS.md](./DOCS-VS-IMPLEMENTATION-GAPS.md) — Gap analysis (docs vs code)
 
 ---
 
 ## 8. Summary
 
-**Current state:** Phase 1 authentication and infrastructure are largely done. A **frontend mockup** (homepage, shop, product detail) is implemented per DESIGN-SPEC.md with responsive layout and mock data. Product catalog backend (DB-003, CAT-001) remains the main gap to wire real data. Phase 2 and most of Phase 3 are not started.
+**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog schema (DB-003, DB-004, DB-006)** is implemented in code (`apps/backend/src/catalog/schema.ts`); run `db:push` to create tables. A **frontend mockup** (homepage with hero video, shop, product detail) is implemented per DESIGN-SPEC.md with responsive layout, Darkloom branding, and mock data. **CAT-001 (Product CRUD API)** is the main gap to wire real data. Phase 2 and most of Phase 3 are not started.
 
-**Recommended next step:** Implement **DB-003 (Products schema)** and **CAT-001 (Product CRUD API)**, then replace mock data with API calls in the frontend.
+**Recommended next step:** Run **`npx drizzle-kit push`** from apps/backend to apply catalog tables, then implement **CAT-001 (Product CRUD API)** and wire the frontend to it.
 
 ---
 
@@ -258,6 +258,7 @@ The **tshirtshop** B2C e-commerce platform is in **Phase 1 (Foundation)** with *
 
 | Date | Changes |
 |------|---------|
+| 2026-02-18 (current) | DB-003, DB-004, DB-006 DONE (catalog schema); DB-005 PARTIAL (brand on product); FND-005 note (dual schema); hero video + Darkloom branding; recommended steps reordered (db:push, then CAT-001) |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
 | 2026-02-14 | Initial audit |
 
