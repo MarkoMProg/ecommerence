@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, desc, sql, and, or, ilike, type SQL } from 'drizzle-orm';
+import { eq, desc, asc, sql, and, or, ilike, gte, lte, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -36,12 +36,25 @@ export interface UpdateProductDto {
   dimensionImperial?: string;
 }
 
+export type ProductSortOption =
+  | 'newest'
+  | 'price-asc'
+  | 'price-desc'
+  | 'name-asc'
+  | 'name-desc';
+
 export interface ListProductsQuery {
   page?: number;
   limit?: number;
   category?: string;
   /** Search query: case-insensitive match on name and description */
   q?: string;
+  /** Faceted filters */
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  /** Sort: newest (default), price-asc, price-desc, name-asc, name-desc */
+  sort?: ProductSortOption;
 }
 
 /** Escape %, _, \ for safe use in ILIKE pattern */
@@ -59,6 +72,15 @@ export class CatalogService {
   async listCategories(): Promise<Category[]> {
     const rows = await this.db.select().from(category).orderBy(category.name);
     return rows;
+  }
+
+  /** Distinct brands for faceted filter UI */
+  async getDistinctBrands(): Promise<string[]> {
+    const rows = await this.db
+      .selectDistinct({ brand: product.brand })
+      .from(product)
+      .orderBy(product.brand);
+    return rows.map((r) => r.brand);
   }
 
   async getCategoryById(id: string): Promise<Category | null> {
@@ -92,14 +114,35 @@ export class CatalogService {
         or(ilike(product.name, pattern), ilike(product.description, pattern))!,
       );
     }
+    if (query.brand && query.brand.trim().length > 0) {
+      conditions.push(eq(product.brand, query.brand.trim()));
+    }
+    if (query.minPrice != null && query.minPrice >= 0) {
+      conditions.push(gte(product.priceCents, Math.round(query.minPrice * 100)));
+    }
+    if (query.maxPrice != null && query.maxPrice >= 0) {
+      conditions.push(lte(product.priceCents, Math.round(query.maxPrice * 100)));
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortOption = query.sort ?? 'newest';
+    const orderByClause =
+      sortOption === 'price-asc'
+        ? asc(product.priceCents)
+        : sortOption === 'price-desc'
+          ? desc(product.priceCents)
+          : sortOption === 'name-asc'
+            ? asc(product.name)
+            : sortOption === 'name-desc'
+              ? desc(product.name)
+              : desc(product.createdAt);
 
     const [data, countResult] = await Promise.all([
       this.db
         .select()
         .from(product)
         .where(whereClause)
-        .orderBy(desc(product.createdAt))
+        .orderBy(orderByClause)
         .limit(limit)
         .offset(offset),
       this.db

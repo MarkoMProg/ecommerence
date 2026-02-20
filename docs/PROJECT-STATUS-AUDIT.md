@@ -101,7 +101,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | CAT-005 | NOT STARTED | No sorting (category filter exists) |
 | CAT-006 | NOT STARTED | No suggestions |
 
-**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct) with absolute URLs for RSC; `lib/mock-data.ts` is unused.
+**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct) with absolute URLs for RSC.
 
 ### 3.5 Frontend Pages
 
@@ -167,8 +167,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 2. ~~**DB-001: ERD**~~ **DONE** — `docs/ERD.md` (Mermaid; auth + catalog; future tables noted).
 
-3. **Optional: Remove `lib/mock-data.ts`**
-   - No longer used by homepage, shop, or product detail. Can deprecate or delete.
+3. ~~**Optional: Remove `lib/mock-data.ts`**~~ **DONE** — Deleted; homepage, shop, product detail use API.
 
 ### 5.2 Short-Term (Complete Phase 1)
 

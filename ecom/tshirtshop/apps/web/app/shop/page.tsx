@@ -1,30 +1,79 @@
 import Link from "next/link";
-import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
+import { fetchProducts, fetchCategories, fetchBrands } from "@/lib/api/catalog";
 
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    q?: string;
+    brand?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    sort?: string;
+  }>;
 }) {
-  const { category: categoryParam, q: qParam } = await searchParams;
-  const categoryFilter = categoryParam ?? "all";
-  const searchQuery = qParam?.trim() || undefined;
+  const params = await searchParams;
+  const categoryFilter = params.category ?? "all";
+  const searchQuery = params.q?.trim() || undefined;
+  const brandFilter = params.brand?.trim() || undefined;
+  const minPrice = params.minPrice != null ? parseFloat(params.minPrice) : undefined;
+  const maxPrice = params.maxPrice != null ? parseFloat(params.maxPrice) : undefined;
+  const sort =
+    params.sort === "price-asc" ||
+    params.sort === "price-desc" ||
+    params.sort === "name-asc" ||
+    params.sort === "name-desc"
+      ? params.sort
+      : undefined;
 
   let products: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
+  let brands: string[] = [];
 
   try {
-    const [productsRes, categoriesData] = await Promise.all([
+    const [productsRes, categoriesData, brandsData] = await Promise.all([
       fetchProducts({
         category: categoryFilter === "all" ? undefined : categoryFilter,
         q: searchQuery,
+        brand: brandFilter,
+        minPrice: !Number.isNaN(minPrice) && minPrice != null ? minPrice : undefined,
+        maxPrice: !Number.isNaN(maxPrice) && maxPrice != null ? maxPrice : undefined,
+        sort,
       }),
       fetchCategories(),
+      fetchBrands(),
     ]);
     products = productsRes.products;
     categories = categoriesData;
+    brands = brandsData;
   } catch (err) {
     console.error("[ShopPage] API fetch failed:", err);
+  }
+
+  function buildShopQuery(overrides: {
+    category?: string;
+    q?: string;
+    brand?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    sort?: string;
+  }): string {
+    const category = overrides.category ?? (categoryFilter === "all" ? undefined : categoryFilter);
+    const q = overrides.q ?? searchQuery;
+    const brand = overrides.brand ?? brandFilter;
+    const mp = overrides.minPrice ?? (minPrice != null && !Number.isNaN(minPrice) ? minPrice : undefined);
+    const mx = overrides.maxPrice ?? (maxPrice != null && !Number.isNaN(maxPrice) ? maxPrice : undefined);
+    const s = overrides.sort ?? sort;
+    const sp = new URLSearchParams();
+    if (category && category !== "all") sp.set("category", category);
+    if (q) sp.set("q", q);
+    if (brand) sp.set("brand", brand);
+    if (mp != null) sp.set("minPrice", String(mp));
+    if (mx != null) sp.set("maxPrice", String(mx));
+    if (s) sp.set("sort", s);
+    const qs = sp.toString();
+    return qs ? `/shop?${qs}` : "/shop";
   }
 
   return (
@@ -37,14 +86,18 @@ export default async function ShopPage({
       </h1>
 
       {/* Search */}
-      <form
-        action="/shop"
-        method="get"
-        className="mb-6 sm:mb-8"
-      >
+      <form action="/shop" method="get" className="mb-6 sm:mb-8">
         {categoryFilter !== "all" && (
           <input type="hidden" name="category" value={categoryFilter} />
         )}
+        {brandFilter && <input type="hidden" name="brand" value={brandFilter} />}
+        {minPrice != null && !Number.isNaN(minPrice) && (
+          <input type="hidden" name="minPrice" value={minPrice} />
+        )}
+        {maxPrice != null && !Number.isNaN(maxPrice) && (
+          <input type="hidden" name="maxPrice" value={maxPrice} />
+        )}
+        {sort && <input type="hidden" name="sort" value={sort} />}
         <div className="flex gap-2">
           <input
             type="search"
@@ -63,10 +116,90 @@ export default async function ShopPage({
         </div>
       </form>
 
-      {/* Filters — text links */}
+      {/* Faceted filters + sort */}
+      <form action="/shop" method="get" className="mb-6 flex flex-wrap items-end gap-4">
+        {categoryFilter !== "all" && (
+          <input type="hidden" name="category" value={categoryFilter} />
+        )}
+        {searchQuery && <input type="hidden" name="q" value={searchQuery} />}
+        <div>
+          <label htmlFor="brand" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+            Brand
+          </label>
+          <select
+            id="brand"
+            name="brand"
+            className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
+            defaultValue={brandFilter ?? ""}
+          >
+            <option value="">All</option>
+            {brands.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="minPrice" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+            Min $ (USD)
+          </label>
+          <input
+            id="minPrice"
+            name="minPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0"
+            defaultValue={!Number.isNaN(minPrice) ? minPrice : ""}
+            className="min-h-[44px] w-24 rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
+          />
+        </div>
+        <div>
+          <label htmlFor="maxPrice" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+            Max $ (USD)
+          </label>
+          <input
+            id="maxPrice"
+            name="maxPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Any"
+            defaultValue={!Number.isNaN(maxPrice) ? maxPrice : ""}
+            className="min-h-[44px] w-24 rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
+          />
+        </div>
+        <div>
+          <label htmlFor="sort" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+            Sort
+          </label>
+          <select
+            id="sort"
+            name="sort"
+            className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
+            defaultValue={sort ?? ""}
+            onChange={(e) => e.currentTarget.form?.submit()}
+          >
+            <option value="">Newest</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="name-asc">Name: A–Z</option>
+            <option value="name-desc">Name: Z–A</option>
+          </select>
+        </div>
+        <button
+          type="submit"
+          className="min-h-[44px] rounded-md border border-white/30 px-4 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:border-white hover:bg-white/5"
+        >
+          Apply
+        </button>
+      </form>
+
+      {/* Category filters — text links */}
       <div className="mb-8 flex flex-wrap gap-3 border-b border-white/10 pb-4 sm:mb-12 sm:gap-6 sm:pb-6">
         <Link
-          href={searchQuery ? `/shop?q=${encodeURIComponent(searchQuery)}` : "/shop"}
+          href={buildShopQuery({ category: "all" })}
           className={`min-h-[44px] py-2 text-xs uppercase tracking-wider transition-colors sm:text-sm ${
             categoryFilter === "all"
               ? "text-[#FF4D00]"
@@ -78,7 +211,7 @@ export default async function ShopPage({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/shop?category=${cat.slug}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
+            href={buildShopQuery({ category: cat.slug })}
             className={`min-h-[44px] py-2 text-xs uppercase tracking-wider transition-colors sm:text-sm ${
               categoryFilter === cat.slug
                 ? "text-[#FF4D00]"

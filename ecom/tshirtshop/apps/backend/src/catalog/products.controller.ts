@@ -32,18 +32,42 @@ export class ProductsController {
     @Query('limit') limit?: string,
     @Query('category') category?: string,
     @Query('q') q?: string,
+    @Query('brand') brand?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('sort') sort?: string,
   ) {
     const result = await this.catalogService.listProducts({
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       category,
       q: q?.trim() || undefined,
+      brand: brand?.trim() || undefined,
+      minPrice: minPrice != null ? parseFloat(minPrice) : undefined,
+      maxPrice: maxPrice != null ? parseFloat(maxPrice) : undefined,
+      sort:
+        sort === 'price-asc' ||
+        sort === 'price-desc' ||
+        sort === 'name-asc' ||
+        sort === 'name-desc'
+          ? sort
+          : undefined,
     });
     return {
       success: true,
       data: result.data,
       pagination: result.pagination,
       message: 'Products retrieved successfully',
+    };
+  }
+
+  @Get('brands')
+  async getBrands() {
+    const brands = await this.catalogService.getDistinctBrands();
+    return {
+      success: true,
+      data: brands,
+      message: 'Brands retrieved successfully',
     };
   }
 

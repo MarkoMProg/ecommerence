@@ -112,18 +112,34 @@ export async function fetchCategories(): Promise<ApiCategory[]> {
   return json.data;
 }
 
+export async function fetchBrands(): Promise<string[]> {
+  const url = apiUrl("/api/v1/products/brands");
+  const res = await fetchApi(url);
+  if (!res.ok) throw new Error(`Brands fetch failed: ${res.status}`);
+  const json = (await res.json()) as { success: boolean; data: string[]; error?: ApiErrorPayload };
+  if (!json.success) throw new Error(json.error?.message ?? "Brands fetch failed");
+  return json.data;
+}
+
 export async function fetchProducts(options?: {
   page?: number;
   limit?: number;
   category?: string;
-  /** Search query: case-insensitive match on name and description */
   q?: string;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc';
 }): Promise<{ products: ProductDisplay[]; pagination: { page: number; limit: number; total: number } }> {
   const params = new URLSearchParams();
   if (options?.page) params.set('page', String(options.page));
   if (options?.limit) params.set('limit', String(options.limit));
   if (options?.category) params.set('category', options.category);
   if (options?.q?.trim()) params.set('q', options.q.trim());
+  if (options?.brand?.trim()) params.set('brand', options.brand.trim());
+  if (options?.minPrice != null && options.minPrice >= 0) params.set('minPrice', String(options.minPrice));
+  if (options?.maxPrice != null && options.maxPrice >= 0) params.set('maxPrice', String(options.maxPrice));
+  if (options?.sort) params.set('sort', options.sort);
   const qs = params.toString();
   const url = apiUrl(`/api/v1/products${qs ? `?${qs}` : ''}`);
   const res = await fetchApi(url);
