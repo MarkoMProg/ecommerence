@@ -7,6 +7,7 @@ import { BetterAuthCoreModule } from './auth/better-auth-core.module';
 import { AuthExtModule } from './auth/auth-ext.module';
 import { UsersModule } from './users/users.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { CartModule } from './cart/cart.module';
 import { betterAuth } from 'better-auth';
 import * as express from 'express';
 
@@ -25,6 +26,7 @@ type BetterAuthInstance = ReturnType<typeof betterAuth>;
     AuthExtModule,
     UsersModule,
     CatalogModule,
+    CartModule,
   ],
   controllers: [],
   providers: [],

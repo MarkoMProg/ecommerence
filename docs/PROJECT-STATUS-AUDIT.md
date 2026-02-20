@@ -1,6 +1,6 @@
 # Project Status Audit — tshirtshop
 
-**Generated:** 2026-02-18 (current state audit)  
+**Generated:** 2026-02-18 (audit refresh)  
 **Previous:** 2026-02-18  
 **Purpose:** Correlate implementation with documentation and provide recommended next steps.
 
@@ -8,12 +8,12 @@
 
 ## 1. Executive Summary
 
-The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundation)** with **Phase 3 (Experience)** partially started. Authentication and core infrastructure are implemented. **Product catalog** (DB-003, DB-004, DB-006, CAT-001–CAT-005) is implemented: schema, CRUD API, category browsing, **search**, **faceted filtering** (brand, price range), **sorting** (newest, price, name), seed script, and **frontend wired to live API**. Homepage, shop (search, filters, sort), and product detail pages fetch from the backend. Commerce workflows (cart, checkout, payments) remain to be built.
+The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)** largely complete and **Phase 2 (Commerce)** partially started. Authentication and core infrastructure are implemented. **Product catalog** (CAT-001–CAT-006) is complete. **Cart** schema and core APIs (CART-001 to CART-004) are implemented: add item, remove item, update quantity; guest carts via X-Cart-Id header. Cart page (UI-004) and CART-005/006 (guest cart cookie, user cart persistence) remain. Checkout and payments not started.
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1 — Foundation | In Progress | ~92% |
-| Phase 2 — Commerce | Not Started | 0% |
+| Phase 1 — Foundation | Near Complete | ~95% |
+| Phase 2 — Commerce | In Progress | ~25% |
 | Phase 3 — Experience | In Progress | ~25% |
 
 ---
@@ -51,7 +51,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | FND-002 | DONE | DONE | NestJS backend configured |
 | FND-003 | DONE | DONE | Next.js 16, App Router |
 | FND-004 | DONE | DONE | PostgreSQL + Drizzle |
-| FND-005 | DONE | DONE | Drizzle ORM; schema in `auth/schema.ts` + `catalog/schema.ts` |
+| FND-005 | DONE | DONE | Drizzle ORM; schema in `auth/schema.ts`, `catalog/schema.ts`, `cart/schema.ts` |
 | FND-006 | NOT STARTED | NOT STARTED | No Dockerfiles |
 
 ### 3.2 Authentication (AUTH-001 to AUTH-010)
@@ -80,7 +80,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Task | Doc Status | Actual Status | Notes |
 |------|------------|----------------|-------|
-| DB-001 | **DONE** | **DONE** | ERD in `docs/ERD.md` (auth + catalog) |
+| DB-001 | **DONE** | **DONE** | ERD in `docs/ERD.md` (auth + catalog + cart) |
 | DB-002 | DONE | DONE | Users schema (better-auth: user, session, account, verification, two_factor) |
 | DB-003 | DONE | DONE | Products table in `apps/backend/src/catalog/schema.ts` |
 | DB-004 | DONE | DONE | Categories table in same file |
@@ -88,7 +88,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | DB-006 | DONE | DONE | product_image table in catalog schema |
 | DB-007 | NOT STARTED | NOT STARTED | No extra indexes on catalog tables yet |
 
-**Current schema:** `apps/backend/src/auth/schema.ts` (auth) + `apps/backend/src/catalog/schema.ts` (category, product, product_image). Drizzle config and DatabaseModule include both. **Run `npx drizzle-kit push` from apps/backend to create catalog tables** if not yet applied.
+**Current schema:** `apps/backend/src/auth/schema.ts` (auth) + `apps/backend/src/catalog/schema.ts` (category, product, product_image) + `apps/backend/src/cart/schema.ts` (cart, cart_item). Drizzle config and DatabaseModule include all three. **Run `npm run db:push` from apps/backend** to apply schema changes.
 
 ### 3.4 Product Catalog (CAT-001 to CAT-006)
 
@@ -101,7 +101,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | CAT-005 | **DONE** | Sort options: newest (default), price-asc, price-desc, name-asc, name-desc; sort dropdown on shop page |
 | CAT-006 | **DONE** | Search suggestions: `GET /api/v1/products/suggestions?q=`; autocomplete dropdown on shop search (products, categories, brands) |
 
-**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands` for distinct brands. Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands) with absolute URLs for RSC.
+**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands`, `GET /api/v1/products/suggestions`. Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands, fetchSearchSuggestions). Shop page has `ShopSearchInput` (autocomplete) and `ShopFiltersForm` (client component for sort onChange).
 
 ### 3.5 Frontend Pages
 
@@ -110,13 +110,13 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | Home | **DONE (API)** | `/` | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API) |
 | Product listing | **DONE (API)** | `/shop` | Search form, category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
 | Product detail | **DONE (API)** | `/shop/[id]` | Gallery, size selector, accordion, related products; fetches from API |
-| Cart | NOT STARTED | — | — |
+| Cart | API DONE, UI NOT STARTED | — | Backend: GET/POST/PATCH/DELETE `/api/v1/cart`; frontend Add to Cart still mockup |
 | Checkout | NOT STARTED | — | — |
 | User account | Partial | `/auth/login` when logged in | Profile card; no dedicated account page |
 | Admin dashboard | NOT STARTED | — | — |
 | Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
 
-**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Branding:** Darkloom. **API client:** `lib/api/catalog.ts` — uses `API_URL` (default `http://localhost:3000`) for server-side fetch; Next.js rewrites `/api/v1/*` for client.
+**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Branding:** Darkloom. **API client:** `lib/api/catalog.ts` — uses `API_URL` (default `http://127.0.0.1:3000` for Windows ECONNREFUSED fix); Next.js rewrites `/api/v1/*` for client.
 
 ### 3.6 Design & UX (New)
 
@@ -129,9 +129,10 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ### 3.7 Commerce & Experience
 
-- **Cart, Checkout, Payments, Orders, Reviews, Admin:** All NOT STARTED.
-- **Tests:** Auth unit tests (`jwt-auth.guard`, `auth.controller`, `auth.service`, `dto`). Catalog tests: DTO validation, CatalogService, ProductsController, CategoriesController. All 87 tests pass.
-- **Build:** Production build passes (auth-provider type fix, Suspense for useSearchParams).
+- **Cart (CART-001–CART-004):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. CART-005 (guest cart cookie), CART-006 (user cart persistence) NOT STARTED.
+- **Checkout, Payments, Orders, Reviews, Admin:** NOT STARTED.
+- **Tests:** Auth + catalog tests. All 87 tests pass. No cart tests yet.
+- **Build:** Production build passes.
 
 ---
 
@@ -155,7 +156,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 - `DATABASE_URL` and `BETTER_AUTH_SECRET` are required.
 - Backend and frontend can run without Resend, reCAPTCHA, or OAuth.
 - **Catalog:** Run `npm run db:seed` from apps/backend to populate products/categories.
-- **Frontend API:** Set `API_URL` in `apps/web/.env.local` if backend runs on a different port (default: `http://localhost:3000`).
+- **Frontend API:** Set `API_URL` in `apps/web/.env.local` if backend runs on a different port (default: `http://127.0.0.1:3000`).
 
 ---
 
@@ -181,23 +182,23 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ### 5.3 Medium-Term (Phase 2)
 
-8. **CART-001 to CART-006:** Cart schema and APIs.
+8. ~~**CART-001 to CART-004**~~ **DONE** — Cart schema, add/remove/update item APIs. **CART-005, CART-006 remaining:** guest cart cookie, user cart persistence.
+9. **UI-004:** Cart page — wire Add to Cart to API, display cart.
+10. **ORD-001 to ORD-005:** Order schema and lifecycle.
 
-9. **ORD-001 to ORD-005:** Order schema and lifecycle.
+11. **CHK-001 to CHK-004:** Checkout flow.
 
-10. **CHK-001 to CHK-004:** Checkout flow.
-
-11. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox).
+12. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox).
 
 ### 5.4 Long-Term (Phase 3)
 
-12. **UI-004 to UI-007:** Cart page, checkout page, user account page, admin dashboard.
+13. **UI-005 to UI-007:** Checkout page, user account page, admin dashboard.
 
-13. **REV-001 to REV-004:** Reviews system.
+14. **REV-001 to REV-004:** Reviews system.
 
-14. **ADM-001 to ADM-004:** Admin RBAC and tools.
+15. **ADM-001 to ADM-004:** Admin RBAC and tools.
 
-15. **SEC-001 to SEC-003, PERF-001 to PERF-002:** Security and performance hardening.
+16. **SEC-001 to SEC-003, PERF-001 to PERF-002:** Security and performance hardening.
 
 ---
 
@@ -207,7 +208,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 |------|--------|--------|
 | Security | Auth follows best practices | Add rate limiting (SEC-002) when needed |
 | Data | No card storage | Maintain as-is |
-| Tests | Auth only | Add tests before new features |
+| Tests | Auth + catalog (87 pass) | Add cart tests; no E2E yet |
 | Docker | Not implemented | Required for final deliverable |
 | Build | Fixed | Auth-provider type, Suspense, API types — production build passes |
 | OAuth | Conditional registration | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev |
@@ -224,15 +225,15 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 - [environment-setup.md](./07-DEVOPS/environment-setup.md) — Setup guide
 - [DESIGN-SPEC.md](./DESIGN-SPEC.md) — Premium DnD Apparel design spec
 - [DOCS-VS-IMPLEMENTATION-GAPS.md](./DOCS-VS-IMPLEMENTATION-GAPS.md) — Gap analysis (docs vs code)
-- [ERD.md](./ERD.md) — Entity relationship diagram (auth + catalog)
+- [ERD.md](./ERD.md) — Entity relationship diagram (auth + catalog + cart)
 
 ---
 
 ## 8. Summary
 
-**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog** is implemented: schema (DB-003, DB-004, DB-006), CRUD API (CAT-001), category browsing (CAT-002), **search** (CAT-003), **faceted filtering + sorting** (CAT-004, CAT-005), **search suggestions** (CAT-006), seed script, and **frontend wired to live API**. Homepage, shop (search with autocomplete, category, brand, price, sort), and product detail fetch from `/api/v1/products`, `/api/v1/categories`, `/api/v1/products/brands`, `/api/v1/products/suggestions`. Catalog routes use `@AllowAnonymous()`. OAuth providers only registered when credentials are set (avoids CLIENT_ID_AND_SECRET_REQUIRED). Phase 2 (cart, checkout, payments) and most of Phase 3 are not started.
+**Current state:** Phase 1 (auth, catalog, tests) is largely complete. **Catalog** (CAT-001–CAT-006) is implemented with search, filters, sort, suggestions. **Cart** (CART-001–CART-004): schema (cart, cart_item), add/remove/update item APIs; guest carts via X-Cart-Id. Cart page (UI-004) not started—Add to Cart is still a mockup. Phase 2: cart APIs done; checkout, orders, payments not started. Phase 3: homepage, shop, product detail done; cart page, checkout page, account, admin not started.
 
-**Recommended next step:** **TEST-001 to TEST-004** (catalog/auth tests) or **Phase 2** (cart, checkout).
+**Recommended next step:** **UI-004** (cart page—wire Add to Cart to API), **CART-005** (guest cart cookie), or **CART-006** (user cart persistence).
 
 ---
 
@@ -240,7 +241,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Date | Changes |
 |------|---------|
-| 2026-02-18 (current) | CAT-006 DONE (search suggestions, autocomplete); Phase 1 catalog complete; recommended next: tests or Phase 2 |
+| 2026-02-18 (current) | CART-001–CART-004 DONE (cart schema, add/remove/update APIs); Phase 2 ~25%; API_URL default 127.0.0.1; ShopFiltersForm client component; recommended next: UI-004, CART-005/006 |
 | 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
 | 2026-02-14 | Initial audit |
