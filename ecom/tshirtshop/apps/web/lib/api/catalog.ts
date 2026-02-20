@@ -6,7 +6,8 @@ function apiUrl(path: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}${path}`;
   }
-  const base = process.env.API_URL || "http://localhost:3000";
+  // Use 127.0.0.1 to avoid Windows IPv6 localhost resolution issues (ECONNREFUSED)
+  const base = process.env.API_URL || "http://127.0.0.1:3000";
   return `${base}${path}`;
 }
 
@@ -127,7 +128,7 @@ export async function fetchSearchSuggestions(
   if (trimmed.length < 2) {
     return { products: [], categories: [], brands: [] };
   }
-  const base = typeof window !== "undefined" ? window.location.origin : process.env.API_URL || "http://localhost:3000";
+  const base = typeof window !== "undefined" ? window.location.origin : process.env.API_URL || "http://127.0.0.1:3000";
   const url = `${base}/api/v1/products/suggestions?q=${encodeURIComponent(trimmed)}&limit=${limit}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return { products: [], categories: [], brands: [] };
