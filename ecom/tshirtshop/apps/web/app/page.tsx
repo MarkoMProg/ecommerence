@@ -4,6 +4,7 @@ import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 export default async function HomePage() {
   let featuredProducts: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
+  let apiUnreachable = false;
 
   try {
     const [productsRes, categoriesData] = await Promise.all([
@@ -14,6 +15,7 @@ export default async function HomePage() {
     categories = categoriesData;
   } catch (err) {
     console.error("[HomePage] API fetch failed:", err);
+    apiUnreachable = true;
   }
   return (
     <>
@@ -59,6 +61,11 @@ export default async function HomePage() {
           >
             Featured Drops
           </h2>
+          {apiUnreachable && (
+            <p className="mb-6 text-sm text-white/60">
+              Catalog API unreachable. Start the backend with: cd apps/backend && npm run dev
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
             {featuredProducts.map((product) => (
               <Link
@@ -131,6 +138,9 @@ export default async function HomePage() {
           >
             Shop by Category
           </h2>
+          {apiUnreachable && categories.length === 0 && (
+            <p className="mb-6 text-sm text-white/60">Categories will load when the backend is running.</p>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
             {categories.map((category) => (
               <Link
