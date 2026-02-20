@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { fetchProducts, fetchCategories, fetchBrands } from "@/lib/api/catalog";
 import { ShopSearchInput } from "@/components/shop-search-input";
 import { ShopFiltersForm } from "@/components/shop-filters-form";
@@ -32,6 +33,7 @@ export default async function ShopPage({
   let products: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
   let brands: string[] = [];
+  let apiUnreachable = false;
 
   try {
     const [productsRes, categoriesData, brandsData] = await Promise.all([
@@ -51,6 +53,7 @@ export default async function ShopPage({
     brands = brandsData;
   } catch (err) {
     console.error("[ShopPage] API fetch failed:", err);
+    apiUnreachable = true;
   }
 
   function buildShopQuery(overrides: {
@@ -99,8 +102,9 @@ export default async function ShopPage({
         />
       </div>
 
-      {/* Faceted filters + sort */}
-      <ShopFiltersForm
+      {/* Faceted filters + sort — wrapped in Suspense (uses useSearchParams) */}
+      <Suspense fallback={<div className="mb-6 h-[120px]" />}>
+        <ShopFiltersForm
         category={categoryFilter !== "all" ? categoryFilter : undefined}
         searchQuery={searchQuery}
         brandFilter={brandFilter}
@@ -108,7 +112,8 @@ export default async function ShopPage({
         maxPrice={maxPrice != null && !Number.isNaN(maxPrice) ? maxPrice : undefined}
         sort={sort}
         brands={brands}
-      />
+        />
+      </Suspense>
 
       {/* Category filters — text links */}
       <div className="mb-8 flex flex-wrap gap-3 border-b border-white/10 pb-4 sm:mb-12 sm:gap-6 sm:pb-6">
@@ -167,7 +172,11 @@ export default async function ShopPage({
 
       {products.length === 0 && (
         <p className="py-20 text-center text-white/60">
-          {searchQuery ? `No products found for "${searchQuery}".` : "No products in this category."}
+          {apiUnreachable
+            ? "Catalog API unreachable. Is the backend running? Start it with: cd apps/backend && npm run dev"
+            : searchQuery
+              ? `No products found for "${searchQuery}".`
+              : "No products in this category."}
         </p>
       )}
     </div>

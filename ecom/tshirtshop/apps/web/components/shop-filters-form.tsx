@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
+
 export interface ShopFiltersFormProps {
   category?: string;
   searchQuery?: string;
@@ -19,6 +21,17 @@ export function ShopFiltersForm({
   sort,
   brands,
 }: ShopFiltersFormProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  function buildSortUrl(newSort: string) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (newSort) sp.set("sort", newSort);
+    else sp.delete("sort");
+    const qs = sp.toString();
+    return qs ? `/shop?${qs}` : "/shop";
+  }
+
   return (
     <form action="/shop" method="get" className="mb-6 flex flex-wrap items-end gap-4">
       {category && category !== "all" && (
@@ -82,7 +95,7 @@ export function ShopFiltersForm({
           name="sort"
           className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
           defaultValue={sort ?? ""}
-          onChange={(e) => e.currentTarget.form?.submit()}
+          onChange={(e) => router.replace(buildSortUrl(e.target.value))}
         >
           <option value="">Newest</option>
           <option value="price-asc">Price: Low to High</option>
