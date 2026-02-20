@@ -8,6 +8,7 @@ const navLinks = [
   { href: "/shop", label: "Shop" },
   { href: "/cart", label: "Cart" },
   { href: "/account", label: "Account" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export function Header() {

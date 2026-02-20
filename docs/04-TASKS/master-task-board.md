@@ -165,7 +165,7 @@ Each task must have one of the following statuses:
 | UI-004 | Implement cart page            | DONE        |
 | UI-005 | Implement checkout page        | DONE        |
 | UI-006 | Implement user account page    | DONE        |
-| UI-007 | Implement admin dashboard      | NOT STARTED |
+| UI-007 | Implement admin dashboard      | DONE        |
 
 ---
 
@@ -185,8 +185,8 @@ Each task must have one of the following statuses:
 | ID      | Task                            | Status      |
 | ------- | ------------------------------- | ----------- |
 | ADM-001 | Implement RBAC system           | NOT STARTED |
-| ADM-002 | Implement product admin tools   | NOT STARTED |
-| ADM-003 | Implement order management UI   | NOT STARTED |
+| ADM-002 | Implement product admin tools   | DONE        |
+| ADM-003 | Implement order management UI   | DONE        |
 | ADM-004 | Implement user management tools | NOT STARTED |
 
 ---

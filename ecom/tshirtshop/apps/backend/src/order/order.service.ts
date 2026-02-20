@@ -49,6 +49,23 @@ export class OrderService {
   ) {}
 
   /**
+   * Get all orders (UI-007 admin). Returns most recent first.
+   */
+  async getAllOrders(): Promise<OrderDto[]> {
+    const orders = await this.db
+      .select()
+      .from(order)
+      .orderBy(desc(order.createdAt));
+
+    const result: OrderDto[] = [];
+    for (const o of orders) {
+      const dto = await this.getOrderById(o.id);
+      if (dto) result.push(dto);
+    }
+    return result;
+  }
+
+  /**
    * Get orders for a user (UI-006). Returns most recent first.
    */
   async getOrdersByUserId(userId: string): Promise<OrderDto[]> {
