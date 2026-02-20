@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
 
-const navLinks = [
+const baseNavLinks = [
   { href: "/", label: "Home" },
   { href: "/shop", label: "Shop" },
   { href: "/cart", label: "Cart" },
-  { href: "/account", label: "Account" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { session } = useAuth();
+
+  const navLinks = [
+    ...baseNavLinks,
+    session?.user
+      ? { href: "/account", label: "Account" }
+      : { href: "/auth/login", label: "Login" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur">
