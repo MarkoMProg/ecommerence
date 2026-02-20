@@ -66,7 +66,7 @@ Each task must have one of the following statuses:
 
 | ID     | Task                        | Status      |
 | ------ | --------------------------- | ----------- |
-| DB-001 | Create ERD documentation    | NOT STARTED |
+| DB-001 | Create ERD documentation    | DONE        |
 | DB-002 | Define users schema         | DONE        |
 | DB-003 | Define products schema      | DONE        |
 | DB-004 | Define categories schema    | DONE        |

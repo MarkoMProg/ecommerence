@@ -35,20 +35,28 @@ export interface ApiProduct {
   category: ApiCategory | null;
 }
 
+export interface ApiErrorPayload {
+  code?: string;
+  message?: string;
+}
+
 export interface ApiProductsResponse {
   success: boolean;
   data: ApiProduct[];
   pagination: { page: number; limit: number; total: number };
+  error?: ApiErrorPayload;
 }
 
 export interface ApiCategoriesResponse {
   success: boolean;
   data: ApiCategory[];
+  error?: ApiErrorPayload;
 }
 
 export interface ApiProductResponse {
   success: boolean;
   data: ApiProduct | null;
+  error?: ApiErrorPayload;
 }
 
 /** Shape used by frontend components (price in dollars, primary image) */
@@ -100,7 +108,7 @@ export async function fetchCategories(): Promise<ApiCategory[]> {
   const res = await fetchApi(url);
   if (!res.ok) throw new Error(`Categories fetch failed: ${res.status}`);
   const json = (await res.json()) as ApiCategoriesResponse;
-  if (!json.success) throw new Error(json.error?.message ?? 'Categories fetch failed');
+  if (!json.success) throw new Error(json.error?.message ?? "Categories fetch failed");
   return json.data;
 }
 

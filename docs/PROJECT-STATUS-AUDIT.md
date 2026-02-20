@@ -80,7 +80,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Task | Doc Status | Actual Status | Notes |
 |------|------------|----------------|-------|
-| DB-001 | NOT STARTED | NOT STARTED | No ERD |
+| DB-001 | **DONE** | **DONE** | ERD in `docs/ERD.md` (auth + catalog) |
 | DB-002 | DONE | DONE | Users schema (better-auth: user, session, account, verification, two_factor) |
 | DB-003 | DONE | DONE | Products table in `apps/backend/src/catalog/schema.ts` |
 | DB-004 | DONE | DONE | Categories table in same file |
@@ -131,7 +131,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 - **Cart, Checkout, Payments, Orders, Reviews, Admin:** All NOT STARTED.
 - **Tests:** Auth unit tests exist (`jwt-auth.guard`, `auth.controller`, `auth.service`, `dto`). No product/catalog tests.
-- **Build:** Known type error in `auth-provider.tsx` (twoFactorEnabled: `null` vs `boolean | undefined`) prevents full production build. Dev server runs.
+- **Build:** Production build passes (auth-provider type fix, Suspense for useSearchParams).
 
 ---
 
@@ -163,12 +163,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ### 5.1 Immediate (Unblock Phase 1 Completion)
 
-1. **Fix auth-provider type error**
-   - Resolve `twoFactorEnabled` type mismatch to unblock production build.
+1. ~~**Fix auth-provider type error**~~ **DONE** — `twoFactorEnabled?: boolean | null`; Suspense for useSearchParams pages; API error types.
 
-2. **DB-001: ERD**
-   - Create ERD for auth + catalog (and future cart/orders).
-   - Store in `docs/` or a dedicated diagrams folder.
+2. ~~**DB-001: ERD**~~ **DONE** — `docs/ERD.md` (Mermaid; auth + catalog; future tables noted).
 
 3. **Optional: Remove `lib/mock-data.ts`**
    - No longer used by homepage, shop, or product detail. Can deprecate or delete.
@@ -213,7 +210,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | Data | No card storage | Maintain as-is |
 | Tests | Auth only | Add tests before new features |
 | Docker | Not implemented | Required for final deliverable |
-| Build | Type error in auth-provider | Fix before production deploy |
+| Build | Fixed | Auth-provider type, Suspense, API types — production build passes |
 | OAuth | Conditional registration | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev |
 
 ---
@@ -228,6 +225,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 - [environment-setup.md](./07-DEVOPS/environment-setup.md) — Setup guide
 - [DESIGN-SPEC.md](./DESIGN-SPEC.md) — Premium DnD Apparel design spec
 - [DOCS-VS-IMPLEMENTATION-GAPS.md](./DOCS-VS-IMPLEMENTATION-GAPS.md) — Gap analysis (docs vs code)
+- [ERD.md](./ERD.md) — Entity relationship diagram (auth + catalog)
 
 ---
 

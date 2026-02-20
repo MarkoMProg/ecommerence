@@ -8,7 +8,8 @@ interface AuthUser {
   email: string;
   name: string;
   image?: string | null;
-  twoFactorEnabled?: boolean;
+  /** better-auth may return null when 2FA not configured */
+  twoFactorEnabled?: boolean | null;
 }
 
 interface AuthContextType {

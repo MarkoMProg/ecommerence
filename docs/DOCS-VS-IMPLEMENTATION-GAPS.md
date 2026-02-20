@@ -19,7 +19,7 @@ This document cross-references the project documentation against the current imp
 
 | Doc Requirement | Status | Notes |
 |-----------------|--------|-------|
-| **ERD creation** | ❌ NOT DONE | DB-001: No ERD exists. Required per project-overview and foundation-requirements. |
+| **ERD creation** | ✅ DONE | DB-001: `docs/ERD.md` — auth + catalog; Mermaid format. |
 | **Product catalog schema** | ✅ DONE | DB-003 to DB-006: category, product, product_image in `apps/backend/src/catalog/schema.ts`. |
 | **Product attributes** | ✅ DONE | description, stock_quantity, dimensions/weight in schema; API returns full product. |
 | **Category browsing API** | ✅ DONE | CAT-002: CategoriesController list + getById. |
