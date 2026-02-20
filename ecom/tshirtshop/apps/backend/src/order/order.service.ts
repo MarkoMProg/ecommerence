@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
@@ -47,6 +47,24 @@ export class OrderService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
   ) {}
+
+  /**
+   * Get orders for a user (UI-006). Returns most recent first.
+   */
+  async getOrdersByUserId(userId: string): Promise<OrderDto[]> {
+    const orders = await this.db
+      .select()
+      .from(order)
+      .where(eq(order.userId, userId))
+      .orderBy(desc(order.createdAt));
+
+    const result: OrderDto[] = [];
+    for (const o of orders) {
+      const dto = await this.getOrderById(o.id);
+      if (dto) result.push(dto);
+    }
+    return result;
+  }
 
   /**
    * Get order by ID (CHK-004). Used for order confirmation page.

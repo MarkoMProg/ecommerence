@@ -37,6 +37,9 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Button variant="secondary" asChild>
+              <Link href="/account">My Account</Link>
+            </Button>
+            <Button variant="secondary" asChild>
               <Link href="/auth/two-factor/setup">
                 Two-Factor Authentication
               </Link>

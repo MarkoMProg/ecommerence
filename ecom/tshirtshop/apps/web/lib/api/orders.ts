@@ -52,6 +52,21 @@ export async function cancelOrder(orderId: string): Promise<Order | null> {
   }
 }
 
+/** List my orders (UI-006). Requires authentication. Returns null if API unreachable. */
+export async function fetchMyOrders(): Promise<Order[] | null> {
+  try {
+    const res = await fetch(`${apiBase()}/api/v1/orders`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: Order[] };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Fetch order by ID. Returns null if not found or API unreachable. */
 export async function fetchOrder(orderId: string): Promise<Order | null> {
   if (!orderId?.trim()) return null;

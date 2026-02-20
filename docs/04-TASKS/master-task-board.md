@@ -164,7 +164,7 @@ Each task must have one of the following statuses:
 | UI-003 | Implement product detail page  | DONE        |
 | UI-004 | Implement cart page            | DONE        |
 | UI-005 | Implement checkout page        | DONE        |
-| UI-006 | Implement user account page    | NOT STARTED |
+| UI-006 | Implement user account page    | DONE        |
 | UI-007 | Implement admin dashboard      | NOT STARTED |
 
 ---

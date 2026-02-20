@@ -113,7 +113,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | Cart | **DONE** | `/cart` | Cart page with item list, quantity controls, remove; Add to Cart on product detail; cart ID cookie (`darkloom_cart_id`); Cart link in header/footer |
 | Checkout | **DONE** | `/checkout` | Order summary, shipping address form (CHK-002 validation), Place Order wired to `POST /api/v1/checkout`; redirects to `/checkout/confirmation`; payment placeholder (PAY-001 pending) |
 | Order confirmation | **DONE** | `/checkout/confirmation` | Fetches order via `GET /api/v1/orders/:id`; displays items, totals, shipping address |
-| User account | Partial | `/auth/login` when logged in | Profile card; no dedicated account page |
+| User account | **DONE** | `/account` | Profile (name, email), order history (GET /api/v1/orders), 2FA/sign out links; redirects to login when unauthenticated |
 | Admin dashboard | NOT STARTED | — | — |
 | Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
 
@@ -191,7 +191,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ### 5.4 Long-Term (Phase 3)
 
-13. ~~**UI-005**~~ **DONE** — Checkout page. **UI-006, UI-007:** User account page, admin dashboard — NOT STARTED.
+13. ~~**UI-005**~~ **DONE** — Checkout page. ~~**UI-006**~~ **DONE** — User account page. **UI-007:** Admin dashboard — NOT STARTED.
 
 14. **REV-001 to REV-004:** Reviews system.
 
@@ -230,9 +230,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ## 8. Summary
 
-**Current state:** Phase 1 (auth, catalog, tests) is complete. Phase 2: **Catalog** (CAT-001–CAT-006), **Cart** (CART-001–CART-004, UI-004), **Checkout** (CHK-001–CHK-004, UI-005), and **Orders** (ORD-001, ORD-002) are implemented. Full flow: add to cart → cart page → checkout (address validation) → place order → confirmation page. Phase 3: Home, Shop, Product detail, Cart, Checkout done; User account (UI-006), Admin (UI-007) not started.
+**Current state:** Phase 1 (auth, catalog, tests) is complete. Phase 2: **Catalog** (CAT-001–CAT-006), **Cart** (CART-001–CART-004, UI-004), **Checkout** (CHK-001–CHK-004, UI-005), and **Orders** (ORD-001, ORD-002) are implemented. Full flow: add to cart → cart page → checkout (address validation) → place order → confirmation page. Phase 3: Home, Shop, Product detail, Cart, Checkout, User account (UI-006) done; Admin (UI-007) not started.
 
-**Recommended next step:** **PAY-001** (Stripe/PayPal sandbox), **ORD-003** (order status lifecycle), **UI-006** (user account page), or **FND-006** (Docker).
+**Recommended next step:** **PAY-001** (Stripe/PayPal sandbox), **FND-006** (Docker), or **UI-007** (admin dashboard).
 
 ---
 
@@ -241,6 +241,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | Date | Changes |
 |------|---------|
 | 2026-02-18 (audit) | Full audit refresh. Phase 2 ~65%, Phase 3 ~60%. Cart, Checkout (CHK-001–004), Orders (ORD-001–002), UI-004, UI-005 DONE. Order schema, confirmation page, address validation (CHK-002), order summary (CHK-003). 108 tests. API unreachable handling on Home/Shop. Recommended next: PAY-001, ORD-003, UI-006, FND-006. |
+| 2026-02-18 (UI-006) | User account page. GET /api/v1/orders (my orders) with auth, /account page (profile, order history, 2FA/sign out), header nav → /account. |
 | 2026-02-18 | CART-001–CART-004 DONE; UI-004 cart page; CHK-001–CHK-004, ORD-001/002; Place Order wired |
 | 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
