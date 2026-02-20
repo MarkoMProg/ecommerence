@@ -1,7 +1,7 @@
 # Entity Relationship Diagram — Darkloom
 
 **Created:** 2026-02-18 (DB-001)  
-**Source:** `apps/backend/src/auth/schema.ts`, `apps/backend/src/catalog/schema.ts`  
+**Source:** `apps/backend/src/auth/schema.ts`, `apps/backend/src/catalog/schema.ts`, `apps/backend/src/cart/schema.ts`  
 **Database:** PostgreSQL via Drizzle ORM
 
 ---
@@ -17,6 +17,8 @@ erDiagram
     product ||--o{ product_image : has
     
     category ||--o{ category : "children"
+    cart ||--o{ cart_item : has
+    user ||--o{ cart : has
     
     user {
         text id PK
@@ -98,6 +100,22 @@ erDiagram
         text imageUrl
         boolean isPrimary
     }
+    
+    cart {
+        text id PK
+        text userId FK "nullable, guest when null"
+        timestamp createdAt
+        timestamp updatedAt
+    }
+    
+    cart_item {
+        text id PK
+        text cartId FK
+        text productId FK
+        integer quantity
+        timestamp createdAt
+        timestamp updatedAt
+    }
 ```
 
 ---
@@ -114,6 +132,8 @@ erDiagram
 | **Catalog** | `category` | Product categories (hierarchical via parentCategoryId) |
 | | `product` | Products with price, stock, brand |
 | | `product_image` | Product images (one primary per product) |
+| **Cart** | `cart` | Shopping cart (guest or user; userId null = guest) |
+| | `cart_item` | Line items (product + quantity per cart) |
 
 ---
 
@@ -127,6 +147,9 @@ erDiagram
 | product.categoryId | category.id | many-to-one | RESTRICT |
 | product_image.productId | product.id | many-to-one | CASCADE |
 | category.parentCategoryId | category.id | self-ref, optional | — |
+| cart.userId | user.id | many-to-one, optional | CASCADE |
+| cart_item.cartId | cart.id | many-to-one | CASCADE |
+| cart_item.productId | product.id | many-to-one | CASCADE |
 
 ---
 
@@ -136,8 +159,6 @@ Per project-overview and master-task-board:
 
 | Table | Purpose |
 |-------|---------|
-| `cart` | Shopping cart (guest or user) |
-| `cart_item` | Items in cart |
 | `order` | Placed orders |
 | `order_item` | Line items per order |
 | `address` | Shipping/billing addresses |

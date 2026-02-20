@@ -108,7 +108,7 @@ Each task must have one of the following statuses:
 
 | ID       | Task                           | Status      |
 | -------- | ------------------------------ | ----------- |
-| CART-001 | Implement cart database schema | NOT STARTED |
+| CART-001 | Implement cart database schema | DONE        |
 | CART-002 | Add item to cart API           | NOT STARTED |
 | CART-003 | Remove item API                | NOT STARTED |
 | CART-004 | Update quantity API            | NOT STARTED |

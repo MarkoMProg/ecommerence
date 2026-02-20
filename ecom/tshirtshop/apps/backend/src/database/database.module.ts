@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as authSchema from '../auth/schema';
 import * as catalogSchema from '../catalog/schema';
+import * as cartSchema from '../cart/schema';
 
 @Module({
   imports: [ConfigModule],
@@ -19,6 +20,7 @@ import * as catalogSchema from '../catalog/schema';
           schema: {
             ...authSchema,
             ...catalogSchema,
+            ...cartSchema,
           },
         });
       },
