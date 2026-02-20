@@ -110,8 +110,8 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | Home | **DONE (API)** | `/` | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API) |
 | Product listing | **DONE (API)** | `/shop` | Search form, category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
 | Product detail | **DONE (API)** | `/shop/[id]` | Gallery, size selector, accordion, related products; fetches from API |
-| Cart | API DONE, UI NOT STARTED | — | Backend: GET/POST/PATCH/DELETE `/api/v1/cart`; frontend Add to Cart still mockup |
-| Checkout | NOT STARTED | — | — |
+| Cart | **DONE** | `/cart` | Cart page with item list, quantity controls, remove; Add to Cart on product detail; cart ID cookie (`darkloom_cart_id`); Cart link in header/footer |
+| Checkout | **DONE (UI)** | `/checkout` | Order summary from cart, shipping address form, payment placeholder; Place Order disabled until CHK-001/PAY-001 |
 | User account | Partial | `/auth/login` when logged in | Profile card; no dedicated account page |
 | Admin dashboard | NOT STARTED | — | — |
 | Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
@@ -129,8 +129,8 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ### 3.7 Commerce & Experience
 
-- **Cart (CART-001–CART-004):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. CART-005 (guest cart cookie), CART-006 (user cart persistence) NOT STARTED.
-- **Checkout, Payments, Orders, Reviews, Admin:** NOT STARTED.
+- **Cart (CART-001–CART-004):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. **UI-004 DONE**: cart page, Add to Cart, cart ID cookie (`darkloom_cart_id`). CART-005 (guest cart cookie) effectively done via cookie; CART-006 (user cart persistence) NOT STARTED.
+- **Checkout:** **UI-005 DONE** — Checkout page with order summary (from cart), shipping address form (ready for CHK-002), payment placeholder. Place Order disabled — CHK-001 to CHK-004, PAY-001 to PAY-004, ORD-001+ NOT STARTED.
 - **Tests:** Auth + catalog tests. All 87 tests pass. No cart tests yet.
 - **Build:** Production build passes.
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { ProductDisplay } from "@/lib/api/catalog";
+import { addToCart } from "@/lib/api/cart";
 
 interface ProductDetailClientProps {
   product: ProductDisplay;
@@ -15,6 +16,7 @@ export default function ProductDetailClient({
 }: ProductDetailClientProps) {
   const [selectedSize, setSelectedSize] = useState<string>("M");
   const [accordionOpen, setAccordionOpen] = useState<string | null>("description");
+  const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const sizes = ["XS", "S", "M", "L", "XL"];
 
@@ -119,15 +121,30 @@ export default function ProductDetailClient({
 
           {/* Add to Cart */}
           <button
-            className="mb-6 min-h-[48px] w-full rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-all hover:bg-[#FF4D00]/90 hover:shadow-[0_0_24px_rgba(255,77,0,0.3)] sm:mb-8"
-            onClick={() => {}}
+            className="mb-6 min-h-[48px] w-full rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-all hover:bg-[#FF4D00]/90 hover:shadow-[0_0_24px_rgba(255,77,0,0.3)] disabled:opacity-70 sm:mb-8"
+            onClick={async () => {
+              setAddStatus("loading");
+              try {
+                await addToCart(product.id, 1);
+                setAddStatus("success");
+              } catch {
+                setAddStatus("error");
+              }
+            }}
+            disabled={addStatus === "loading"}
           >
-            Add to Cart
+            {addStatus === "loading" ? "Adding…" : "Add to Cart"}
           </button>
-
-          <p className="text-sm text-white/60">
-            Mockup — cart not yet implemented.
-          </p>
+          {addStatus === "success" && (
+            <p className="mb-6 text-sm text-[#4ADE80] sm:mb-8">
+              Added to cart. <Link href="/cart" className="underline">View cart</Link>
+            </p>
+          )}
+          {addStatus === "error" && (
+            <p className="mb-6 text-sm text-red-400 sm:mb-8">
+              Could not add to cart. Please try again.
+            </p>
+          )}
         </div>
       </div>
 

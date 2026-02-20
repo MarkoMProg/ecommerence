@@ -68,7 +68,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/auth/callback"
+                  href="/cart"
                   className="text-sm text-white/80 transition-colors hover:text-white"
                 >
                   Cart
