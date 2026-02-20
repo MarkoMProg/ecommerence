@@ -70,7 +70,7 @@ describe('AuthService', () => {
 
 
   describe('login', () => {
-    it('should authenticate and return user + session', async () => {
+    it('should authenticate and return user', async () => {
       mockAuth.api.signInEmail.mockResolvedValue({ user: mockUser, session: mockSession });
 
       const result = await service.login({
@@ -79,7 +79,7 @@ describe('AuthService', () => {
         headers: new Headers(),
       });
 
-      expect(result).toEqual({ user: mockUser, session: mockSession });
+      expect(result).toEqual({ user: mockUser });
     });
 
     it('should return twoFactorRequired when 2FA is needed', async () => {
@@ -89,6 +89,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         password: 'Password1',
         headers: new Headers(),
+      });
 
       expect(result).toEqual({ twoFactorRequired: true });
     });

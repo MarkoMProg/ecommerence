@@ -130,7 +130,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 ### 3.7 Commerce & Experience
 
 - **Cart, Checkout, Payments, Orders, Reviews, Admin:** All NOT STARTED.
-- **Tests:** Auth unit tests exist (`jwt-auth.guard`, `auth.controller`, `auth.service`, `dto`). No product/catalog tests.
+- **Tests:** Auth unit tests (`jwt-auth.guard`, `auth.controller`, `auth.service`, `dto`). Catalog tests: DTO validation, CatalogService, ProductsController, CategoriesController. All 87 tests pass.
 - **Build:** Production build passes (auth-provider type fix, Suspense for useSearchParams).
 
 ---
@@ -173,7 +173,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 4. ~~**CAT-004, CAT-005, CAT-006**~~ **DONE** — Faceted filtering, sorting, and search suggestions (autocomplete dropdown).
 
-5. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
+5. ~~**TEST-001 to TEST-004**~~ **DONE** — JWT (jwt-auth.guard), validation (auth + catalog DTOs), product model (CatalogService), API integration (products + categories controllers).
 
 6. **AUTH-007:** OAuth (Google/Facebook) — credentials in `.env.example` are placeholders.
 

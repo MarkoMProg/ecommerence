@@ -105,6 +105,7 @@ describe('AuthController', () => {
     it('should login and return user info', async () => {
       const req = {
         body: { email: 'test@example.com', password: 'Password1' },
+        headers: {},
       } as any;
 
       const result = await controller.login(req);
@@ -123,6 +124,7 @@ describe('AuthController', () => {
 
       const req = {
         body: { email: 'test@example.com', password: 'Password1' },
+        headers: {},
       } as any;
 
       const result = await controller.login(req);

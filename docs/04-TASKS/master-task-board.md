@@ -93,10 +93,10 @@ Each task must have one of the following statuses:
 
 | ID       | Task                   | Status      |
 | -------- | ---------------------- | ----------- |
-| TEST-001 | JWT unit tests         | NOT STARTED |
-| TEST-002 | Input validation tests | NOT STARTED |
-| TEST-003 | Product model tests    | NOT STARTED |
-| TEST-004 | API integration tests  | NOT STARTED |
+| TEST-001 | JWT unit tests         | DONE        |
+| TEST-002 | Input validation tests | DONE        |
+| TEST-003 | Product model tests    | DONE        |
+| TEST-004 | API integration tests  | DONE        |
 
 ---
 
