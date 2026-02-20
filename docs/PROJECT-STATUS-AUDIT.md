@@ -130,7 +130,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 ### 3.7 Commerce & Experience
 
 - **Cart (CART-001–CART-004):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. **UI-004 DONE**: cart page, Add to Cart, cart ID cookie (`darkloom_cart_id`). CART-005 (guest cart cookie) effectively done via cookie; CART-006 (user cart persistence) NOT STARTED.
-- **Checkout:** **UI-005 DONE** — Checkout page with order summary (from cart), shipping address form (ready for CHK-002), payment placeholder. Place Order disabled — CHK-001 to CHK-004, PAY-001 to PAY-004, ORD-001+ NOT STARTED.
+- **Checkout:** **UI-005, CHK-001, CHK-002, ORD-001, ORD-002 DONE** — Checkout page with order summary, shipping address form, Place Order wired to `POST /api/v1/checkout`. Order schema (order, order_item), CheckoutService creates order from cart (status: pending). Confirmation page at `/checkout/confirmation`. **CHK-002 DONE**: address validation (length limits, postal code format per US/CA/GB, phone format, control-char check, country whitelist). CHK-003/CHK-004, PAY-001+, ORD-003+ NOT STARTED.
 - **Tests:** Auth + catalog tests. All 87 tests pass. No cart tests yet.
 - **Build:** Production build passes.
 

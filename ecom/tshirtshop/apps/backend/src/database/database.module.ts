@@ -6,6 +6,7 @@ import { Pool } from 'pg';
 import * as authSchema from '../auth/schema';
 import * as catalogSchema from '../catalog/schema';
 import * as cartSchema from '../cart/schema';
+import * as orderSchema from '../order/schema';
 
 @Module({
   imports: [ConfigModule],
@@ -21,6 +22,7 @@ import * as cartSchema from '../cart/schema';
             ...authSchema,
             ...catalogSchema,
             ...cartSchema,
+            ...orderSchema,
           },
         });
       },

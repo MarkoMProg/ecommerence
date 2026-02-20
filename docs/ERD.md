@@ -1,7 +1,7 @@
 # Entity Relationship Diagram — Darkloom
 
 **Created:** 2026-02-18 (DB-001)  
-**Source:** `apps/backend/src/auth/schema.ts`, `apps/backend/src/catalog/schema.ts`, `apps/backend/src/cart/schema.ts`  
+**Source:** `apps/backend/src/auth/schema.ts`, `apps/backend/src/catalog/schema.ts`, `apps/backend/src/cart/schema.ts`, `apps/backend/src/order/schema.ts`  
 **Database:** PostgreSQL via Drizzle ORM
 
 ---
@@ -19,6 +19,9 @@ erDiagram
     category ||--o{ category : "children"
     cart ||--o{ cart_item : has
     user ||--o{ cart : has
+    user ||--o{ order : has
+    order ||--o{ order_item : has
+    product ||--o{ order_item : referenced_by
     
     user {
         text id PK
@@ -116,6 +119,35 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
+    
+    order {
+        text id PK
+        text userId FK "nullable, guest when null"
+        text status
+        text shippingFullName
+        text shippingLine1
+        text shippingLine2
+        text shippingCity
+        text shippingStateOrProvince
+        text shippingPostalCode
+        text shippingCountry
+        text shippingPhone
+        integer subtotalCents
+        integer shippingCents
+        integer totalCents
+        timestamp createdAt
+        timestamp updatedAt
+    }
+    
+    order_item {
+        text id PK
+        text orderId FK
+        text productId FK
+        integer quantity
+        integer priceCentsAtOrder
+        text productNameAtOrder
+        timestamp createdAt
+    }
 ```
 
 ---
@@ -134,6 +166,8 @@ erDiagram
 | | `product_image` | Product images (one primary per product) |
 | **Cart** | `cart` | Shopping cart (guest or user; userId null = guest) |
 | | `cart_item` | Line items (product + quantity per cart) |
+| **Order** | `order` | Placed orders (created at checkout; status: pending/paid/shipped/completed/cancelled) |
+| | `order_item` | Line items with price snapshot at order time |
 
 ---
 
@@ -150,6 +184,9 @@ erDiagram
 | cart.userId | user.id | many-to-one, optional | CASCADE |
 | cart_item.cartId | cart.id | many-to-one | CASCADE |
 | cart_item.productId | product.id | many-to-one | CASCADE |
+| order.userId | user.id | many-to-one, optional | SET NULL |
+| order_item.orderId | order.id | many-to-one | CASCADE |
+| order_item.productId | product.id | many-to-one | RESTRICT |
 
 ---
 
@@ -159,9 +196,7 @@ Per project-overview and master-task-board:
 
 | Table | Purpose |
 |-------|---------|
-| `order` | Placed orders |
-| `order_item` | Line items per order |
-| `address` | Shipping/billing addresses |
+| `address` | Dedicated shipping/billing addresses (currently embedded in order) |
 | `payment` | Payment records |
 | `review` | Product reviews |
 | `review_helpful_vote` | Helpful voting on reviews |

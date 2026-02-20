@@ -121,8 +121,8 @@ Each task must have one of the following statuses:
 
 | ID      | Task                          | Status      |
 | ------- | ----------------------------- | ----------- |
-| CHK-001 | Implement checkout API        | NOT STARTED |
-| CHK-002 | Implement address validation  | NOT STARTED |
+| CHK-001 | Implement checkout API        | DONE        |
+| CHK-002 | Implement address validation  | DONE        |
 | CHK-003 | Implement order summary logic | NOT STARTED |
 | CHK-004 | Implement order confirmation  | NOT STARTED |
 
@@ -143,8 +143,8 @@ Each task must have one of the following statuses:
 
 | ID      | Task                              | Status      |
 | ------- | --------------------------------- | ----------- |
-| ORD-001 | Implement order schema            | NOT STARTED |
-| ORD-002 | Implement order creation API      | NOT STARTED |
+| ORD-001 | Implement order schema            | DONE        |
+| ORD-002 | Implement order creation API      | DONE        |
 | ORD-003 | Implement order status lifecycle  | NOT STARTED |
 | ORD-004 | Implement order cancellation flow | NOT STARTED |
 | ORD-005 | Implement refund workflow         | NOT STARTED |
