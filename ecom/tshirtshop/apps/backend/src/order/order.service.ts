@@ -1,8 +1,18 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
+import type { OrderStatus } from './schema';
+
+/** Valid status transitions. ORD-003 */
+const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: ['paid', 'cancelled'],
+  paid: ['shipped', 'cancelled'],
+  shipped: ['completed'],
+  completed: [],
+  cancelled: [],
+};
 
 export interface OrderItemDto {
   id: string;
@@ -76,5 +86,40 @@ export class OrderService {
       })),
       createdAt: o.createdAt,
     };
+  }
+
+  /**
+   * Update order status (ORD-003). Validates lifecycle transitions.
+   * WARNING: Endpoint is unauthenticated. Add auth for production (admin or webhook secret).
+   */
+  async updateOrderStatus(orderId: string, newStatus: string): Promise<OrderDto | null> {
+    const status = newStatus.trim().toLowerCase();
+    if (!(['pending', 'paid', 'shipped', 'completed', 'cancelled'] as const).includes(status as OrderStatus)) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'INVALID_STATUS', message: `Invalid status: ${newStatus}` },
+      });
+    }
+
+    const [o] = await this.db.select().from(order).where(eq(order.id, orderId.trim()));
+    if (!o) return null;
+
+    const allowed = ALLOWED_TRANSITIONS[o.status as OrderStatus];
+    if (!allowed?.includes(status as OrderStatus)) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: `Cannot transition from ${o.status} to ${status}`,
+        },
+      });
+    }
+
+    await this.db
+      .update(order)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(order.id, orderId.trim()));
+
+    return this.getOrderById(orderId.trim());
   }
 }
