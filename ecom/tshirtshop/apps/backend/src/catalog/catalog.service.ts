@@ -74,6 +74,50 @@ export class CatalogService {
     return rows;
   }
 
+  /** Search suggestions for autocomplete: product names, category name+slug, brand names */
+  async getSearchSuggestions(
+    q: string,
+    limit = 10,
+  ): Promise<{
+    products: string[];
+    categories: { name: string; slug: string }[];
+    brands: string[];
+  }> {
+    const trimmed = q?.trim() ?? '';
+    if (trimmed.length < 2) {
+      return { products: [], categories: [], brands: [] };
+    }
+    const pattern = `%${escapeIlikePattern(trimmed)}%`;
+    const perType = Math.max(1, Math.ceil(limit / 3));
+
+    const [productRows, categoryRows, brandRows] = await Promise.all([
+      this.db
+        .selectDistinct({ name: product.name })
+        .from(product)
+        .where(ilike(product.name, pattern))
+        .limit(perType)
+        .orderBy(product.name),
+      this.db
+        .select({ name: category.name, slug: category.slug })
+        .from(category)
+        .where(ilike(category.name, pattern))
+        .limit(perType)
+        .orderBy(category.name),
+      this.db
+        .selectDistinct({ brand: product.brand })
+        .from(product)
+        .where(ilike(product.brand, pattern))
+        .limit(perType)
+        .orderBy(product.brand),
+    ]);
+
+    return {
+      products: productRows.map((r) => r.name),
+      categories: categoryRows.map((r) => ({ name: r.name, slug: r.slug })),
+      brands: brandRows.map((r) => r.brand),
+    };
+  }
+
   /** Distinct brands for faceted filter UI */
   async getDistinctBrands(): Promise<string[]> {
     const rows = await this.db

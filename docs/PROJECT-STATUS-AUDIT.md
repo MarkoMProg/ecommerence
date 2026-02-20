@@ -99,7 +99,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 | CAT-003 | **DONE** | ILIKE search on name + description; `q` query param; shop page search form |
 | CAT-004 | **DONE** | Faceted filtering: brand (distinct brands API), minPrice, maxPrice; shop page filter form; URL params preserved |
 | CAT-005 | **DONE** | Sort options: newest (default), price-asc, price-desc, name-asc, name-desc; sort dropdown on shop page |
-| CAT-006 | NOT STARTED | No search suggestions (autocomplete, etc.) |
+| CAT-006 | **DONE** | Search suggestions: `GET /api/v1/products/suggestions?q=`; autocomplete dropdown on shop search (products, categories, brands) |
 
 **Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands` for distinct brands. Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands) with absolute URLs for RSC.
 
@@ -171,8 +171,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ### 5.2 Short-Term (Complete Phase 1)
 
-4. ~~**CAT-004, CAT-005**~~ **DONE** — Faceted filtering (brand, price) and sorting (newest, price, name) on backend + shop page.
-   - **CAT-006 remaining:** Search suggestions (autocomplete, related queries).
+4. ~~**CAT-004, CAT-005, CAT-006**~~ **DONE** — Faceted filtering, sorting, and search suggestions (autocomplete dropdown).
 
 5. **TEST-001 to TEST-004:** JWT, validation, product model, API integration tests.
 
@@ -231,9 +230,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 ## 8. Summary
 
-**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog** is implemented: schema (DB-003, DB-004, DB-006), CRUD API (CAT-001), category browsing (CAT-002), **search** (CAT-003), **faceted filtering + sorting** (CAT-004, CAT-005), seed script, and **frontend wired to live API**. Homepage, shop (search, category, brand, price, sort), and product detail fetch from `/api/v1/products`, `/api/v1/categories`, `/api/v1/products/brands`. Catalog routes use `@AllowAnonymous()`. OAuth providers only registered when credentials are set (avoids CLIENT_ID_AND_SECRET_REQUIRED). Phase 2 (cart, checkout, payments) and most of Phase 3 are not started.
+**Current state:** Phase 1 authentication and infrastructure are largely done. **Catalog** is implemented: schema (DB-003, DB-004, DB-006), CRUD API (CAT-001), category browsing (CAT-002), **search** (CAT-003), **faceted filtering + sorting** (CAT-004, CAT-005), **search suggestions** (CAT-006), seed script, and **frontend wired to live API**. Homepage, shop (search with autocomplete, category, brand, price, sort), and product detail fetch from `/api/v1/products`, `/api/v1/categories`, `/api/v1/products/brands`, `/api/v1/products/suggestions`. Catalog routes use `@AllowAnonymous()`. OAuth providers only registered when credentials are set (avoids CLIENT_ID_AND_SECRET_REQUIRED). Phase 2 (cart, checkout, payments) and most of Phase 3 are not started.
 
-**Recommended next step:** **CAT-006** (search suggestions), **TEST-001 to TEST-004** (catalog/auth tests), or **Phase 2** (cart, checkout).
+**Recommended next step:** **TEST-001 to TEST-004** (catalog/auth tests) or **Phase 2** (cart, checkout).
 
 ---
 
@@ -241,7 +240,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform is in **Phase 1 (Foundatio
 
 | Date | Changes |
 |------|---------|
-| 2026-02-18 (current) | CAT-004, CAT-005 DONE (faceted filtering, sorting); Phase 1 ~92%; recommended next: CAT-006, tests, or Phase 2 |
+| 2026-02-18 (current) | CAT-006 DONE (search suggestions, autocomplete); Phase 1 catalog complete; recommended next: tests or Phase 2 |
 | 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
 | 2026-02-14 | Initial audit |

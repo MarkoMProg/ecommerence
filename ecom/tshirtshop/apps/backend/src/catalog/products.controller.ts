@@ -61,6 +61,22 @@ export class ProductsController {
     };
   }
 
+  @Get('suggestions')
+  async getSuggestions(
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const suggestions = await this.catalogService.getSearchSuggestions(
+      q ?? '',
+      limit ? parseInt(limit, 10) : 10,
+    );
+    return {
+      success: true,
+      data: suggestions,
+      message: 'Suggestions retrieved successfully',
+    };
+  }
+
   @Get('brands')
   async getBrands() {
     const brands = await this.catalogService.getDistinctBrands();

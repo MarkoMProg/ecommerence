@@ -85,7 +85,7 @@ Each task must have one of the following statuses:
 | CAT-003 | Implement search functionality | DONE        |
 | CAT-004 | Implement faceted filtering    | DONE        |
 | CAT-005 | Implement sorting options      | DONE        |
-| CAT-006 | Implement search suggestions   | NOT STARTED |
+| CAT-006 | Implement search suggestions   | DONE        |
 
 ---
 

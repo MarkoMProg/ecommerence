@@ -112,6 +112,29 @@ export async function fetchCategories(): Promise<ApiCategory[]> {
   return json.data;
 }
 
+export interface SearchSuggestions {
+  products: string[];
+  categories: { name: string; slug: string }[];
+  brands: string[];
+}
+
+/** Search suggestions for autocomplete. Call from client only (uses fetch with relative path). */
+export async function fetchSearchSuggestions(
+  q: string,
+  limit = 10,
+): Promise<SearchSuggestions> {
+  const trimmed = q?.trim() ?? "";
+  if (trimmed.length < 2) {
+    return { products: [], categories: [], brands: [] };
+  }
+  const base = typeof window !== "undefined" ? window.location.origin : process.env.API_URL || "http://localhost:3000";
+  const url = `${base}/api/v1/products/suggestions?q=${encodeURIComponent(trimmed)}&limit=${limit}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return { products: [], categories: [], brands: [] };
+  const json = (await res.json()) as { success: boolean; data: SearchSuggestions };
+  return json.success ? json.data : { products: [], categories: [], brands: [] };
+}
+
 export async function fetchBrands(): Promise<string[]> {
   const url = apiUrl("/api/v1/products/brands");
   const res = await fetchApi(url);

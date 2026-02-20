@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchProducts, fetchCategories, fetchBrands } from "@/lib/api/catalog";
+import { ShopSearchInput } from "@/components/shop-search-input";
 
 export default async function ShopPage({
   searchParams,
@@ -85,36 +86,17 @@ export default async function ShopPage({
         {searchQuery ? `Search: "${searchQuery}"` : "All Items"}
       </h1>
 
-      {/* Search */}
-      <form action="/shop" method="get" className="mb-6 sm:mb-8">
-        {categoryFilter !== "all" && (
-          <input type="hidden" name="category" value={categoryFilter} />
-        )}
-        {brandFilter && <input type="hidden" name="brand" value={brandFilter} />}
-        {minPrice != null && !Number.isNaN(minPrice) && (
-          <input type="hidden" name="minPrice" value={minPrice} />
-        )}
-        {maxPrice != null && !Number.isNaN(maxPrice) && (
-          <input type="hidden" name="maxPrice" value={maxPrice} />
-        )}
-        {sort && <input type="hidden" name="sort" value={sort} />}
-        <div className="flex gap-2">
-          <input
-            type="search"
-            name="q"
-            placeholder="Search products..."
-            defaultValue={searchQuery}
-            className="min-h-[44px] flex-1 rounded-md border border-white/20 bg-[#1A1A1A] px-4 py-2 text-sm text-white placeholder:text-white/50 focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00]"
-            aria-label="Search products"
-          />
-          <button
-            type="submit"
-            className="min-h-[44px] min-w-[44px] rounded-md bg-[#FF4D00] px-4 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90"
-          >
-            Search
-          </button>
-        </div>
-      </form>
+      {/* Search with autocomplete suggestions */}
+      <div className="mb-6 sm:mb-8">
+        <ShopSearchInput
+          defaultValue={searchQuery ?? ""}
+          category={categoryFilter !== "all" ? categoryFilter : undefined}
+          brand={brandFilter}
+          minPrice={minPrice != null && !Number.isNaN(minPrice) ? minPrice : undefined}
+          maxPrice={maxPrice != null && !Number.isNaN(maxPrice) ? maxPrice : undefined}
+          sort={sort}
+        />
+      </div>
 
       {/* Faceted filters + sort */}
       <form action="/shop" method="get" className="mb-6 flex flex-wrap items-end gap-4">
