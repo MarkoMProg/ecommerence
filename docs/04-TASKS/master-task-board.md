@@ -123,8 +123,8 @@ Each task must have one of the following statuses:
 | ------- | ----------------------------- | ----------- |
 | CHK-001 | Implement checkout API        | DONE        |
 | CHK-002 | Implement address validation  | DONE        |
-| CHK-003 | Implement order summary logic | NOT STARTED |
-| CHK-004 | Implement order confirmation  | NOT STARTED |
+| CHK-003 | Implement order summary logic | DONE        |
+| CHK-004 | Implement order confirmation  | DONE        |
 
 ---
 
