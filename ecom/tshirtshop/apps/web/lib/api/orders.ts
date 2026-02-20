@@ -36,13 +36,33 @@ export interface Order {
   createdAt: string;
 }
 
-/** Fetch order by ID. Works from server or client. */
+/** Cancel order (ORD-004). Only pending or paid orders can be cancelled. */
+export async function cancelOrder(orderId: string): Promise<Order | null> {
+  if (!orderId?.trim()) return null;
+  try {
+    const res = await fetch(
+      `${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}/cancel`,
+      { method: "POST" },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: Order | null };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch order by ID. Returns null if not found or API unreachable. */
 export async function fetchOrder(orderId: string): Promise<Order | null> {
   if (!orderId?.trim()) return null;
-  const res = await fetch(`${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { success: boolean; data: Order | null };
-  return json.success ? json.data : null;
+  try {
+    const res = await fetch(`${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: Order | null };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
 }

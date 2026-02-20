@@ -146,7 +146,7 @@ Each task must have one of the following statuses:
 | ORD-001 | Implement order schema            | DONE        |
 | ORD-002 | Implement order creation API      | DONE        |
 | ORD-003 | Implement order status lifecycle  | DONE        |
-| ORD-004 | Implement order cancellation flow | NOT STARTED |
+| ORD-004 | Implement order cancellation flow | DONE        |
 | ORD-005 | Implement refund workflow         | NOT STARTED |
 
 ---

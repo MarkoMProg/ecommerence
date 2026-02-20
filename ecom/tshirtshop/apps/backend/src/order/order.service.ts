@@ -122,4 +122,12 @@ export class OrderService {
 
     return this.getOrderById(orderId.trim());
   }
+
+  /**
+   * Cancel order (ORD-004). Only pending or paid orders can be cancelled.
+   * Shipped/completed orders cannot be cancelled; use refund workflow (ORD-005) instead.
+   */
+  async cancelOrder(orderId: string): Promise<OrderDto | null> {
+    return this.updateOrderStatus(orderId.trim(), 'cancelled');
+  }
 }

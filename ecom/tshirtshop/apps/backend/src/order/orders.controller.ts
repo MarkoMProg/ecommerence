@@ -1,9 +1,12 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -14,6 +17,26 @@ import { OrderService } from './order.service';
 @AllowAnonymous()
 export class OrdersController {
   constructor(private readonly orderService: OrderService) {}
+
+  /**
+   * Cancel order (ORD-004). Only pending or paid orders can be cancelled.
+   */
+  @Post(':orderId/cancel')
+  @HttpCode(HttpStatus.OK)
+  async cancelOrder(@Param('orderId') orderId: string) {
+    const order = await this.orderService.cancelOrder(orderId.trim());
+    if (!order) {
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' },
+      });
+    }
+    return {
+      success: true,
+      data: order,
+      message: 'Order cancelled',
+    };
+  }
 
   /**
    * Update order status (ORD-003). Validates lifecycle transitions.

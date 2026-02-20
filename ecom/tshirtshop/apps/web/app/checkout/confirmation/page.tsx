@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchOrder } from "@/lib/api/orders";
+import { CancelOrderButton } from "./CancelOrderButton";
 
 export const metadata = {
   title: "Order Confirmation | Darkloom",
@@ -52,6 +53,9 @@ export default async function CheckoutConfirmationPage({
           <p className="mb-8 text-sm text-white/60">
             Payment integration is in progress. You will receive an email when payment options are available.
           </p>
+          {orderId && order && (
+            <CancelOrderButton orderId={orderId} status={order.status} />
+          )}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/shop"
@@ -70,6 +74,11 @@ export default async function CheckoutConfirmationPage({
 
         {order && order.items.length > 0 && (
           <div className="rounded-lg border border-white/10 bg-white/5 p-6">
+            {order.status === "cancelled" && (
+              <p className="mb-6 rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                This order has been cancelled.
+              </p>
+            )}
             <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
               Order details
             </h2>

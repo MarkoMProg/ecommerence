@@ -34,16 +34,20 @@ function cartHeaders(cartId: string | null): Record<string, string> {
   return h;
 }
 
-/** Fetch cart. Returns null if no cart ID or cart not found. */
+/** Fetch cart. Returns null if no cart ID, cart not found, or API unreachable. */
 export async function fetchCart(cartId: string | null): Promise<Cart | null> {
   if (!cartId?.trim()) return null;
-  const res = await fetch(`${apiBase()}/api/v1/cart`, {
-    headers: cartHeaders(cartId),
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { success: boolean; data: Cart | null };
-  return json.success ? json.data : null;
+  try {
+    const res = await fetch(`${apiBase()}/api/v1/cart`, {
+      headers: cartHeaders(cartId),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: Cart | null };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface AddToCartResult {
