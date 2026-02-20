@@ -110,7 +110,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | Home | **DONE (API)** | `/` | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API) |
 | Product listing | **DONE (API)** | `/shop` | Search form, category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
 | Product detail | **DONE (API)** | `/shop/[id]` | Gallery, size selector, accordion, related products; fetches from API |
-| Cart | **DONE** | `/cart` | Cart page with item list, quantity controls, remove; Add to Cart on product detail; cart ID cookie (`darkloom_cart_id`); Cart link in header/footer |
+| Cart | **DONE** | `/cart` | Guest cart (cookie); user cart (session); merge on login (CART-005, CART-006) |
 | Checkout | **DONE** | `/checkout` | Order summary, shipping address form (CHK-002 validation), Place Order wired to `POST /api/v1/checkout`; redirects to `/checkout/confirmation`; payment placeholder (PAY-001 pending) |
 | Order confirmation | **DONE** | `/checkout/confirmation` | Fetches order via `GET /api/v1/orders/:id`; displays items, totals, shipping address |
 | User account | **DONE** | `/account` | Profile (name, email), order history (GET /api/v1/orders), 2FA/sign out links; redirects to login when unauthenticated |
@@ -243,6 +243,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | 2026-02-18 (audit) | Full audit refresh. Phase 2 ~65%, Phase 3 ~60%. Cart, Checkout (CHK-001–004), Orders (ORD-001–002), UI-004, UI-005 DONE. Order schema, confirmation page, address validation (CHK-002), order summary (CHK-003). 108 tests. API unreachable handling on Home/Shop. Recommended next: PAY-001, ORD-003, UI-006, FND-006. |
 | 2026-02-18 (UI-006) | User account page. GET /api/v1/orders (my orders) with auth, /account page (profile, order history, 2FA/sign out), header nav → /account. |
 | 2026-02-18 (UI-007) | Admin dashboard. AdminGuard + ADMIN_EMAILS. /admin (dashboard, products CRUD, orders list+status). Product POST/PATCH/DELETE protected. |
+| 2026-02-18 (CART-005/006) | Guest cart + persistent user cart. OptionalAuthGuard on cart/checkout. Merge guest→user on login. Checkout associates order with userId. |
 | 2026-02-18 | CART-001–CART-004 DONE; UI-004 cart page; CHK-001–CHK-004, ORD-001/002; Place Order wired |
 | 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |

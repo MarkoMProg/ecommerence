@@ -26,3 +26,9 @@ export function setCartIdClient(cartId: string): void {
   const maxAge = MAX_AGE_DAYS * 24 * 60 * 60;
   document.cookie = `${CART_COOKIE}=${encodeURIComponent(cartId)}; path=/; max-age=${maxAge}; SameSite=Lax`;
 }
+
+/** Clear guest cart cookie (client-side). Call after cart merged into user cart. */
+export function clearCartIdClient(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${CART_COOKIE}=; path=/; max-age=0`;
+}

@@ -49,17 +49,21 @@ export interface ShippingAddress {
   phone?: string;
 }
 
-/** Create order from cart. Requires shipping address. Call from client only. */
-export async function createOrder(shippingAddress: ShippingAddress): Promise<Order> {
-  const cartId = getCartIdClient();
-  if (!cartId) throw new Error("No cart");
+/** Create order from cart. Pass cartId (e.g. cart.id) or omit to use cookie. Call from client only. */
+export async function createOrder(
+  shippingAddress: ShippingAddress,
+  cartId?: string | null
+): Promise<Order> {
+  const id = cartId ?? getCartIdClient();
+  if (!id?.trim()) throw new Error("No cart");
 
   const res = await fetch(`${apiBase()}/api/v1/checkout`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Cart-Id": cartId,
+      "X-Cart-Id": id,
     },
+    credentials: "include",
     body: JSON.stringify({ shippingAddress }),
   });
 

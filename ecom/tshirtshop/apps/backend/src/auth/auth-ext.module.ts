@@ -5,12 +5,13 @@ import { BetterAuthCoreModule } from './better-auth-core.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { BetterAuthGuard } from './guards/jwt-auth.guard';
+import { OptionalAuthGuard } from './guards/optional-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 
 @Module({
   imports: [BetterAuthCoreModule, DatabaseModule, ConfigModule],
   controllers: [AuthController],
-  providers: [AuthService, BetterAuthGuard, AdminGuard],
-  exports: [AuthService, BetterAuthGuard, AdminGuard, BetterAuthCoreModule],
+  providers: [AuthService, BetterAuthGuard, OptionalAuthGuard, AdminGuard],
+  exports: [AuthService, BetterAuthGuard, OptionalAuthGuard, AdminGuard, BetterAuthCoreModule],
 })
 export class AuthExtModule {}

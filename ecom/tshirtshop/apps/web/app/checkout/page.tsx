@@ -13,7 +13,13 @@ export const metadata = {
 export default async function CheckoutPage() {
   const cookieStore = await cookies();
   const cartId = getCartIdFromCookies(cookieStore);
-  const cart = await fetchCart(cartId);
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  const cart = await fetchCart(cartId, {
+    cookieHeader: cookieHeader || undefined,
+  });
 
   if (!cart || cart.items.length === 0) {
     redirect("/cart");

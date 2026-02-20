@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -55,6 +55,54 @@ export class CartService {
       if (existing) return existing;
     }
     return this.createGuestCart();
+  }
+
+  /** Get user's cart (CART-006). Returns most recent by updatedAt. */
+  async getCartByUserId(userId: string): Promise<CartWithItems | null> {
+    const [c] = await this.db
+      .select()
+      .from(cart)
+      .where(eq(cart.userId, userId))
+      .orderBy(desc(cart.updatedAt))
+      .limit(1);
+    if (!c) return null;
+    return this.enrichCartWithItems(c);
+  }
+
+  /** Get or create user cart (CART-006). */
+  async getOrCreateUserCart(userId: string): Promise<CartWithItems> {
+    const existing = await this.getCartByUserId(userId);
+    if (existing) return existing;
+    const id = randomUUID();
+    await this.db.insert(cart).values({
+      id,
+      userId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const [c] = await this.db.select().from(cart).where(eq(cart.id, id));
+    if (!c) throw new Error('Failed to create user cart');
+    return this.enrichCartWithItems(c);
+  }
+
+  /**
+   * Merge guest cart into user cart (CART-006). Adds guest items to user cart (combines quantities).
+   * Deletes guest cart after merge. Returns user cart.
+   */
+  async mergeGuestCartIntoUser(
+    guestCartId: string,
+    userId: string,
+  ): Promise<CartWithItems> {
+    const guestCart = await this.getCartById(guestCartId);
+    if (!guestCart || guestCart.userId) {
+      return this.getOrCreateUserCart(userId);
+    }
+    let userCartData = await this.getOrCreateUserCart(userId);
+    for (const item of guestCart.items) {
+      userCartData = await this.addItem(userCartData.id, item.productId, item.quantity);
+    }
+    await this.db.delete(cart).where(eq(cart.id, guestCartId));
+    return userCartData;
   }
 
   /** Get or create cart, add item, return cart. `created` true if new cart was created. */

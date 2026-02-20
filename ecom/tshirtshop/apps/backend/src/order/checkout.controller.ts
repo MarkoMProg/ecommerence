@@ -4,33 +4,50 @@ import {
   Post,
   Body,
   Headers,
+  Req,
   HttpCode,
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
+import { UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
+import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { CheckoutService } from './checkout.service';
 import { validateShippingAddress } from './dto/checkout.dto';
+import { CartService } from '../cart/cart.service';
 
 @Controller('api/v1/checkout')
 @AllowAnonymous()
+@UseGuards(OptionalAuthGuard)
 export class CheckoutController {
-  constructor(private readonly checkoutService: CheckoutService) {}
+  constructor(
+    private readonly checkoutService: CheckoutService,
+    private readonly cartService: CartService,
+  ) {}
 
   /**
-   * Get order summary for cart (CHK-003). Returns subtotal, shipping, total.
-   * X-Cart-Id header required.
+   * Get order summary for cart (CHK-003). Uses user cart when authenticated.
    */
   @Get('summary')
-  async getSummary(@Headers('x-cart-id') cartId: string | undefined) {
-    if (!cartId?.trim()) {
+  async getSummary(
+    @Req() req: Request,
+    @Headers('x-cart-id') cartIdHeader: string | undefined,
+  ) {
+    const user = (req as any).user as { id: string } | null;
+    let cartId = cartIdHeader?.trim();
+    if (user) {
+      const userCart = await this.cartService.getOrCreateUserCart(user.id);
+      cartId = userCart.id;
+    }
+    if (!cartId) {
       return {
         success: true,
         data: null,
-        message: 'No cart ID provided. Use X-Cart-Id header.',
+        message: 'No cart ID provided. Use X-Cart-Id header or log in.',
       };
     }
-    const summary = await this.checkoutService.getOrderSummary(cartId.trim());
+    const summary = await this.checkoutService.getOrderSummary(cartId);
     return {
       success: true,
       data: summary,
@@ -39,19 +56,25 @@ export class CheckoutController {
   }
 
   /**
-   * Create order from cart. Requires X-Cart-Id header and shipping address in body.
-   * Returns created order (status: pending). Payment integration (PAY-001) to follow.
+   * Create order from cart. Requires X-Cart-Id (or session). Associates order with user when authenticated.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createOrder(
-    @Headers('x-cart-id') cartId: string | undefined,
+    @Req() req: Request,
+    @Headers('x-cart-id') cartIdHeader: string | undefined,
     @Body() body: { shippingAddress?: unknown },
   ) {
+    const user = (req as any).user as { id: string } | null;
+    let cartId = cartIdHeader?.trim();
+    if (user) {
+      const userCart = await this.cartService.getOrCreateUserCart(user.id);
+      cartId = userCart.id;
+    }
     if (!cartId?.trim()) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'CART_ID_REQUIRED', message: 'X-Cart-Id header is required' },
+        error: { code: 'CART_ID_REQUIRED', message: 'X-Cart-Id header is required for guests' },
       });
     }
 
@@ -80,7 +103,7 @@ export class CheckoutController {
         country: shippingAddress.country?.trim(),
         phone: shippingAddress.phone?.trim(),
       },
-      null, // TODO: get userId from session when authenticated
+      user?.id ?? null,
     );
 
     return {

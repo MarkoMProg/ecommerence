@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Cart } from "@/lib/api/cart";
 import {
   updateCartItemQuantity,
   removeFromCart,
 } from "@/lib/api/cart";
+import { clearCartIdClient, getCartIdClient } from "@/lib/cart-cookie";
 
 interface CartClientProps {
   initialCart: Cart | null;
@@ -14,6 +15,12 @@ interface CartClientProps {
 
 export function CartClient({ initialCart }: CartClientProps) {
   const [cart, setCart] = useState<Cart | null>(initialCart);
+
+  useEffect(() => {
+    if (initialCart?.userId && getCartIdClient()) {
+      clearCartIdClient();
+    }
+  }, [initialCart?.userId]);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 

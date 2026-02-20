@@ -112,8 +112,8 @@ Each task must have one of the following statuses:
 | CART-002 | Add item to cart API           | DONE        |
 | CART-003 | Remove item API                | DONE        |
 | CART-004 | Update quantity API            | DONE        |
-| CART-005 | Implement guest cart logic     | NOT STARTED |
-| CART-006 | Implement persistent user cart | NOT STARTED |
+| CART-005 | Implement guest cart logic     | DONE        |
+| CART-006 | Implement persistent user cart | DONE        |
 
 ---
 

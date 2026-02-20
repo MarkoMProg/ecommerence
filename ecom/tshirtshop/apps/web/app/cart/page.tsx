@@ -12,7 +12,13 @@ export const metadata = {
 export default async function CartPage() {
   const cookieStore = await cookies();
   const cartId = getCartIdFromCookies(cookieStore);
-  const cart = await fetchCart(cartId);
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  const cart = await fetchCart(cartId, {
+    cookieHeader: cookieHeader || undefined,
+  });
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-16">

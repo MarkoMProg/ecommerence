@@ -70,16 +70,19 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
     setPlaceStatus("loading");
     setPlaceError(null);
     try {
-      const order = await createOrder({
-        fullName: address.fullName.trim(),
-        line1: address.line1.trim(),
-        line2: address.line2.trim() || undefined,
-        city: address.city.trim(),
-        stateOrProvince: address.stateOrProvince.trim(),
-        postalCode: address.postalCode.trim(),
-        country: address.country.trim(),
-        phone: address.phone.trim() || undefined,
-      });
+      const order = await createOrder(
+        {
+          fullName: address.fullName.trim(),
+          line1: address.line1.trim(),
+          line2: address.line2.trim() || undefined,
+          city: address.city.trim(),
+          stateOrProvince: address.stateOrProvince.trim(),
+          postalCode: address.postalCode.trim(),
+          country: address.country.trim(),
+          phone: address.phone.trim() || undefined,
+        },
+        cart.id
+      );
       router.push(`/checkout/confirmation?orderId=${order.id}`);
     } catch (err) {
       setPlaceError(err instanceof Error ? err.message : "Failed to create order");
