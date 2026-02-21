@@ -38,6 +38,10 @@ export interface OrderDto {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  /** Stripe Checkout Session ID when paid via Stripe (PAY-004). */
+  stripeSessionId: string | null;
+  /** When order was marked paid (PAY-004). */
+  paidAt: Date | null;
   items: OrderItemDto[];
   createdAt: Date;
 }
@@ -113,6 +117,8 @@ export class OrderService {
       subtotalCents: o.subtotalCents,
       shippingCents: o.shippingCents,
       totalCents: o.totalCents,
+      stripeSessionId: o.stripeSessionId ?? null,
+      paidAt: o.paidAt ?? null,
       items: items.map((i) => ({
         id: i.id,
         productId: i.productId,
@@ -126,14 +132,32 @@ export class OrderService {
 
   /**
    * Mark order as paid if currently pending (PAY-002 idempotency).
+   * Stores stripeSessionId and paidAt when provided (PAY-004).
    * Returns order; no-op if already paid. Used by webhook and verify-payment.
    */
-  async markOrderPaidIfPending(orderId: string): Promise<OrderDto | null> {
+  async markOrderPaidIfPending(
+    orderId: string,
+    paymentMeta?: { stripeSessionId?: string },
+  ): Promise<OrderDto | null> {
     const o = await this.getOrderById(orderId.trim());
     if (!o) return null;
     if (o.status === 'paid') return o;
     if (o.status !== 'pending') return o;
-    return this.updateOrderStatus(orderId.trim(), 'paid');
+
+    const now = new Date();
+    const sessionId = paymentMeta?.stripeSessionId?.trim() || null;
+
+    await this.db
+      .update(order)
+      .set({
+        status: 'paid',
+        stripeSessionId: sessionId,
+        paidAt: now,
+        updatedAt: now,
+      })
+      .where(eq(order.id, orderId.trim()));
+
+    return this.getOrderById(orderId.trim());
   }
 
   /**

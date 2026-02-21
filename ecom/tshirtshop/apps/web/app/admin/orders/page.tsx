@@ -96,7 +96,8 @@ export default function AdminOrdersPage() {
             <thead className="border-b border-white/10 bg-white/5">
               <tr>
                 <th className="px-4 py-3 font-medium text-white">Order</th>
-                <th className="px-4 py-3 font-medium text-white">Date</th>
+                <th className="px-4 py-3 font-medium text-white">Created</th>
+                <th className="px-4 py-3 font-medium text-white">Paid</th>
                 <th className="px-4 py-3 font-medium text-white">Customer</th>
                 <th className="px-4 py-3 font-medium text-white">Status</th>
                 <th className="px-4 py-3 font-medium text-white">Total</th>
@@ -115,6 +116,9 @@ export default function AdminOrdersPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-white/80">{formatDate(order.createdAt)}</td>
+                  <td className="px-4 py-3 text-white/80">
+                    {order.paidAt ? formatDate(order.paidAt) : "—"}
+                  </td>
                   <td className="px-4 py-3 text-white/80">{order.shippingFullName}</td>
                   <td className="px-4 py-3">
                     <select

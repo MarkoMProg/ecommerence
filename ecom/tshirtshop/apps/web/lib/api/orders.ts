@@ -32,6 +32,10 @@ export interface Order {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  /** Stripe Checkout Session ID when paid via Stripe (PAY-004). */
+  stripeSessionId?: string | null;
+  /** When order was marked paid (PAY-004). */
+  paidAt?: string | null;
   items: OrderItem[];
   createdAt: string;
 }

@@ -33,6 +33,10 @@ export interface AdminOrder {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  /** Stripe Checkout Session ID when paid via Stripe (PAY-004). */
+  stripeSessionId?: string | null;
+  /** When order was marked paid (PAY-004). */
+  paidAt?: string | null;
   items: { id: string; productId: string; quantity: number; priceCentsAtOrder: number; productNameAtOrder: string }[];
   createdAt: string;
 }

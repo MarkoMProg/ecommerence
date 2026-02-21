@@ -34,6 +34,8 @@ export interface Order {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  stripeSessionId?: string | null;
+  paidAt?: string | null;
   items: OrderItem[];
   createdAt: string;
 }
@@ -85,6 +87,26 @@ export async function createOrder(
   return json.data;
 }
 
+/** Error codes from verify-payment (PAY-003). */
+export type VerifyPaymentErrorCode =
+  | "SESSION_ID_REQUIRED"
+  | "PAYMENT_NOT_COMPLETE"
+  | "INVALID_SESSION"
+  | "AMOUNT_MISMATCH"
+  | "SESSION_NOT_FOUND"
+  | "ORDER_NOT_FOUND"
+  | "PAYMENT_VERIFICATION_FAILED";
+
+export class VerifyPaymentError extends Error {
+  constructor(
+    message: string,
+    public readonly code: VerifyPaymentErrorCode
+  ) {
+    super(message);
+    this.name = "VerifyPaymentError";
+  }
+}
+
 /** Verify Stripe payment and mark order as paid. Call after user returns from Stripe Checkout. */
 export async function verifyPayment(
   sessionId: string,
@@ -101,7 +123,8 @@ export async function verifyPayment(
     const body = await res.json();
     const err = body?.error;
     const msg = err?.message ?? "Failed to verify payment";
-    throw new Error(msg);
+    const code = (err?.code as VerifyPaymentErrorCode) ?? "PAYMENT_VERIFICATION_FAILED";
+    throw new VerifyPaymentError(msg, code);
   }
 
   const json = (await res.json()) as { success: boolean; data: Order };

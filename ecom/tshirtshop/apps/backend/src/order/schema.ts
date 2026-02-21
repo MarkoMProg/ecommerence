@@ -36,6 +36,10 @@ export const order = pgTable('order', {
   subtotalCents: integer('subtotal_cents').notNull(),
   shippingCents: integer('shipping_cents').notNull().default(0),
   totalCents: integer('total_cents').notNull(),
+  /** Stripe Checkout Session ID when paid via Stripe (PAY-004). Used for refunds and reconciliation. */
+  stripeSessionId: text('stripe_session_id'),
+  /** When order transitioned to paid (PAY-004). */
+  paidAt: timestamp('paid_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

@@ -147,12 +147,31 @@ export class CheckoutController {
     const existingOrder = orderId ? await this.orderService.getOrderById(orderId) : null;
     const expectedTotalCents = existingOrder?.totalCents;
 
-    const verifiedOrderId = await this.stripeService.verifySession(
-      sessionId,
-      orderId,
-      expectedTotalCents,
-    );
-    const updated = await this.orderService.markOrderPaidIfPending(verifiedOrderId);
+    let verifiedOrderId: string;
+    try {
+      verifiedOrderId = await this.stripeService.verifySession(
+        sessionId,
+        orderId,
+        expectedTotalCents,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Payment verification failed';
+      let code = 'PAYMENT_VERIFICATION_FAILED';
+      if (msg.includes('Payment not complete')) code = 'PAYMENT_NOT_COMPLETE';
+      else if (msg.includes('Session has no orderId') || msg.includes('does not match'))
+        code = 'INVALID_SESSION';
+      else if (msg.includes('amount mismatch') || msg.includes('Payment amount'))
+        code = 'AMOUNT_MISMATCH';
+      else if (msg.includes('No such checkout.session')) code = 'SESSION_NOT_FOUND';
+      throw new BadRequestException({
+        success: false,
+        error: { code, message: msg },
+      });
+    }
+
+    const updated = await this.orderService.markOrderPaidIfPending(verifiedOrderId, {
+      stripeSessionId: sessionId,
+    });
     if (!updated) {
       throw new BadRequestException({
         success: false,

@@ -4,8 +4,27 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Order } from "@/lib/api/orders";
 import { fetchOrder } from "@/lib/api/orders";
-import { verifyPayment } from "@/lib/api/checkout";
+import { verifyPayment, VerifyPaymentError } from "@/lib/api/checkout";
 import { CancelOrderButton } from "./CancelOrderButton";
+
+function paymentErrorMessage(e: unknown): string {
+  if (e instanceof VerifyPaymentError) {
+    switch (e.code) {
+      case "PAYMENT_NOT_COMPLETE":
+        return "Payment was not completed. If you cancelled, you can try again from checkout.";
+      case "SESSION_NOT_FOUND":
+      case "INVALID_SESSION":
+        return "This payment session is invalid or expired. Please place your order again.";
+      case "AMOUNT_MISMATCH":
+        return "Payment amount does not match the order. Please place your order again.";
+      case "ORDER_NOT_FOUND":
+        return "Order not found. Please check your order and try again.";
+      default:
+        return e.message;
+    }
+  }
+  return e instanceof Error ? e.message : "Failed to verify payment";
+}
 
 interface ConfirmationClientProps {
   orderId: string;
@@ -30,7 +49,8 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
           }
         } catch (e) {
           if (!cancelled) {
-            setError(e instanceof Error ? e.message : "Failed to verify payment");
+            const msg = paymentErrorMessage(e);
+            setError(msg);
             setStatus("error");
           }
         }

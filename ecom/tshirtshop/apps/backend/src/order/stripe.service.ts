@@ -51,7 +51,7 @@ export class StripeService {
       ],
       metadata: { orderId },
       success_url: `${this.uiUrl}/checkout/confirmation?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${this.uiUrl}/checkout`,
+      cancel_url: `${this.uiUrl}/checkout?canceled=1`,
     });
 
     return session.url;
@@ -59,9 +59,12 @@ export class StripeService {
 
   /**
    * Handle Stripe webhook event (PAY-002). Verifies signature and processes checkout.session.completed.
-   * Returns orderId if payment completed, null for other events.
+   * Returns { orderId, sessionId } if payment completed, null for other events (PAY-004).
    */
-  handleWebhookEvent(rawBody: Buffer, signature: string): string | null {
+  handleWebhookEvent(
+    rawBody: Buffer,
+    signature: string,
+  ): { orderId: string; sessionId: string } | null {
     if (!this.stripe) return null;
 
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET')?.trim();
@@ -73,8 +76,11 @@ export class StripeService {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      if (session.payment_status === 'paid' && session.metadata?.orderId) {
-        return session.metadata.orderId.trim();
+      if (session.payment_status === 'paid' && session.metadata?.orderId && session.id) {
+        return {
+          orderId: session.metadata.orderId.trim(),
+          sessionId: session.id,
+        };
       }
     }
 

@@ -15,6 +15,7 @@ import {
 
 interface CheckoutClientProps {
   cart: Cart;
+  canceled?: boolean;
 }
 
 /** Shipping address form state */
@@ -91,7 +92,7 @@ function isAddressValid(a: ShippingAddress): boolean {
   );
 }
 
-export function CheckoutClient({ cart }: CheckoutClientProps) {
+export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) {
   const router = useRouter();
   const [address, setAddress] = useState<ShippingAddress>(initialAddress);
   const [placeStatus, setPlaceStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -141,6 +142,11 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+      {canceled && (
+        <div className="col-span-full rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          Payment was cancelled. You can place your order again below.
+        </div>
+      )}
       {/* Left: Shipping & Payment */}
       <div className="space-y-8">
         {/* Shipping address */}

@@ -134,8 +134,8 @@ Each task must have one of the following statuses:
 | ------- | --------------------------------- | ----------- |
 | PAY-001 | Integrate Stripe/PayPal sandbox   | DONE        |
 | PAY-002 | Implement payment validation flow | DONE        |
-| PAY-003 | Handle payment failures           | NOT STARTED |
-| PAY-004 | Implement payment status tracking | NOT STARTED |
+| PAY-003 | Handle payment failures           | DONE        |
+| PAY-004 | Implement payment status tracking | DONE        |
 
 ---
 
