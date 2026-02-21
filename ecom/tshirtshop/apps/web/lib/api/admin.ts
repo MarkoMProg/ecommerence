@@ -168,6 +168,59 @@ export async function adminUpdateOrderStatus(
   }
 }
 
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  twoFactorEnabled: boolean | null;
+  createdAt: string;
+  orderCount: number;
+}
+
+export interface AdminUserDetail extends AdminUser {
+  image: string | null;
+  updatedAt: string;
+}
+
+/** List users (ADM-004). Returns null if not admin. */
+export async function fetchAdminUsers(opts?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}): Promise<{ data: AdminUser[]; pagination: { page: number; limit: number; total: number } } | null> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.page != null) params.set("page", String(opts.page));
+    if (opts?.limit != null) params.set("limit", String(opts.limit));
+    if (opts?.search?.trim()) params.set("search", opts.search.trim());
+    const qs = params.toString();
+    const res = await adminFetch(`/api/v1/admin/users${qs ? `?${qs}` : ""}`);
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      success: boolean;
+      data: AdminUser[];
+      pagination: { page: number; limit: number; total: number };
+    };
+    return json.success ? { data: json.data, pagination: json.pagination } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Get user by ID (ADM-004). */
+export async function fetchAdminUser(userId: string): Promise<AdminUserDetail | null> {
+  if (!userId?.trim()) return null;
+  try {
+    const res = await adminFetch(`/api/v1/admin/users/${encodeURIComponent(userId.trim())}`);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: AdminUserDetail };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Refund order (ORD-005). Only paid/shipped/completed. Returns null on failure. */
 export async function adminRefundOrder(orderId: string): Promise<AdminOrder | null> {
   if (!orderId?.trim()) return null;

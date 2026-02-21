@@ -187,7 +187,7 @@ Each task must have one of the following statuses:
 | ADM-001 | Implement RBAC system           | NOT STARTED |
 | ADM-002 | Implement product admin tools   | DONE        |
 | ADM-003 | Implement order management UI   | DONE        |
-| ADM-004 | Implement user management tools | NOT STARTED |
+| ADM-004 | Implement user management tools | DONE        |
 
 ---
 
