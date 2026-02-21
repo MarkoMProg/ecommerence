@@ -79,6 +79,11 @@ export default async function CheckoutConfirmationPage({
                 This order has been cancelled.
               </p>
             )}
+            {order.status === "refunded" && (
+              <p className="mb-6 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                This order has been refunded.
+              </p>
+            )}
             <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
               Order details
             </h2>

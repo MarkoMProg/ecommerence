@@ -131,7 +131,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 ### 3.7 Commerce & Experience
 
 - **Cart (CART-001–CART-004):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. **UI-004 DONE**: cart page, Add to Cart, cart ID cookie (`darkloom_cart_id`). CART-005 (guest cart cookie) effectively done via cookie; CART-006 (user cart persistence) NOT STARTED.
-- **Checkout:** **UI-005, CHK-001 to CHK-004, ORD-001, ORD-002 DONE** — Checkout page with order summary, shipping address form, Place Order wired to `POST /api/v1/checkout`. Order schema (order, order_item), CheckoutService creates order from cart (status: pending). **CHK-002**: address validation. **CHK-003**: `GET /api/v1/checkout/summary` (subtotal, shipping, total from cart). **CHK-004**: `GET /api/v1/orders/:id`, confirmation page fetches and displays full order details (items, address, totals). **ORD-003 DONE**: `PATCH /api/v1/orders/:id/status` for status lifecycle. **ORD-004 DONE**: `POST /api/v1/orders/:id/cancel`; Cancel button on confirmation page when pending/paid. PAY-001+, ORD-005 NOT STARTED.
+- **Checkout:** **UI-005, CHK-001 to CHK-004, ORD-001, ORD-002 DONE** — Checkout page with order summary, shipping address form, Place Order wired to `POST /api/v1/checkout`. Order schema (order, order_item), CheckoutService creates order from cart (status: pending). **CHK-002**: address validation. **CHK-003**: `GET /api/v1/checkout/summary` (subtotal, shipping, total from cart). **CHK-004**: `GET /api/v1/orders/:id`, confirmation page fetches and displays full order details (items, address, totals). **ORD-003 DONE**: `PATCH /api/v1/orders/:id/status` for status lifecycle. **ORD-004 DONE**: `POST /api/v1/orders/:id/cancel`; Cancel button on confirmation page when pending/paid. **ORD-005 DONE**: `POST /api/v1/admin/orders/:id/refund`; Refund button in admin orders for paid/shipped/completed. PAY-001+ NOT STARTED.
 - **Tests:** Auth + catalog + order DTO tests. **108 tests** pass. No cart or checkout integration tests yet.
 - **Build:** Production build passes.
 
@@ -185,7 +185,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 8. ~~**CART-001 to CART-004**~~ **DONE** — Cart schema, add/remove/update item APIs. CART-005 (guest cookie) done via `darkloom_cart_id`. CART-006 (user cart persistence) NOT STARTED.
 9. ~~**UI-004**~~ **DONE** — Cart page, Add to Cart on product detail, quantity controls, remove.
-10. ~~**ORD-001, ORD-002**~~ **DONE** — Order schema (order, order_item), checkout creates order. ORD-003 to ORD-005 NOT STARTED.
+10. ~~**ORD-001, ORD-002**~~ **DONE** — Order schema (order, order_item), checkout creates order. ~~**ORD-003, ORD-004, ORD-005**~~ **DONE** — Status lifecycle, cancel, refund.
 11. ~~**CHK-001 to CHK-004**~~ **DONE** — Checkout API, address validation, order summary endpoint, order confirmation.
 12. **PAY-001 to PAY-004:** Payment simulation (Stripe/PayPal sandbox) — NOT STARTED.
 
@@ -243,6 +243,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | 2026-02-18 (audit) | Full audit refresh. Phase 2 ~65%, Phase 3 ~60%. Cart, Checkout (CHK-001–004), Orders (ORD-001–002), UI-004, UI-005 DONE. Order schema, confirmation page, address validation (CHK-002), order summary (CHK-003). 108 tests. API unreachable handling on Home/Shop. Recommended next: PAY-001, ORD-003, UI-006, FND-006. |
 | 2026-02-18 (UI-006) | User account page. GET /api/v1/orders (my orders) with auth, /account page (profile, order history, 2FA/sign out), header nav → /account. |
 | 2026-02-18 (UI-007) | Admin dashboard. AdminGuard + ADMIN_EMAILS. /admin (dashboard, products CRUD, orders list+status). Product POST/PATCH/DELETE protected. |
+| 2026-02-21 (ORD-005) | Refund workflow. New status "refunded"; POST /api/v1/admin/orders/:id/refund; Refund button in admin orders for paid/shipped/completed. |
 | 2026-02-18 (CART-005/006) | Guest cart + persistent user cart. OptionalAuthGuard on cart/checkout. Merge guest→user on login. Checkout associates order with userId. |
 | 2026-02-18 | CART-001–CART-004 DONE; UI-004 cart page; CHK-001–CHK-004, ORD-001/002; Place Order wired |
 | 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |

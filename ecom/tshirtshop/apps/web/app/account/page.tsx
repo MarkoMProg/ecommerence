@@ -28,6 +28,7 @@ function statusBadge(status: string): string {
     shipped: "bg-blue-500/20 text-blue-200",
     completed: "bg-white/10 text-white/80",
     cancelled: "bg-red-500/20 text-red-200",
+    refunded: "bg-slate-500/20 text-slate-200",
   };
   return map[status] ?? "bg-white/10 text-white/60";
 }

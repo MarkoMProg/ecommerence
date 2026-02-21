@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Body, UseGuards } from '@nestjs/common';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BetterAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
@@ -58,6 +58,25 @@ export class AdminController {
       success: true,
       data: order,
       message: 'Order status updated',
+    };
+  }
+
+  /**
+   * Refund order (ORD-005). Only paid, shipped, or completed orders can be refunded.
+   */
+  @Post('orders/:orderId/refund')
+  async refundOrder(@Param('orderId') orderId: string) {
+    const order = await this.orderService.refundOrder(orderId.trim());
+    if (!order) {
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' },
+      });
+    }
+    return {
+      success: true,
+      data: order,
+      message: 'Order refunded',
     };
   }
 }

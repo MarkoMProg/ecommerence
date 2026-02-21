@@ -10,8 +10,9 @@ import { product } from '../catalog/schema';
  * - shipped: Order shipped
  * - completed: Delivered
  * - cancelled: Cancelled by user or system
+ * - refunded: Refunded (ORD-005); from paid/shipped/completed
  */
-export const orderStatusEnum = ['pending', 'paid', 'shipped', 'completed', 'cancelled'] as const;
+export const orderStatusEnum = ['pending', 'paid', 'shipped', 'completed', 'cancelled', 'refunded'] as const;
 export type OrderStatus = (typeof orderStatusEnum)[number];
 
 /**
