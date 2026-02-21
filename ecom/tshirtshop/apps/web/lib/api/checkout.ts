@@ -49,11 +49,16 @@ export interface ShippingAddress {
   phone?: string;
 }
 
+export interface CreateOrderResponse {
+  order: Order;
+  checkoutUrl: string | null;
+}
+
 /** Create order from cart. Pass cartId (e.g. cart.id) or omit to use cookie. Call from client only. */
 export async function createOrder(
   shippingAddress: ShippingAddress,
   cartId?: string | null
-): Promise<Order> {
+): Promise<CreateOrderResponse> {
   const id = cartId ?? getCartIdClient();
   if (!id?.trim()) throw new Error("No cart");
 
@@ -75,7 +80,31 @@ export async function createOrder(
     throw new Error(details?.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
 
+  const json = (await res.json()) as { success: boolean; data: { order: Order; checkoutUrl: string | null } };
+  if (!json.success || !json.data?.order) throw new Error("Invalid response from checkout API");
+  return json.data;
+}
+
+/** Verify Stripe payment and mark order as paid. Call after user returns from Stripe Checkout. */
+export async function verifyPayment(
+  sessionId: string,
+  orderId?: string
+): Promise<Order> {
+  const res = await fetch(`${apiBase()}/api/v1/checkout/verify-payment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ session_id: sessionId, orderId: orderId ?? undefined }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json();
+    const err = body?.error;
+    const msg = err?.message ?? "Failed to verify payment";
+    throw new Error(msg);
+  }
+
   const json = (await res.json()) as { success: boolean; data: Order };
-  if (!json.success || !json.data) throw new Error("Invalid response from checkout API");
+  if (!json.success || !json.data) throw new Error("Invalid response from verify-payment API");
   return json.data;
 }

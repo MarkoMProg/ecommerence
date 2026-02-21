@@ -70,7 +70,7 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
     setPlaceStatus("loading");
     setPlaceError(null);
     try {
-      const order = await createOrder(
+      const { order, checkoutUrl } = await createOrder(
         {
           fullName: address.fullName.trim(),
           line1: address.line1.trim(),
@@ -83,7 +83,11 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
         },
         cart.id
       );
-      router.push(`/checkout/confirmation?orderId=${order.id}`);
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        router.push(`/checkout/confirmation?orderId=${order.id}`);
+      }
     } catch (err) {
       setPlaceError(err instanceof Error ? err.message : "Failed to create order");
     } finally {
@@ -218,17 +222,17 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
           </form>
         </section>
 
-        {/* Payment - placeholder until PAY-001 */}
+        {/* Payment - Stripe Checkout (PAY-001) or direct confirmation */}
         <section className="rounded-lg border border-white/10 bg-white/5 p-6">
           <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
             Payment
           </h2>
           <div className="rounded-md border border-dashed border-white/20 bg-white/5 p-6 text-center">
             <p className="text-sm text-white/60">
-              Payment integration (Stripe/PayPal) is not yet configured.
+              Payment is collected securely after you place your order.
             </p>
             <p className="mt-2 text-xs text-white/40">
-              PAY-001 to PAY-004 — See master-task-board.md
+              You may be redirected to Stripe Checkout if configured.
             </p>
           </div>
         </section>
@@ -302,7 +306,7 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
             {placeStatus === "loading" ? "Placing…" : "Place Order"}
           </button>
           <p className="mt-3 text-center text-[10px] text-white/40">
-            Order created as pending. Payment integration (PAY-001) coming soon.
+            Order created as pending. Redirect to Stripe or confirmation.
           </p>
         </section>
       </div>

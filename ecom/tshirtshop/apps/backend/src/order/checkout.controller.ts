@@ -16,6 +16,8 @@ import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { CheckoutService } from './checkout.service';
 import { validateShippingAddress } from './dto/checkout.dto';
 import { CartService } from '../cart/cart.service';
+import { StripeService } from './stripe.service';
+import { OrderService } from './order.service';
 
 @Controller('api/v1/checkout')
 @AllowAnonymous()
@@ -24,6 +26,8 @@ export class CheckoutController {
   constructor(
     private readonly checkoutService: CheckoutService,
     private readonly cartService: CartService,
+    private readonly stripeService: StripeService,
+    private readonly orderService: OrderService,
   ) {}
 
   /**
@@ -106,10 +110,53 @@ export class CheckoutController {
       user?.id ?? null,
     );
 
+    let checkoutUrl: string | null = null;
+    if (this.stripeService.isConfigured() && order.status === 'pending') {
+      checkoutUrl = await this.stripeService.createCheckoutSession(
+        order.id,
+        order.totalCents,
+        'usd',
+      );
+    }
+
     return {
       success: true,
-      data: order,
-      message: 'Order created successfully. Payment integration coming soon.',
+      data: { order, checkoutUrl },
+      message: checkoutUrl
+        ? 'Order created. Redirect to Stripe Checkout.'
+        : 'Order created successfully.',
+    };
+  }
+
+  /**
+   * Verify Stripe payment and mark order as paid (PAY-001).
+   * Call after user returns from Stripe Checkout with session_id.
+   */
+  @Post('verify-payment')
+  @HttpCode(HttpStatus.OK)
+  async verifyPayment(@Body() body: { session_id?: string; orderId?: string }) {
+    const sessionId = body.session_id?.trim();
+    const orderId = body.orderId?.trim();
+    if (!sessionId) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'SESSION_ID_REQUIRED', message: 'session_id is required' },
+      });
+    }
+
+    const verifiedOrderId = await this.stripeService.verifySession(sessionId, orderId);
+    const updated = await this.orderService.updateOrderStatus(verifiedOrderId, 'paid');
+    if (!updated) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' },
+      });
+    }
+
+    return {
+      success: true,
+      data: updated,
+      message: 'Payment verified. Order marked as paid.',
     };
   }
 }

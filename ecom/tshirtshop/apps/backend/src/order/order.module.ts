@@ -6,11 +6,12 @@ import { CheckoutService } from './checkout.service';
 import { CheckoutController } from './checkout.controller';
 import { OrderService } from './order.service';
 import { OrdersController } from './orders.controller';
+import { StripeService } from './stripe.service';
 
 @Module({
   imports: [DatabaseModule, AuthExtModule, CartModule],
   controllers: [CheckoutController, OrdersController],
-  providers: [CheckoutService, OrderService],
+  providers: [CheckoutService, OrderService, StripeService],
   exports: [CheckoutService, OrderService],
 })
 export class OrderModule {}
