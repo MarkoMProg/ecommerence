@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { twoFactor, bearer, captcha } from 'better-auth/plugins';
+import { twoFactor, bearer, captcha, admin } from 'better-auth/plugins';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres/driver';
 import { Resend } from 'resend';
 import { DatabaseModule } from '../database/database.module';
@@ -156,6 +156,9 @@ import { BETTER_AUTH_INSTANCE } from './constants';
               issuer: 'Darkloom',
             }),
             bearer(),
+            admin({
+              defaultRole: 'user',
+            }),
             ...(configService.get('RECAPTCHA_SECRET_KEY')
               ? [
                   captcha({

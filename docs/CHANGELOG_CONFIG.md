@@ -23,6 +23,8 @@ ADMIN_EMAILS=your-email@example.com
 
 **Impact:** Product create/update/delete (POST/PATCH/DELETE /api/v1/products) and admin endpoints (GET /api/v1/admin/*) require admin. Add your email to test the admin dashboard.
 
+**ADM-001 (2026-02-21):** Better Auth Admin plugin added. Admin access now checks `user.role === 'admin'` first, with `ADMIN_EMAILS` as fallback. Run `npm run db:bootstrap-admin` from apps/backend to promote users in ADMIN_EMAILS to admin role. After bootstrap, role-based admin works without ADMIN_EMAILS.
+
 ---
 
 ## 2026-02-21 — Stripe (PAY-001)

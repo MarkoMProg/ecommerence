@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:push": "node scripts/db-push.mjs",
     "db:generate": "node -r dotenv/config ../../node_modules/drizzle-kit/bin.cjs generate",
-    "db:seed": "node scripts/seed.mjs"
+    "db:seed": "node scripts/seed.mjs",
+    "db:bootstrap-admin": "node scripts/bootstrap-admin-role.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -42,7 +43,8 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.9.1",
     "rxjs": "^7.8.1",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "stripe": "^20.3.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

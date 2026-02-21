@@ -41,6 +41,7 @@ export class BetterAuthGuard implements CanActivate {
       image: session.user.image,
       emailVerified: session.user.emailVerified,
       twoFactorEnabled: (session.user as any).twoFactorEnabled,
+      role: (session.user as any).role,
     };
 
     request.session = session.session;
