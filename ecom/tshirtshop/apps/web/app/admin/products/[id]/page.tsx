@@ -164,7 +164,7 @@ export default function AdminEditProductPage() {
                 id="category"
                 value={form.categoryId}
                 onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white"
+                className="mt-1 w-full rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white [color-scheme:dark]"
                 required
               >
                 <option value="">Select category</option>

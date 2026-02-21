@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/checkout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CheckoutClientProps {
   cart: Cart;
@@ -230,19 +237,24 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
               <label htmlFor="checkout-country" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
                 Country
               </label>
-              <select
-                id="checkout-country"
+              <Select
                 value={address.country}
-                onChange={(e) => updateAddress("country", e.target.value)}
-                className="min-h-[44px] w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00] [color-scheme:dark]"
-                autoComplete="country-name"
+                onValueChange={(v) => updateAddress("country", v)}
               >
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="checkout-country"
+                  className="min-h-[44px] w-full px-4 py-2"
+                >
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="checkout-phone" className="mb-1 block text-xs uppercase tracking-widest text-white/60">

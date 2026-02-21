@@ -45,7 +45,7 @@ export function ShopFiltersForm({
         <select
           id="brand"
           name="brand"
-          className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
+          className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none [color-scheme:dark]"
           defaultValue={brandFilter ?? ""}
         >
           <option value="">All</option>
@@ -93,7 +93,7 @@ export function ShopFiltersForm({
         <select
           id="sort"
           name="sort"
-          className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none"
+          className="min-h-[44px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none [color-scheme:dark]"
           defaultValue={sort ?? ""}
           onChange={(e) => router.replace(buildSortUrl(e.target.value))}
         >

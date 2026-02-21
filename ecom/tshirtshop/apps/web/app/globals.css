@@ -86,6 +86,7 @@
 
 /* Design spec: Premium DnD Apparel — dark mode dominant */
 .dark {
+  color-scheme: dark;
   --background: #0A0A0A;
   --foreground: #FFFFFF;
   --card: #1A1A1A;
@@ -133,5 +134,10 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-space-grotesk), var(--font-inter), sans-serif;
+  }
+  /* Native select dropdown: Windows often ignores color-scheme. Force option contrast. */
+  .dark select option {
+    color: #0a0a0a;
+    background: #ffffff;
   }
 }
