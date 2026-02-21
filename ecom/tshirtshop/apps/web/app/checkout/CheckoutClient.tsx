@@ -22,6 +22,43 @@ interface ShippingAddress {
   phone: string;
 }
 
+/** ISO 3166-1 alpha-2 codes. Estonia first (base location), then EU/EEA, then others. */
+const COUNTRIES: { code: string; name: string }[] = [
+  { code: "EE", name: "Estonia" },
+  { code: "LV", name: "Latvia" },
+  { code: "LT", name: "Lithuania" },
+  { code: "FI", name: "Finland" },
+  { code: "SE", name: "Sweden" },
+  { code: "NO", name: "Norway" },
+  { code: "DK", name: "Denmark" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "NL", name: "Netherlands" },
+  { code: "BE", name: "Belgium" },
+  { code: "PL", name: "Poland" },
+  { code: "ES", name: "Spain" },
+  { code: "IT", name: "Italy" },
+  { code: "AT", name: "Austria" },
+  { code: "IE", name: "Ireland" },
+  { code: "PT", name: "Portugal" },
+  { code: "CZ", name: "Czech Republic" },
+  { code: "GR", name: "Greece" },
+  { code: "RO", name: "Romania" },
+  { code: "HU", name: "Hungary" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "HR", name: "Croatia" },
+  { code: "SK", name: "Slovakia" },
+  { code: "SI", name: "Slovenia" },
+  { code: "LU", name: "Luxembourg" },
+  { code: "CY", name: "Cyprus" },
+  { code: "MT", name: "Malta" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" },
+  { code: "CH", name: "Switzerland" },
+  { code: "IS", name: "Iceland" },
+];
+
 const initialAddress: ShippingAddress = {
   fullName: "",
   line1: "",
@@ -29,7 +66,7 @@ const initialAddress: ShippingAddress = {
   city: "",
   stateOrProvince: "",
   postalCode: "",
-  country: "US",
+  country: "EE",
   phone: "",
 };
 
@@ -200,9 +237,11 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
                 className="min-h-[44px] w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00]"
                 autoComplete="country-name"
               >
-                <option value="US">United States</option>
-                <option value="CA">Canada</option>
-                <option value="GB">United Kingdom</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="sm:col-span-2">
