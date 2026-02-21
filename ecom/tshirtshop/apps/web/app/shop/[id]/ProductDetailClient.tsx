@@ -93,9 +93,31 @@ export default function ProductDetailClient({
           >
             {product.name}
           </h1>
-          <p className="mb-6 text-xl text-[#E6C068] sm:mb-8 sm:text-2xl">
+          <p className="mb-2 text-xl text-[#E6C068] sm:mb-4 sm:text-2xl">
             ${product.price}
           </p>
+          {(product.reviewCount != null && product.reviewCount > 0) && (
+            <div className="mb-6 flex items-center gap-2 text-sm text-white/80 sm:mb-8">
+              <span className="flex" aria-label={`${product.averageRating ?? 0} out of 5 stars`}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span
+                    key={star}
+                    className={
+                      star <= (product.averageRating ?? 0)
+                        ? "text-[#E6C068]"
+                        : "text-white/30"
+                    }
+                  >
+                    ★
+                  </span>
+                ))}
+              </span>
+              <span>
+                {product.averageRating?.toFixed(1)} ({product.reviewCount} review
+                {product.reviewCount === 1 ? "" : "s"})
+              </span>
+            </div>
+          )}
 
           {/* Size selector */}
           <div className="mb-8">

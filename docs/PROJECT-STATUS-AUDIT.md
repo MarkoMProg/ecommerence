@@ -193,7 +193,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 13. ~~**UI-005**~~ **DONE** — Checkout page. ~~**UI-006**~~ **DONE** — User account page. ~~**UI-007**~~ **DONE** — Admin dashboard.
 
-14. **REV-001, REV-002 DONE** — Review schema, review API. Endpoints: GET/POST /api/v1/products/:id/reviews, PATCH/DELETE /api/v1/reviews/:id. **REV-003, REV-004:** Rating aggregation, helpful voting.
+14. **REV-001, REV-002, REV-003 DONE** — Review schema, review API, rating aggregation. Product detail shows average rating and review count. **REV-004:** Helpful voting.
 
 15. **ADM-001 to ADM-004:** Admin RBAC and tools.
 
@@ -246,6 +246,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | 2026-02-21 (ORD-005) | Refund workflow. New status "refunded"; POST /api/v1/admin/orders/:id/refund; Refund button in admin orders for paid/shipped/completed. |
 | 2026-02-21 (REV-001) | Review schema. Tables: review (productId, userId, rating, title, body), review_helpful_vote (reviewId, userId, helpful). Unique (productId, userId) per review. |
 | 2026-02-21 (REV-002) | Review API. GET/POST /api/v1/products/:id/reviews (list, create); PATCH/DELETE /api/v1/reviews/:id (update, delete own). Auth required for create/update/delete. |
+| 2026-02-21 (REV-003) | Rating aggregation. ReviewService.getRatingSummary; product API returns averageRating, reviewCount; product detail shows stars and review count. |
 | 2026-02-18 (CART-005/006) | Guest cart + persistent user cart. OptionalAuthGuard on cart/checkout. Merge guest→user on login. Checkout associates order with userId. |
 | 2026-02-18 | CART-001–CART-004 DONE; UI-004 cart page; CHK-001–CHK-004, ORD-001/002; Place Order wired |
 | 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |

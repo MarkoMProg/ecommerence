@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { ReviewService } from '../review/review.service';
 import { eq, desc, asc, sql, and, or, ilike, gte, lte, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
@@ -67,6 +68,7 @@ export class CatalogService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
+    private readonly reviewService: ReviewService,
   ) {}
 
   async listCategories(): Promise<Category[]> {
@@ -220,18 +222,30 @@ export class CatalogService {
   }
 
   async getProductById(id: string): Promise<
-    | (Product & { images: ProductImage[]; category: Category | null })
+    | (Product & {
+        images: ProductImage[];
+        category: Category | null;
+        averageRating: number;
+        reviewCount: number;
+      })
     | null
   > {
     const [p] = await this.db.select().from(product).where(eq(product.id, id));
     if (!p) return null;
 
-    const [images, categories] = await Promise.all([
+    const [images, categories, ratingSummary] = await Promise.all([
       this.db.select().from(productImage).where(eq(productImage.productId, id)),
       this.db.select().from(category).where(eq(category.id, p.categoryId)),
+      this.reviewService.getRatingSummary(id),
     ]);
     const cat = categories[0] ?? null;
-    return { ...p, images, category: cat };
+    return {
+      ...p,
+      images,
+      category: cat,
+      averageRating: ratingSummary.averageRating,
+      reviewCount: ratingSummary.reviewCount,
+    };
   }
 
   async createProduct(dto: CreateProductDto): Promise<Product & { images: ProductImage[] }> {

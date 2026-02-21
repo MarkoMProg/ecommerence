@@ -34,6 +34,9 @@ export interface ApiProduct {
   brand: string;
   images: ApiProductImage[];
   category: ApiCategory | null;
+  /** REV-003: aggregated from reviews */
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface ApiErrorPayload {
@@ -68,6 +71,9 @@ export interface ProductDisplay {
   imageUrl: string;
   category: string;
   description?: string;
+  /** REV-003: average star rating 0–5, number of reviews */
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 function mapProduct(p: ApiProduct): ProductDisplay {
@@ -79,6 +85,8 @@ function mapProduct(p: ApiProduct): ProductDisplay {
     imageUrl: primaryImage?.imageUrl ?? '',
     category: p.category?.slug ?? '',
     description: p.description,
+    averageRating: p.averageRating,
+    reviewCount: p.reviewCount,
   };
 }
 
