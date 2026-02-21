@@ -234,7 +234,7 @@ export function CheckoutClient({ cart }: CheckoutClientProps) {
                 id="checkout-country"
                 value={address.country}
                 onChange={(e) => updateAddress("country", e.target.value)}
-                className="min-h-[44px] w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00]"
+                className="min-h-[44px] w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00] [color-scheme:dark]"
                 autoComplete="country-name"
               >
                 {COUNTRIES.map((c) => (

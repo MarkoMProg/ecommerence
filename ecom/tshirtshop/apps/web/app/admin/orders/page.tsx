@@ -121,7 +121,7 @@ export default function AdminOrdersPage() {
                       value={order.status}
                       onChange={(e) => handleStatusChange(order.id, e.target.value)}
                       disabled={updating === order.id}
-                      className="rounded border border-white/20 bg-white/5 px-2 py-1 text-white disabled:opacity-50"
+                      className="rounded border border-white/20 bg-white/5 px-2 py-1 text-white disabled:opacity-50 [color-scheme:dark]"
                     >
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s} value={s}>
