@@ -58,10 +58,38 @@ export class StripeService {
   }
 
   /**
-   * Verify Stripe session and return orderId if payment is complete.
-   * Throws if session not found, not paid, or metadata.orderId mismatch.
+   * Handle Stripe webhook event (PAY-002). Verifies signature and processes checkout.session.completed.
+   * Returns orderId if payment completed, null for other events.
    */
-  async verifySession(sessionId: string, expectedOrderId?: string): Promise<string> {
+  handleWebhookEvent(rawBody: Buffer, signature: string): string | null {
+    if (!this.stripe) return null;
+
+    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET')?.trim();
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is required for webhook verification');
+    }
+
+    const event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.payment_status === 'paid' && session.metadata?.orderId) {
+        return session.metadata.orderId.trim();
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Verify Stripe session and return orderId if payment is complete (PAY-002: amount validation).
+   * Throws if session not found, not paid, metadata.orderId mismatch, or amount mismatch.
+   */
+  async verifySession(
+    sessionId: string,
+    expectedOrderId?: string,
+    expectedTotalCents?: number,
+  ): Promise<string> {
     if (!this.stripe) {
       throw new Error('Stripe is not configured');
     }
@@ -77,6 +105,12 @@ export class StripeService {
     }
     if (expectedOrderId && orderId.trim() !== expectedOrderId.trim()) {
       throw new Error('Session orderId does not match');
+    }
+
+    if (expectedTotalCents != null && session.amount_total !== expectedTotalCents) {
+      throw new Error(
+        `Payment amount mismatch: expected ${expectedTotalCents} cents, got ${session.amount_total ?? 'null'}`,
+      );
     }
 
     return orderId.trim();

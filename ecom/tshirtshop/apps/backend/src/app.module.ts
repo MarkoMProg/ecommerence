@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
@@ -39,7 +40,11 @@ type BetterAuthInstance = ReturnType<typeof betterAuth>;
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Parse JSON body for our custom endpoints (not Better Auth — it handles its own body)
+    // Stripe webhook needs raw body for signature verification (PAY-002)
+    consumer
+      .apply(express.raw({ type: 'application/json' }))
+      .forRoutes({ path: 'webhooks/stripe', method: RequestMethod.POST });
+    // Parse JSON for API routes
     consumer
       .apply(express.json(), express.urlencoded({ extended: true }))
       .forRoutes('api/v1/*path');

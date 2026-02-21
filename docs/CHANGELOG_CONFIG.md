@@ -41,3 +41,5 @@ ADMIN_EMAILS=your-email@example.com
 **Impact:** Required for PAY-001 Stripe sandbox integration. Get keys from Stripe Dashboard → Developers → API keys (Test mode).
 
 **PAY-001 Implementation (2026-02-21):** When `STRIPE_SECRET_KEY` is set (sk_test_...), checkout creates a Stripe Checkout Session and returns `checkoutUrl`. Frontend redirects to Stripe; on success Stripe redirects to `/checkout/confirmation?orderId=X&session_id=Y`. Confirmation page calls `POST /api/v1/checkout/verify-payment` to verify payment and mark order as paid.
+
+**PAY-002 Implementation (2026-02-21):** Payment validation flow. `STRIPE_WEBHOOK_SECRET` required for webhooks. Configure Stripe Dashboard → Webhooks → Add endpoint: `https://your-backend/webhooks/stripe`, event `checkout.session.completed`. Webhook marks order as paid (authoritative server-to-server). Verify-payment endpoint validates session amount matches order total; idempotent when order already paid. Local dev: use Stripe CLI `stripe listen --forward-to localhost:3000/webhooks/stripe`.

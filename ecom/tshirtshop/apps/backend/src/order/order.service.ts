@@ -125,6 +125,18 @@ export class OrderService {
   }
 
   /**
+   * Mark order as paid if currently pending (PAY-002 idempotency).
+   * Returns order; no-op if already paid. Used by webhook and verify-payment.
+   */
+  async markOrderPaidIfPending(orderId: string): Promise<OrderDto | null> {
+    const o = await this.getOrderById(orderId.trim());
+    if (!o) return null;
+    if (o.status === 'paid') return o;
+    if (o.status !== 'pending') return o;
+    return this.updateOrderStatus(orderId.trim(), 'paid');
+  }
+
+  /**
    * Update order status (ORD-003). Validates lifecycle transitions.
    * WARNING: Endpoint is unauthenticated. Add auth for production (admin or webhook secret).
    */

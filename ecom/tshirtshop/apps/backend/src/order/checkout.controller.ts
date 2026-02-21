@@ -144,8 +144,15 @@ export class CheckoutController {
       });
     }
 
-    const verifiedOrderId = await this.stripeService.verifySession(sessionId, orderId);
-    const updated = await this.orderService.updateOrderStatus(verifiedOrderId, 'paid');
+    const existingOrder = orderId ? await this.orderService.getOrderById(orderId) : null;
+    const expectedTotalCents = existingOrder?.totalCents;
+
+    const verifiedOrderId = await this.stripeService.verifySession(
+      sessionId,
+      orderId,
+      expectedTotalCents,
+    );
+    const updated = await this.orderService.markOrderPaidIfPending(verifiedOrderId);
     if (!updated) {
       throw new BadRequestException({
         success: false,
