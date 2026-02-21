@@ -8,10 +8,11 @@ import type { OrderStatus } from './schema';
 /** Valid status transitions. ORD-003 */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ['paid', 'cancelled'],
-  paid: ['shipped', 'cancelled'],
-  shipped: ['completed'],
-  completed: [],
+  paid: ['shipped', 'cancelled', 'refunded'],
+  shipped: ['completed', 'refunded'],
+  completed: ['refunded'],
   cancelled: [],
+  refunded: [],
 };
 
 export interface OrderItemDto {
@@ -129,7 +130,7 @@ export class OrderService {
    */
   async updateOrderStatus(orderId: string, newStatus: string): Promise<OrderDto | null> {
     const status = newStatus.trim().toLowerCase();
-    if (!(['pending', 'paid', 'shipped', 'completed', 'cancelled'] as const).includes(status as OrderStatus)) {
+    if (!(['pending', 'paid', 'shipped', 'completed', 'cancelled', 'refunded'] as const).includes(status as OrderStatus)) {
       throw new BadRequestException({
         success: false,
         error: { code: 'INVALID_STATUS', message: `Invalid status: ${newStatus}` },
@@ -160,9 +161,17 @@ export class OrderService {
 
   /**
    * Cancel order (ORD-004). Only pending or paid orders can be cancelled.
-   * Shipped/completed orders cannot be cancelled; use refund workflow (ORD-005) instead.
+   * Shipped/completed orders cannot be cancelled; use refundOrder (ORD-005) instead.
    */
   async cancelOrder(orderId: string): Promise<OrderDto | null> {
     return this.updateOrderStatus(orderId.trim(), 'cancelled');
+  }
+
+  /**
+   * Refund order (ORD-005). Only paid, shipped, or completed orders can be refunded.
+   * Admin-only. When PAY-001 exists, integrate with Stripe/PayPal refund API and restore stock.
+   */
+  async refundOrder(orderId: string): Promise<OrderDto | null> {
+    return this.updateOrderStatus(orderId.trim(), 'refunded');
   }
 }
