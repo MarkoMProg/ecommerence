@@ -7,6 +7,7 @@ import * as authSchema from '../auth/schema';
 import * as catalogSchema from '../catalog/schema';
 import * as cartSchema from '../cart/schema';
 import * as orderSchema from '../order/schema';
+import * as reviewSchema from '../review/schema';
 
 @Module({
   imports: [ConfigModule],
@@ -23,6 +24,7 @@ import * as orderSchema from '../order/schema';
             ...catalogSchema,
             ...cartSchema,
             ...orderSchema,
+            ...reviewSchema,
           },
         });
       },

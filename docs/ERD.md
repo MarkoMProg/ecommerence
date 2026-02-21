@@ -166,8 +166,10 @@ erDiagram
 | | `product_image` | Product images (one primary per product) |
 | **Cart** | `cart` | Shopping cart (guest or user; userId null = guest) |
 | | `cart_item` | Line items (product + quantity per cart) |
-| **Order** | `order` | Placed orders (created at checkout; status: pending/paid/shipped/completed/cancelled) |
+| **Order** | `order` | Placed orders (created at checkout; status: pending/paid/shipped/completed/cancelled/refunded) |
 | | `order_item` | Line items with price snapshot at order time |
+| **Review** | `review` | Product reviews (rating 1–5, title, body); one per user per product |
+| | `review_helpful_vote` | Helpful votes on reviews |
 
 ---
 
@@ -198,12 +200,19 @@ Per project-overview and master-task-board:
 |-------|---------|
 | `address` | Dedicated shipping/billing addresses (currently embedded in order) |
 | `payment` | Payment records |
-| `review` | Product reviews |
-| `review_helpful_vote` | Helpful voting on reviews |
 
 ---
 
-## 5. Diagram Reference
+## 5. Review Tables (REV-001, Implemented)
+
+| Table | Purpose |
+|-------|---------|
+| `review` | Product reviews (productId, userId, rating 1–5, title, body); unique (productId, userId) |
+| `review_helpful_vote` | Helpful voting (reviewId, userId, helpful); unique (reviewId, userId) |
+
+---
+
+## 6. Diagram Reference
 
 - **PK** = Primary key  
 - **UK** = Unique key  

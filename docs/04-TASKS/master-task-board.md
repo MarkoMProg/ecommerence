@@ -173,8 +173,8 @@ Each task must have one of the following statuses:
 
 | ID      | Task                         | Status      |
 | ------- | ---------------------------- | ----------- |
-| REV-001 | Implement review schema      | NOT STARTED |
-| REV-002 | Implement review API         | NOT STARTED |
+| REV-001 | Implement review schema      | DONE        |
+| REV-002 | Implement review API         | DONE        |
 | REV-003 | Implement rating aggregation | NOT STARTED |
 | REV-004 | Implement helpful voting     | NOT STARTED |
 
