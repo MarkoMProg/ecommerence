@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart } from "@/lib/api/cart";
+import {
+  fetchProductReviews,
+  voteReviewHelpful,
+  type Review,
+} from "@/lib/api/reviews";
 
 interface ProductDetailClientProps {
   product: ProductDisplay;
@@ -17,8 +22,33 @@ export default function ProductDetailClient({
   const [selectedSize, setSelectedSize] = useState<string>("M");
   const [accordionOpen, setAccordionOpen] = useState<string | null>("description");
   const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [reviews, setReviews] = useState<Review[] | null>(null);
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   const sizes = ["XS", "S", "M", "L", "XL"];
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProductReviews(product.id).then((res) => {
+      if (!cancelled && res?.data) setReviews(res.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
+
+  const handleHelpful = async (reviewId: string) => {
+    setVotingId(reviewId);
+    const result = await voteReviewHelpful(reviewId, true);
+    if (result && reviews) {
+      setReviews(
+        reviews.map((r) =>
+          r.id === reviewId ? { ...r, helpfulCount: result.helpfulCount } : r
+        )
+      );
+    }
+    setVotingId(null);
+  };
 
   const accordionSections = [
     {
@@ -199,6 +229,65 @@ export default function ProductDetailClient({
             )}
           </div>
         ))}
+      </div>
+
+      {/* Reviews */}
+      <div className="mb-16 border-t border-white/10 pt-8 sm:mb-24 sm:pt-12">
+        <h2
+          className="mb-6 text-xl font-bold uppercase tracking-tight text-white sm:mb-8 sm:text-2xl"
+          style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+        >
+          Reviews
+        </h2>
+        {reviews === null ? (
+          <p className="text-sm text-white/60">Loading reviews…</p>
+        ) : reviews.length === 0 ? (
+          <p className="text-sm text-white/60">No reviews yet.</p>
+        ) : (
+          <ul className="space-y-6">
+            {reviews.map((r) => (
+              <li
+                key={r.id}
+                className="rounded-lg border border-white/10 bg-white/5 p-4"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="flex text-[#E6C068]">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={
+                          star <= r.rating ? "text-[#E6C068]" : "text-white/30"
+                        }
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </span>
+                  <span className="text-sm font-medium text-white">
+                    {r.userName}
+                  </span>
+                  <span className="text-xs text-white/50">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                {r.title && (
+                  <p className="mb-1 text-sm font-medium text-white">
+                    {r.title}
+                  </p>
+                )}
+                <p className="mb-3 text-sm text-white/80">{r.body}</p>
+                <button
+                  type="button"
+                  onClick={() => handleHelpful(r.id)}
+                  disabled={votingId === r.id}
+                  className="text-xs text-white/60 hover:text-white disabled:opacity-50"
+                >
+                  Helpful ({r.helpfulCount})
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Related Products */}

@@ -176,7 +176,7 @@ Each task must have one of the following statuses:
 | REV-001 | Implement review schema      | DONE        |
 | REV-002 | Implement review API         | DONE        |
 | REV-003 | Implement rating aggregation | DONE        |
-| REV-004 | Implement helpful voting     | NOT STARTED |
+| REV-004 | Implement helpful voting     | DONE        |
 
 ---
 
