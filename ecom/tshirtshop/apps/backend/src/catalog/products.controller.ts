@@ -131,7 +131,7 @@ export class ProductsController {
       weightImperial: body.weightImperial,
       dimensionMetric: body.dimensionMetric,
       dimensionImperial: body.dimensionImperial,
-      imageUrls: body.imageUrls,
+      images: body.images,
     });
     return {
       success: true,

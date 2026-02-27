@@ -58,7 +58,11 @@ export interface AdminProduct {
   stockQuantity: number;
   categoryId: string;
   brand: string;
-  images: { id: string; productId: string; imageUrl: string; isPrimary: boolean }[];
+  weightMetric?: string | null;
+  weightImperial?: string | null;
+  dimensionMetric?: string | null;
+  dimensionImperial?: string | null;
+  images: { id: string; productId: string; imageUrl: string; altText: string | null; isPrimary: boolean }[];
   category: { id: string; name: string; slug: string } | null;
 }
 
@@ -108,6 +112,33 @@ export async function fetchAdminOrders(): Promise<AdminOrder[] | null> {
   }
 }
 
+/** Shared image input type: url + optional alt text. */
+export interface ProductImageInput {
+  url: string;
+}
+
+/**
+ * Upload a product image file to the backend.
+ * Returns the hosted URL on success, or null on failure.
+ */
+export async function adminUploadImage(file: File): Promise<string | null> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    // Do NOT set Content-Type — the browser sets it with the correct boundary.
+    const res = await fetch(`${apiBase()}/api/v1/uploads`, {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: { url: string } };
+    return json.success ? json.data.url : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Create product (admin). Returns null on failure. */
 export async function adminCreateProduct(body: {
   name: string;
@@ -116,7 +147,11 @@ export async function adminCreateProduct(body: {
   stockQuantity?: number;
   categoryId: string;
   brand: string;
-  imageUrls?: string[];
+  weightMetric?: string;
+  weightImperial?: string;
+  dimensionMetric?: string;
+  dimensionImperial?: string;
+  images?: ProductImageInput[];
 }): Promise<unknown | null> {
   try {
     const res = await adminFetch("/api/v1/products", {
@@ -134,7 +169,19 @@ export async function adminCreateProduct(body: {
 /** Update product (admin). Returns null on failure. */
 export async function adminUpdateProduct(
   id: string,
-  body: Record<string, unknown>
+  body: {
+    name?: string;
+    description?: string;
+    priceCents?: number;
+    stockQuantity?: number;
+    categoryId?: string;
+    brand?: string;
+    weightMetric?: string;
+    weightImperial?: string;
+    dimensionMetric?: string;
+    dimensionImperial?: string;
+    images?: ProductImageInput[];
+  }
 ): Promise<unknown | null> {
   try {
     const res = await adminFetch(`/api/v1/products/${encodeURIComponent(id)}`, {

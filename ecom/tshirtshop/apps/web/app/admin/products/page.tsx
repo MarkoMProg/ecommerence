@@ -77,7 +77,9 @@ export default function AdminProductsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-64 bg-white/5"
           />
-          {/* Future: Add Product button */}
+          <Button asChild>
+            <Link href="/admin/products/new">+ New Product</Link>
+          </Button>
         </div>
       </div>
 

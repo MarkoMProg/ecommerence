@@ -1,5 +1,10 @@
 /** DTOs and validation for catalog endpoints. */
 
+/** A single image entry with a URL. */
+export interface ProductImageInput {
+  url: string;
+}
+
 export interface CreateProductBody {
   name: string;
   description: string;
@@ -11,7 +16,8 @@ export interface CreateProductBody {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
-  imageUrls?: string[];
+  /** Images array: each item has a url and optional alt text. First image is primary. */
+  images?: ProductImageInput[];
 }
 
 export interface UpdateProductBody {
@@ -25,6 +31,8 @@ export interface UpdateProductBody {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  /** When provided, replaces all existing images for the product. */
+  images?: ProductImageInput[];
 }
 
 export interface ValidationError {
@@ -66,11 +74,17 @@ export function validateCreateProduct(body: unknown): ValidationError[] {
     }
   }
 
-  if (b?.imageUrls != null) {
-    if (!Array.isArray(b.imageUrls)) {
-      errors.push({ field: 'imageUrls', message: 'imageUrls must be an array' });
-    } else if (b.imageUrls.some((u: unknown) => typeof u !== 'string')) {
-      errors.push({ field: 'imageUrls', message: 'imageUrls must contain only strings' });
+  if (b?.images != null) {
+    if (!Array.isArray(b.images)) {
+      errors.push({ field: 'images', message: 'images must be an array' });
+    } else {
+      for (const img of b.images as unknown[]) {
+        const entry = img as Record<string, unknown>;
+        if (!entry?.url || typeof entry.url !== 'string' || entry.url.trim().length < 1) {
+          errors.push({ field: 'images', message: 'Each image must have a non-empty url string' });
+          break;
+        }
+      }
     }
   }
 
@@ -111,6 +125,20 @@ export function validateUpdateProduct(body: unknown): ValidationError[] {
 
   if (b?.brand != null && (typeof b.brand !== 'string' || b.brand.trim().length < 1)) {
     errors.push({ field: 'brand', message: 'Brand must be a non-empty string' });
+  }
+
+  if (b?.images != null) {
+    if (!Array.isArray(b.images)) {
+      errors.push({ field: 'images', message: 'images must be an array' });
+    } else {
+      for (const img of b.images as unknown[]) {
+        const entry = img as Record<string, unknown>;
+        if (!entry?.url || typeof entry.url !== 'string' || entry.url.trim().length < 1) {
+          errors.push({ field: 'images', message: 'Each image must have a non-empty url string' });
+          break;
+        }
+      }
+    }
   }
 
   return errors;

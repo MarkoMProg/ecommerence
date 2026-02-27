@@ -1,16 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchCategories } from "@/lib/api/catalog";
 import type { ApiCategory } from "@/lib/api/catalog";
-import {
-  fetchAdminProduct,
-  adminUpdateProduct,
-  adminUploadImage,
-  type AdminProduct,
-} from "@/lib/api/admin";
+import { adminCreateProduct, adminUploadImage } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,15 +14,45 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ImageEntry {
+  /** Hosted URL — set after file upload or entered manually. */
   url: string;
+  /** True while the file is being uploaded. */
   uploading: boolean;
 }
 
-// ─── Shared components ────────────────────────────────────────────────────────
+
+interface FormState {
+  name: string;
+  description: string;
+  price: string;
+  stockQuantity: string;
+  categoryId: string;
+  brand: string;
+  weightMetric: string;
+  weightImperial: string;
+  dimensionMetric: string;
+  dimensionImperial: string;
+}
+
+const EMPTY_FORM: FormState = {
+  name: "",
+  description: "",
+  price: "",
+  stockQuantity: "0",
+  categoryId: "",
+  brand: "",
+  weightMetric: "",
+  weightImperial: "",
+  dimensionMetric: "",
+  dimensionImperial: "",
+};
+
+// ─── Form field wrapper ────────────────────────────────────────────────────────
 
 function FormField(props: {
   id: string;
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -35,10 +60,13 @@ function FormField(props: {
       <Label htmlFor={props.id} className="text-white/80">
         {props.label}
       </Label>
+      {props.hint && <p className="mb-1 text-xs text-white/40">{props.hint}</p>}
       <div className="mt-1">{props.children}</div>
     </div>
   );
 }
+
+// ─── Image Manager ────────────────────────────────────────────────────────────
 
 function ImageManager({
   images,
@@ -49,14 +77,17 @@ function ImageManager({
 }) {
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const update = (index: number, patch: Partial<ImageEntry>) =>
+  const update = (index: number, patch: Partial<ImageEntry>) => {
     onChange(images.map((img, i) => (i === index ? { ...img, ...patch } : img)));
+  };
 
-  const remove = (index: number) =>
+  const remove = (index: number) => {
     onChange(images.filter((_, i) => i !== index));
+  };
 
-  const add = () =>
+  const add = () => {
     onChange([...images, { url: "", uploading: false }]);
+  };
 
   const handleFile = async (index: number, file: File) => {
     update(index, { uploading: true, url: "" });
@@ -67,7 +98,11 @@ function ImageManager({
   return (
     <div className="space-y-3">
       {images.map((img, i) => (
-        <div key={i} className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
+        <div
+          key={i}
+          className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3"
+        >
+          {/* Header row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
@@ -88,7 +123,9 @@ function ImageManager({
             </button>
           </div>
 
+          {/* Preview + upload */}
           <div className="flex gap-3 items-start">
+            {/* Thumbnail */}
             <div className="flex-shrink-0 h-20 w-20 rounded border border-white/10 overflow-hidden bg-white/5 flex items-center justify-center">
               {img.uploading ? (
                 <span className="text-xs text-white/40 animate-pulse">Uploading…</span>
@@ -103,12 +140,17 @@ function ImageManager({
                   }}
                 />
               ) : (
-                <svg className="h-8 w-8 text-white/20" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-8 w-8 text-white/20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                 </svg>
               )}
             </div>
 
+            {/* URL input + file picker */}
             <div className="flex-1 space-y-2">
               <div className="flex gap-2">
                 <Input
@@ -155,61 +197,20 @@ function ImageManager({
   );
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────────────
-
-export default function AdminEditProductPage() {
+export default function AdminNewProductPage() {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
-  const [product, setProduct] = useState<AdminProduct | null>(null);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [images, setImages] = useState<ImageEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [images, setImages] = useState<ImageEntry[]>([]);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    priceCents: "",
-    stockQuantity: "0",
-    categoryId: "",
-    brand: "",
-    weightMetric: "",
-    weightImperial: "",
-    dimensionMetric: "",
-    dimensionImperial: "",
-  });
 
   useEffect(() => {
-    Promise.all([fetchAdminProduct(id), fetchCategories()]).then(
-      ([p, cats]) => {
-        setProduct(p ?? null);
-        setCategories(cats);
-        if (p) {
-          setForm({
-            name: p.name,
-            description: p.description,
-            priceCents: (p.priceCents / 100).toFixed(2),
-            stockQuantity: String(p.stockQuantity),
-            categoryId: p.categoryId,
-            brand: p.brand,
-            weightMetric: p.weightMetric ?? "",
-            weightImperial: p.weightImperial ?? "",
-            dimensionMetric: p.dimensionMetric ?? "",
-            dimensionImperial: p.dimensionImperial ?? "",
-          });
-          setImages(
-            p.images.map((img) => ({
-              url: img.imageUrl,
-              uploading: false,
-            }))
-          );
-        }
-      }
-    );
-  }, [id]);
+    fetchCategories().then(setCategories);
+  }, []);
 
   const set =
-    (key: keyof typeof form) =>
+    (key: keyof FormState) =>
     (
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -219,26 +220,25 @@ export default function AdminEditProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
     setError(null);
 
-    const price = Math.round(parseFloat(form.priceCents) * 100);
+    const price = Math.round(parseFloat(form.price) * 100);
     const stock = parseInt(form.stockQuantity, 10) || 0;
 
-    if (!form.name.trim() || !form.description.trim() || !form.categoryId || !form.brand.trim()) {
-      setError("Name, description, category, and brand are required.");
-      return;
-    }
-    if (isNaN(price) || price < 0) {
-      setError("Price must be a valid positive number.");
-      return;
-    }
+    if (!form.name.trim()) return setError("Name is required.");
+    if (!form.description.trim()) return setError("Description is required.");
+    if (!form.categoryId) return setError("Category is required.");
+    if (!form.brand.trim()) return setError("Brand is required.");
+    if (isNaN(price) || price < 0)
+      return setError("Price must be a valid positive number.");
+    if (stock < 0) return setError("Stock quantity cannot be negative.");
+
     if (images.some((img) => img.uploading))
       return setError("Please wait for all images to finish uploading.");
 
     const validImages = images.filter((img) => img.url.trim());
     setSubmitting(true);
-    const result = await adminUpdateProduct(product.id, {
+    const result = await adminCreateProduct({
       name: form.name.trim(),
       description: form.description.trim(),
       priceCents: price,
@@ -249,29 +249,23 @@ export default function AdminEditProductPage() {
       weightImperial: form.weightImperial.trim() || undefined,
       dimensionMetric: form.dimensionMetric.trim() || undefined,
       dimensionImperial: form.dimensionImperial.trim() || undefined,
-      images: validImages.map((img) => ({
-        url: img.url.trim(),
-      })),
+      images:
+        validImages.length > 0
+          ? validImages.map((img) => ({
+              url: img.url.trim(),
+            }))
+          : undefined,
     });
     setSubmitting(false);
 
     if (result) {
       router.push("/admin/products");
     } else {
-      setError("Failed to update product.");
+      setError(
+        "Failed to create product. Check that all fields are valid and try again."
+      );
     }
   };
-
-  if (!product) {
-    return (
-      <p className="py-8 text-white/60">
-        Loading… or product not found.{" "}
-        <Link href="/admin/products" className="text-[#FF4D00] hover:underline">
-          Back to products
-        </Link>
-      </p>
-    );
-  }
 
   return (
     <>
@@ -280,7 +274,7 @@ export default function AdminEditProductPage() {
           className="text-2xl font-bold uppercase tracking-tight text-white sm:text-4xl"
           style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
         >
-          Edit Product
+          New Product
         </h1>
         <Button variant="outline" asChild>
           <Link href="/admin/products">Cancel</Link>
@@ -307,6 +301,7 @@ export default function AdminEditProductPage() {
                 id="name"
                 value={form.name}
                 onChange={set("name")}
+                placeholder="e.g. Infernal D20 Tee"
                 className="bg-white/5"
                 required
               />
@@ -317,8 +312,9 @@ export default function AdminEditProductPage() {
                 id="description"
                 value={form.description}
                 onChange={set("description")}
+                placeholder="Detailed product description…"
                 rows={5}
-                className="w-full rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30"
                 required
               />
             </FormField>
@@ -346,6 +342,7 @@ export default function AdminEditProductPage() {
                   id="brand"
                   value={form.brand}
                   onChange={set("brand")}
+                  placeholder="e.g. Darkloom"
                   className="bg-white/5"
                   required
                 />
@@ -368,11 +365,14 @@ export default function AdminEditProductPage() {
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.priceCents}
-                onChange={set("priceCents")}
+                value={form.price}
+                onChange={set("price")}
+                placeholder="e.g. 29.99"
                 className="bg-white/5"
+                required
               />
             </FormField>
+
             <FormField id="stock" label="Stock Quantity">
               <Input
                 id="stock"
@@ -396,16 +396,40 @@ export default function AdminEditProductPage() {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <FormField id="weightMetric" label="Weight (metric)">
-              <Input id="weightMetric" value={form.weightMetric} onChange={set("weightMetric")} placeholder="e.g. 200g" className="bg-white/5" />
+              <Input
+                id="weightMetric"
+                value={form.weightMetric}
+                onChange={set("weightMetric")}
+                placeholder="e.g. 200g"
+                className="bg-white/5"
+              />
             </FormField>
             <FormField id="weightImperial" label="Weight (imperial)">
-              <Input id="weightImperial" value={form.weightImperial} onChange={set("weightImperial")} placeholder="e.g. 7oz" className="bg-white/5" />
+              <Input
+                id="weightImperial"
+                value={form.weightImperial}
+                onChange={set("weightImperial")}
+                placeholder="e.g. 7oz"
+                className="bg-white/5"
+              />
             </FormField>
             <FormField id="dimensionMetric" label="Dimensions (metric)">
-              <Input id="dimensionMetric" value={form.dimensionMetric} onChange={set("dimensionMetric")} placeholder="e.g. 30×20×2 cm" className="bg-white/5" />
+              <Input
+                id="dimensionMetric"
+                value={form.dimensionMetric}
+                onChange={set("dimensionMetric")}
+                placeholder="e.g. 30×20×2 cm"
+                className="bg-white/5"
+              />
             </FormField>
             <FormField id="dimensionImperial" label="Dimensions (imperial)">
-              <Input id="dimensionImperial" value={form.dimensionImperial} onChange={set("dimensionImperial")} placeholder='e.g. 12×8×0.8"' className="bg-white/5" />
+              <Input
+                id="dimensionImperial"
+                value={form.dimensionImperial}
+                onChange={set("dimensionImperial")}
+                placeholder='e.g. 12×8×0.8"'
+                className="bg-white/5"
+              />
             </FormField>
           </CardContent>
         </Card>
@@ -416,7 +440,7 @@ export default function AdminEditProductPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wider text-white/60">
               Product Images{" "}
               <span className="font-normal normal-case text-white/30">
-                (first image will be primary)
+                (optional — first image will be primary)
               </span>
             </h2>
           </CardHeader>
@@ -428,7 +452,7 @@ export default function AdminEditProductPage() {
         {/* ── Actions ── */}
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Saving…" : "Save Changes"}
+            {submitting ? "Creating…" : "Create Product"}
           </Button>
           <Button variant="outline" asChild>
             <Link href="/admin/products">Cancel</Link>

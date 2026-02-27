@@ -42,6 +42,7 @@ export const productImage = pgTable('product_image', {
     .notNull()
     .references(() => product.id, { onDelete: 'cascade' }),
   imageUrl: text('image_url').notNull(),
+  altText: text('alt_text'),
   isPrimary: boolean('is_primary').default(false).notNull(),
 });
 

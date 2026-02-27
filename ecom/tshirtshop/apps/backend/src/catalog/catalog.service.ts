@@ -9,6 +9,10 @@ type Category = typeof category.$inferSelect;
 type Product = typeof product.$inferSelect;
 type ProductImage = typeof productImage.$inferSelect;
 
+export interface ProductImageEntry {
+  url: string;
+}
+
 export interface CreateProductDto {
   name: string;
   description: string;
@@ -20,7 +24,7 @@ export interface CreateProductDto {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
-  imageUrls?: string[];
+  images?: ProductImageEntry[];
 }
 
 export interface UpdateProductDto {
@@ -34,6 +38,8 @@ export interface UpdateProductDto {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  /** When provided, replaces all existing product images. */
+  images?: ProductImageEntry[];
 }
 
 export type ProductSortOption =
@@ -257,12 +263,13 @@ export class CatalogService {
       dimensionImperial: dto.dimensionImperial ?? null,
     });
 
-    const imageUrls = dto.imageUrls ?? [];
-    for (let i = 0; i < imageUrls.length; i++) {
+    const imageInputs = dto.images ?? [];
+    for (let i = 0; i < imageInputs.length; i++) {
       await this.db.insert(productImage).values({
         id: randomUUID(),
         productId: id,
-        imageUrl: imageUrls[i],
+        imageUrl: imageInputs[i].url,
+        altText: null,
         isPrimary: i === 0,
       });
     }
@@ -288,7 +295,23 @@ export class CatalogService {
     if (dto.dimensionMetric != null) updateData.dimensionMetric = dto.dimensionMetric;
     if (dto.dimensionImperial != null) updateData.dimensionImperial = dto.dimensionImperial;
 
-    await this.db.update(product).set(updateData).where(eq(product.id, id));
+    if (Object.keys(updateData).length > 0) {
+      await this.db.update(product).set(updateData).where(eq(product.id, id));
+    }
+
+    if (dto.images != null) {
+      await this.db.delete(productImage).where(eq(productImage.productId, id));
+      for (let i = 0; i < dto.images.length; i++) {
+        await this.db.insert(productImage).values({
+          id: randomUUID(),
+          productId: id,
+          imageUrl: dto.images[i].url,
+          altText: null,
+          isPrimary: i === 0,
+        });
+      }
+    }
+
     const [updated] = await this.db.select().from(product).where(eq(product.id, id));
     return updated ?? null;
   }

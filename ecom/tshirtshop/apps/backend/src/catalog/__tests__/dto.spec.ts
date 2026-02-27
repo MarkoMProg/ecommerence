@@ -106,27 +106,27 @@ describe('Catalog DTO Validators', () => {
       expect(errors.some((e) => e.field === 'stockQuantity')).toBe(true);
     });
 
-    it('should error on invalid imageUrls (not array)', () => {
+    it('should error on invalid images (not array)', () => {
       const errors = validateCreateProduct({
         ...validCreateBody,
-        imageUrls: 'not-array' as unknown as string[],
+        images: 'not-array' as unknown as { url: string }[],
       });
-      expect(errors.some((e) => e.field === 'imageUrls')).toBe(true);
+      expect(errors.some((e) => e.field === 'images')).toBe(true);
     });
 
-    it('should error on imageUrls with non-string elements', () => {
+    it('should error on images entries with missing url', () => {
       const errors = validateCreateProduct({
         ...validCreateBody,
-        imageUrls: ['url1', 123 as unknown as string],
+        images: [{ url: 'url1' }, { url: 123 as unknown as string }],
       });
-      expect(errors.some((e) => e.field === 'imageUrls')).toBe(true);
+      expect(errors.some((e) => e.field === 'images')).toBe(true);
     });
 
     it('should accept valid optional fields', () => {
       const errors = validateCreateProduct({
         ...validCreateBody,
         stockQuantity: 10,
-        imageUrls: ['https://example.com/img.png'],
+        images: [{ url: 'https://example.com/img.png' }],
       });
       expect(errors).toHaveLength(0);
     });
