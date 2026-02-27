@@ -8,6 +8,7 @@ import { Resend } from 'resend';
 import { DatabaseModule } from '../database/database.module';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { BETTER_AUTH_INSTANCE } from './constants';
+import * as authSchema from './schema';
 
 @Module({
   imports: [DatabaseModule, ConfigModule],
@@ -18,7 +19,7 @@ import { BETTER_AUTH_INSTANCE } from './constants';
         const resendApiKey = configService.get('RESEND_API_KEY');
         /** Minimal interface for email sending; stub used when RESEND_API_KEY is missing */
         type EmailSender = { emails: { send: (opts: object) => Promise<unknown> } };
-        const resend: EmailSender = resendApiKey
+        const resend = resendApiKey
           ? new Resend(resendApiKey)
           : {
               emails: {
@@ -45,7 +46,9 @@ import { BETTER_AUTH_INSTANCE } from './constants';
 
         return betterAuth({
           baseURL,
-          database: drizzleAdapter(database, { provider: 'pg' }),
+          secret: configService.get('BETTER_AUTH_SECRET'),
+          appName: 'Darkloom',
+          database: drizzleAdapter(database, { provider: 'pg', schema: authSchema }),
 
           emailAndPassword: {
             enabled: true,

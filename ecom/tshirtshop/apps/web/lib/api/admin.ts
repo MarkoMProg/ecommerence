@@ -1,5 +1,13 @@
 /**
- * Admin API client. All requests require authentication + admin role.
+ * Admin API client.
+ *
+ * User management (list, ban, role, create, remove, impersonate) is now
+ * handled entirely by Better Auth admin plugin client (authClient.admin.*).
+ *
+ * This file only contains helpers for business-specific admin operations
+ * (orders, products) that Better Auth does not cover.
+ *
+ * All requests require authentication + admin role.
  * Uses credentials: "include" for session cookie.
  */
 
@@ -166,59 +174,6 @@ export async function adminUpdateOrderStatus(
     );
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: AdminOrder };
-    return json.success ? json.data : null;
-  } catch {
-    return null;
-  }
-}
-
-export interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  twoFactorEnabled: boolean | null;
-  createdAt: string;
-  orderCount: number;
-}
-
-export interface AdminUserDetail extends AdminUser {
-  image: string | null;
-  updatedAt: string;
-}
-
-/** List users (ADM-004). Returns null if not admin. */
-export async function fetchAdminUsers(opts?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-}): Promise<{ data: AdminUser[]; pagination: { page: number; limit: number; total: number } } | null> {
-  try {
-    const params = new URLSearchParams();
-    if (opts?.page != null) params.set("page", String(opts.page));
-    if (opts?.limit != null) params.set("limit", String(opts.limit));
-    if (opts?.search?.trim()) params.set("search", opts.search.trim());
-    const qs = params.toString();
-    const res = await adminFetch(`/api/v1/admin/users${qs ? `?${qs}` : ""}`);
-    if (!res.ok) return null;
-    const json = (await res.json()) as {
-      success: boolean;
-      data: AdminUser[];
-      pagination: { page: number; limit: number; total: number };
-    };
-    return json.success ? { data: json.data, pagination: json.pagination } : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Get user by ID (ADM-004). */
-export async function fetchAdminUser(userId: string): Promise<AdminUserDetail | null> {
-  if (!userId?.trim()) return null;
-  try {
-    const res = await adminFetch(`/api/v1/admin/users/${encodeURIComponent(userId.trim())}`);
-    if (!res.ok) return null;
-    const json = (await res.json()) as { success: boolean; data: AdminUserDetail };
     return json.success ? json.data : null;
   } catch {
     return null;

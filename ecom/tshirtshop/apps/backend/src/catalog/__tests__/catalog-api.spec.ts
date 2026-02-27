@@ -3,10 +3,13 @@ import { NotFoundException } from '@nestjs/common';
 import { ProductsController } from '../products.controller';
 import { CategoriesController } from '../categories.controller';
 import { CatalogService } from '../catalog.service';
+import { BetterAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 jest.mock('@thallesp/nestjs-better-auth', () => ({
   AllowAnonymous: () => () => {},
 }));
+
+const mockBetterAuthGuard = { canActivate: jest.fn().mockReturnValue(true) };
 
 describe('Catalog API (Controller Integration)', () => {
   let productsController: ProductsController;
@@ -53,6 +56,8 @@ describe('Catalog API (Controller Integration)', () => {
         },
       ],
     })
+      .overrideGuard(BetterAuthGuard)
+      .useValue(mockBetterAuthGuard)
       .compile();
 
     productsController = moduleFixture.get<ProductsController>(ProductsController);

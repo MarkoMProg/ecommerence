@@ -1,4 +1,4 @@
-import {
+/*import {
   Controller,
   Get,
   Post,
@@ -28,9 +28,7 @@ import {
 export class ReviewsController {
   constructor(private readonly reviewService: ReviewService) {}
 
-  /**
-   * List reviews for a product (REV-002). Public.
-   */
+  
   @Get('products/:productId/reviews')
   @AllowAnonymous()
   async listByProduct(
@@ -51,9 +49,7 @@ export class ReviewsController {
     };
   }
 
-  /**
-   * Create review (REV-002). Auth required.
-   */
+
   @Post('products/:productId/reviews')
   @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -86,9 +82,7 @@ export class ReviewsController {
     };
   }
 
-  /**
-   * Update own review (REV-002). Auth required.
-   */
+
   @Patch('reviews/:id')
   @UseGuards(BetterAuthGuard)
   async update(
@@ -120,9 +114,7 @@ export class ReviewsController {
     };
   }
 
-  /**
-   * Delete own review (REV-002). Auth required.
-   */
+  
   @Delete('reviews/:id')
   @HttpCode(HttpStatus.OK)
   @UseGuards(BetterAuthGuard)
@@ -136,9 +128,7 @@ export class ReviewsController {
     };
   }
 
-  /**
-   * Vote helpful on a review (REV-004). Auth required. Body: { helpful: boolean }.
-   */
+
   @Post('reviews/:id/helpful')
   @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -157,3 +147,4 @@ export class ReviewsController {
     };
   }
 }
+  */

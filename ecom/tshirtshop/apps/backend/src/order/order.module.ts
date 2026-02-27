@@ -7,11 +7,10 @@ import { CheckoutController } from './checkout.controller';
 import { OrderService } from './order.service';
 import { OrdersController } from './orders.controller';
 import { StripeService } from './stripe.service';
-import { StripeWebhookController } from './stripe-webhook.controller';
 
 @Module({
   imports: [DatabaseModule, AuthExtModule, CartModule],
-  controllers: [CheckoutController, OrdersController, StripeWebhookController],
+  controllers: [CheckoutController, OrdersController],
   providers: [CheckoutService, OrderService, StripeService],
   exports: [CheckoutService, OrderService],
 })

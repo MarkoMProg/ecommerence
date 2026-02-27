@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import ReCAPTCHA from "react-google-recaptcha";
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,7 @@ export function LoginForm({
 }: {
   onForgotPassword?: () => void;
 }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -156,10 +158,18 @@ export function LoginForm({
 
     setIsLoading(true);
     try {
-      const result = await authClient.signIn.email({
-        email,
-        password,
-      });
+      const result = await authClient.signIn.email(
+        { email, password },
+        {
+          async onSuccess(context) {
+            if ((context.data as any)?.twoFactorRedirect) {
+              router.push("/auth/two-factor/verify");
+            } else {
+              router.push("/");
+            }
+          },
+        },
+      );
 
       if (result?.error) {
         const msg = result.error.message || "Login failed";
@@ -167,15 +177,12 @@ export function LoginForm({
           msg.toLowerCase().includes("two factor") ||
           (result as any)?.data?.twoFactorRedirect
         ) {
-          setTwoFactorRequired(true);
+          router.push("/auth/two-factor/verify");
           return;
         }
         setFormError(msg);
         return;
       }
-
-      // Better Auth sets the session cookie automatically
-      window.location.reload();
     } catch {
       setFormError("An unexpected error occurred. Please try again.");
     } finally {
@@ -631,7 +638,6 @@ export function TwoFactorSetupForm() {
       const pass = prompt("Please enter your current password:") || "";
       const result = await authClient.twoFactor.enable({
         password: pass,
-        issuer: "my-app-name",
       });
       if (result?.error) {
         setFormError(result.error.message || "Failed to enable 2FA");

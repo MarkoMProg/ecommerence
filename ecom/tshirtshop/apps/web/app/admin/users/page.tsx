@@ -1,66 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { fetchAdminUsers, type AdminUser } from "@/lib/api/admin";
+import { authClient } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-function formatDate(iso: string): string {
+/**
+ * Better Auth admin plugin user type.
+ * Fields come from authClient.admin.listUsers().
+ */
+interface BAUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  role?: string | null;
+  banned?: boolean | null;
+  banReason?: string | null;
+  banExpires?: number | null;
+  twoFactorEnabled?: boolean | null;
+  createdAt: Date;
+}
+
+function formatDate(d: Date | string): string {
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
+    const date = typeof d === "string" ? new Date(d) : d;
+    return date.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
   } catch {
-    return iso;
+    return String(d);
   }
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [users, setUsers] = useState<BAUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-  });
+  const [error, setError] = useState<string | null>(null);
 
-  const load = (page = 1) => {
+  const load = useCallback(async (newOffset = 0, searchValue?: string) => {
     setLoading(true);
-    fetchAdminUsers({
-      page,
-      limit: 20,
-      search: search.trim() || undefined,
-    }).then((res) => {
-      if (res) {
-        setUsers(res.data);
-        setPagination(res.pagination);
-      } else {
-        setUsers(null);
+    setError(null);
+    try {
+      const result = await authClient.admin.listUsers({
+        query: {
+          limit: PAGE_SIZE,
+          offset: newOffset,
+          ...(searchValue?.trim()
+            ? {
+                searchValue: searchValue.trim(),
+                searchField: "email" as const,
+                searchOperator: "contains" as const,
+              }
+            : {}),
+          sortBy: "createdAt",
+          sortDirection: "desc" as const,
+        },
+      });
+
+      if (result?.data) {
+        setUsers(result.data.users as unknown as BAUser[]);
+        setTotal(result.data.total ?? 0);
+        setOffset(newOffset);
+      } else if (result?.error) {
+        setError(result.error.message || "Failed to load users");
       }
+    } catch {
+      setError("Failed to load users. Ensure you have admin access.");
+    } finally {
       setLoading(false);
-    });
-  };
+    }
+  }, []);
 
   useEffect(() => {
-    load(1);
-  }, []);
+    load(0);
+  }, [load]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    load(1);
+    load(0, search);
   };
 
-  if (users === null && !loading) {
-    return (
-      <p className="py-8 text-white/60">
-        Unable to load users. Ensure ADMIN_EMAILS includes your email in backend
-        .env
-      </p>
-    );
-  }
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <>
@@ -74,52 +105,84 @@ export default function AdminUsersPage() {
         <form onSubmit={handleSearch} className="flex gap-2">
           <Input
             type="search"
-            placeholder="Search by email or name"
+            placeholder="Search by email"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-48 bg-white/5 sm:w-64"
           />
-          <button
+          <Button
             type="submit"
-            className="rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+            variant="outline"
+            className="border-white/20 bg-white/5 text-white hover:bg-white/10"
           >
             Search
-          </button>
+          </Button>
         </form>
       </div>
+
+      {error && (
+        <p className="mb-4 rounded border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm text-red-200">
+          {error}
+        </p>
+      )}
+
       {loading ? (
         <p className="py-8 text-white/60">Loading users...</p>
-      ) : users?.length === 0 ? (
+      ) : users.length === 0 ? (
         <p className="py-8 text-white/60">
           No users found{search.trim() ? " matching search" : ""}.
         </p>
       ) : (
         <>
           <div className="overflow-x-auto rounded-lg border border-white/10">
-            <table className="w-full min-w-[500px] text-left text-sm">
+            <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="border-b border-white/10 bg-white/5">
                 <tr>
                   <th className="px-4 py-3 font-medium text-white">Name</th>
                   <th className="px-4 py-3 font-medium text-white">Email</th>
+                  <th className="px-4 py-3 font-medium text-white">Role</th>
+                  <th className="px-4 py-3 font-medium text-white">Status</th>
                   <th className="px-4 py-3 font-medium text-white">Verified</th>
                   <th className="px-4 py-3 font-medium text-white">2FA</th>
-                  <th className="px-4 py-3 font-medium text-white">Orders</th>
                   <th className="px-4 py-3 font-medium text-white">Joined</th>
                   <th className="px-4 py-3 font-medium text-white">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {users?.map((u) => (
+                {users.map((u) => (
                   <tr key={u.id} className="bg-[#1A1A1A]/50">
-                    <td className="px-4 py-3 font-medium text-white">{u.name}</td>
+                    <td className="px-4 py-3 font-medium text-white">
+                      {u.name}
+                    </td>
                     <td className="px-4 py-3 text-white/80">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium uppercase ${
+                          u.role === "admin"
+                            ? "bg-[#FF4D00]/20 text-[#FF4D00]"
+                            : "bg-white/10 text-white/60"
+                        }`}
+                      >
+                        {u.role || "user"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.banned ? (
+                        <span className="inline-block rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium uppercase text-red-300">
+                          Banned
+                        </span>
+                      ) : (
+                        <span className="inline-block rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium uppercase text-green-300">
+                          Active
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-white/80">
                       {u.emailVerified ? "Yes" : "No"}
                     </td>
                     <td className="px-4 py-3 text-white/80">
                       {u.twoFactorEnabled ? "Yes" : "—"}
                     </td>
-                    <td className="px-4 py-3 text-white/80">{u.orderCount}</td>
                     <td className="px-4 py-3 text-white/80">
                       {formatDate(u.createdAt)}
                     </td>
@@ -128,7 +191,7 @@ export default function AdminUsersPage() {
                         href={`/admin/users/${u.id}`}
                         className="text-[#FF4D00] hover:underline"
                       >
-                        View
+                        Manage
                       </Link>
                     </td>
                   </tr>
@@ -136,32 +199,37 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
           </div>
-          {pagination.total > pagination.limit && (
+
+          {/* Pagination */}
+          {totalPages > 1 && (
             <div className="mt-4 flex items-center gap-4 text-sm text-white/60">
               <span>
-                Page {pagination.page} of{" "}
-                {Math.ceil(pagination.total / pagination.limit)}
+                Page {currentPage} of {totalPages} ({total} total)
               </span>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => load(pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                  className="rounded border border-white/20 px-2 py-1 disabled:opacity-50"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => load(Math.max(0, offset - PAGE_SIZE), search)}
+                  disabled={currentPage <= 1}
+                  className="border-white/20 disabled:opacity-50"
                 >
                   Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => load(pagination.page + 1)}
-                  disabled={
-                    pagination.page >=
-                    Math.ceil(pagination.total / pagination.limit)
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    load(
+                      Math.min(offset + PAGE_SIZE, (total - 1)),
+                      search,
+                    )
                   }
-                  className="rounded border border-white/20 px-2 py-1 disabled:opacity-50"
+                  disabled={currentPage >= totalPages}
+                  className="border-white/20 disabled:opacity-50"
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}

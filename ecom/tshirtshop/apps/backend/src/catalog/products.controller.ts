@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { BetterAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AdminGuard } from '../auth/guards/admin.guard';
 import { CatalogService } from './catalog.service';
 import {
   validateCreateProduct,
@@ -108,7 +107,7 @@ export class ProductsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(BetterAuthGuard, AdminGuard)
+  @UseGuards(BetterAuthGuard)
   async create(@Body() body: CreateProductBody) {
     const errors = validateCreateProduct(body);
     if (errors.length > 0) {
@@ -142,7 +141,7 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @UseGuards(BetterAuthGuard, AdminGuard)
+  @UseGuards(BetterAuthGuard)
   async update(@Param('id') id: string, @Body() body: UpdateProductBody) {
     const errors = validateUpdateProduct(body);
     if (errors.length > 0) {
@@ -171,7 +170,7 @@ export class ProductsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(BetterAuthGuard, AdminGuard)
+  @UseGuards(BetterAuthGuard)
   async delete(@Param('id') id: string) {
     const deleted = await this.catalogService.deleteProduct(id);
     if (!deleted) {
