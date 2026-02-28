@@ -27,6 +27,7 @@ export interface ApiProductImage {
 export interface ApiProduct {
   id: string;
   name: string;
+  slug: string;
   description: string;
   priceCents: number;
   stockQuantity: number;
@@ -66,6 +67,7 @@ export interface ApiProductResponse {
 /** Shape used by frontend components (price in dollars, primary image) */
 export interface ProductDisplay {
   id: string;
+  slug: string;
   name: string;
   price: number;
   imageUrl: string;
@@ -80,6 +82,7 @@ function mapProduct(p: ApiProduct): ProductDisplay {
   const primaryImage = p.images.find((i) => i.isPrimary) ?? p.images[0];
   return {
     id: p.id,
+    slug: p.slug,
     name: p.name,
     price: p.priceCents / 100,
     imageUrl: primaryImage?.imageUrl ?? '',

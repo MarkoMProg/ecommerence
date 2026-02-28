@@ -9,6 +9,7 @@ import { product, productImage } from '../catalog/schema';
 export interface CartItemWithProduct {
   id: string;
   productId: string;
+  slug: string;
   quantity: number;
   productName: string;
   priceCents: number;
@@ -237,6 +238,7 @@ export class CartService {
       .select({
         id: cartItem.id,
         productId: cartItem.productId,
+        slug: product.slug,
         quantity: cartItem.quantity,
         productName: product.name,
         priceCents: product.priceCents,
@@ -268,6 +270,7 @@ export class CartService {
     const enriched: CartItemWithProduct[] = items.map((i) => ({
       id: i.id,
       productId: i.productId,
+      slug: i.slug,
       quantity: i.quantity,
       productName: i.productName,
       priceCents: i.priceCents,

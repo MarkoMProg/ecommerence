@@ -77,6 +77,9 @@ export default function AdminProductsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-64 bg-white/5"
           />
+          <Button asChild variant="outline">
+            <Link href="/admin/products/bulk">Bulk Upload</Link>
+          </Button>
           <Button asChild>
             <Link href="/admin/products/new">+ New Product</Link>
           </Button>

@@ -1,13 +1,20 @@
-import { Controller, Get, Patch, Post, Param, Body, UseGuards } from '@nestjs/common';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { AdminGuard } from './guards/admin.guard';
 import { OrderService } from '../order/order.service';
+import { CatalogService } from '../catalog/catalog.service';
+import { BulkUploadService, type BulkUploadResult, type BulkRowResult } from '../catalog/bulk-upload.service';
 
 
 @Controller('api/v1/admin')
 @UseGuards(AdminGuard)
 export class AdminController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly catalogService: CatalogService,
+    private readonly bulkUploadService: BulkUploadService,
+  ) {}
 
  
   @Get('dashboard')
@@ -69,5 +76,157 @@ export class AdminController {
       data: order,
       message: 'Order refunded',
     };
+  }
+
+  // ─── Bulk Product Upload ────────────────────────────────────────────────
+
+  @Post('products/bulk')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+      fileFilter: (_req, file, cb) => {
+        const allowed = /\.(csv|json)$/i;
+        const mimeOk = /^(text\/csv|application\/json|text\/plain|application\/octet-stream)$/i;
+        if (!allowed.test(file.originalname) && !mimeOk.test(file.mimetype)) {
+          return cb(
+            new BadRequestException('Only .csv and .json files are accepted'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async bulkUploadProducts(
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'NO_FILE',
+          message: 'No file provided. Upload a .csv or .json file with field name "file".',
+        },
+      });
+    }
+
+    const content = file.buffer.toString('utf-8');
+    const format = this.bulkUploadService.detectFormat(file.originalname, content);
+
+    let entries;
+    try {
+      entries = format === 'json'
+        ? this.bulkUploadService.parseJSON(content)
+        : this.bulkUploadService.parseCSV(content);
+    } catch (err) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'PARSE_ERROR',
+          message: `Failed to parse ${format.toUpperCase()} file: ${(err as Error).message}`,
+        },
+      });
+    }
+
+    if (entries.length === 0) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'EMPTY_FILE', message: 'File contains no product entries.' },
+      });
+    }
+
+    const results: BulkRowResult[] = [];
+    let succeeded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const validationError = this.bulkUploadService.validateEntry(entry);
+      if (validationError) {
+        results.push({ row: i + 1, name: entry.name || '(unnamed)', status: 'error', error: validationError });
+        failed++;
+        continue;
+      }
+
+      try {
+        const created = await this.catalogService.createProduct({
+          name: entry.name,
+          description: entry.description,
+          priceCents: entry.priceCents,
+          stockQuantity: entry.stockQuantity,
+          categoryId: entry.categoryId,
+          brand: entry.brand,
+          weightMetric: entry.weightMetric,
+          weightImperial: entry.weightImperial,
+          dimensionMetric: entry.dimensionMetric,
+          dimensionImperial: entry.dimensionImperial,
+          images: entry.images,
+        });
+        results.push({ row: i + 1, name: entry.name, status: 'created', productId: created.id });
+        succeeded++;
+      } catch (err) {
+        results.push({
+          row: i + 1,
+          name: entry.name || '(unnamed)',
+          status: 'error',
+          error: this.friendlyDbError(err, entry),
+        });
+        failed++;
+      }
+    }
+
+    const summary: BulkUploadResult = {
+      total: entries.length,
+      succeeded,
+      failed,
+      results,
+    };
+
+    return {
+      success: true,
+      data: summary,
+      message: `Bulk upload complete: ${succeeded} created, ${failed} failed out of ${entries.length} total.`,
+    };
+  }
+
+  // ─── Private helpers ──────────────────────────────────────────────────
+
+  /**
+   * Translate raw database / service errors into human-readable messages.
+   * Avoids exposing SQL queries or internal details to end users (coding-rules §10).
+   */
+  private friendlyDbError(err: unknown, entry: { categoryId?: string }): string {
+    const raw = (err as Error).message ?? String(err);
+
+    // Foreign-key violation on category_id
+    if (
+      raw.includes('category_id') ||
+      raw.includes('violates foreign key') ||
+      raw.includes('insert or update on table') ||
+      raw.includes('is not present in table')
+    ) {
+      return `The Category ID "${entry.categoryId ?? '(empty)'}" does not match any existing category. Please use a valid category ID from your store.`;
+    }
+
+    // Unique constraint violation
+    if (raw.includes('duplicate key') || raw.includes('unique constraint')) {
+      return 'A product with this name or identifier already exists.';
+    }
+
+    // Not-null constraint violation
+    if (raw.includes('not-null constraint') || raw.includes('null value in column')) {
+      const colMatch = raw.match(/column "(\w+)"/);
+      const col = colMatch ? colMatch[1].replace(/_/g, ' ') : 'a required field';
+      return `Missing required value for "${col}". Please make sure all required fields are filled in.`;
+    }
+
+    // Data type / numeric errors
+    if (raw.includes('invalid input syntax')) {
+      return 'One of the values has an invalid format. Check that numbers are numbers, IDs are correct, etc.';
+    }
+
+    // Generic fallback — still keep internal details hidden
+    return 'Something went wrong while saving this product. Please double-check all fields and try again.';
   }
 }

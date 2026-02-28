@@ -290,7 +290,7 @@ export default function ProductDetailClient({
         )}
       </div>
 
-      {/* Related Products */}
+      {/* Related Products — links use slug for clean URLs */}
       <div>
         <h2
           className="mb-6 text-xl font-bold uppercase tracking-tight text-white sm:mb-8 sm:text-2xl"
@@ -300,7 +300,7 @@ export default function ProductDetailClient({
         </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
           {relatedProducts.map((p) => (
-            <Link key={p.id} href={`/shop/${p.id}`} className="group block">
+            <Link key={p.id} href={`/shop/${p.slug}`} className="group block">
               <div className="aspect-square overflow-hidden bg-[#1A1A1A]">
                 <img
                   src={p.imageUrl}

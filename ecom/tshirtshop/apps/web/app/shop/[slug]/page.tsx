@@ -5,10 +5,10 @@ import ProductDetailClient from "./ProductDetailClient";
 export default async function ProductPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = await params;
-  const product = await fetchProduct(id);
+  const { slug } = await params;
+  const product = await fetchProduct(slug);
 
   if (!product) {
     return (

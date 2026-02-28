@@ -1,0 +1,60 @@
+[
+  {
+    "name": "Infernal D20 Tee",
+    "description": "A fiery red t-shirt featuring a flaming D20 dice design. Made from 100% premium cotton.",
+    "priceCents": 2999,
+    "stockQuantity": 50,
+    "categoryId": "REPLACE_WITH_CATEGORY_ID",
+    "brand": "InfernalWear",
+    "weightMetric": "200g",
+    "weightImperial": "7oz",
+    "dimensionMetric": "28×20×1 cm",
+    "dimensionImperial": "11×8×0.4\"",
+    "images": [
+      { "url": "https://example.com/images/infernal-d20-front.jpg" },
+      { "url": "https://example.com/images/infernal-d20-back.jpg" }
+    ]
+  },
+  {
+    "name": "Shadow Dragon Hoodie",
+    "description": "Cozy pullover hoodie with an embroidered shadow dragon on the chest. Fleece-lined interior.",
+    "priceCents": 5999,
+    "stockQuantity": 25,
+    "categoryId": "REPLACE_WITH_CATEGORY_ID",
+    "brand": "DragonThreads",
+    "weightMetric": "450g",
+    "weightImperial": "16oz",
+    "dimensionMetric": "30×25×3 cm",
+    "dimensionImperial": "12×10×1.2\"",
+    "images": [
+      { "url": "https://example.com/images/shadow-dragon-hoodie.jpg" }
+    ]
+  },
+  {
+    "name": "Mystic Rune Tank Top",
+    "description": "Lightweight tank top with ancient rune patterns. Perfect for summer adventures.",
+    "priceCents": 1999,
+    "stockQuantity": 100,
+    "categoryId": "REPLACE_WITH_CATEGORY_ID",
+    "brand": "RuneForge",
+    "weightMetric": "120g",
+    "weightImperial": "4.2oz",
+    "dimensionMetric": "26×18×0.5 cm",
+    "dimensionImperial": "10×7×0.2\""
+  },
+  {
+    "name": "Celestial Mage Crewneck",
+    "description": "Premium crewneck sweatshirt with constellation-pattern celestial mage artwork.",
+    "priceCents": 4499,
+    "stockQuantity": 30,
+    "categoryId": "REPLACE_WITH_CATEGORY_ID",
+    "brand": "CelestialCraft",
+    "weightMetric": "380g",
+    "weightImperial": "13.4oz",
+    "dimensionMetric": "29×22×2 cm",
+    "dimensionImperial": "11.5×8.5×0.8\"",
+    "images": [
+      { "url": "https://example.com/images/celestial-mage.jpg" }
+    ]
+  }
+]

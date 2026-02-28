@@ -70,7 +70,7 @@ export default async function HomePage() {
             {featuredProducts.map((product) => (
               <Link
                 key={product.id}
-                href={`/shop/${product.id}`}
+                href={`/shop/${product.slug}`}
                 className="group block"
               >
                 <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">

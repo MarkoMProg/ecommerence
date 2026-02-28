@@ -1,9 +1,23 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, ConflictException } from '@nestjs/common';
 import { eq, desc, asc, sql, and, or, ilike, gte, lte, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { category, product, productImage } from './schema';
+
+/**
+ * Generate a URL-safe slug from a product name.
+ * Appends a short random suffix to guarantee uniqueness.
+ */
+function generateSlug(name: string): string {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const suffix = randomUUID().slice(0, 6);
+  return `${base}-${suffix}`;
+}
 
 type Category = typeof category.$inferSelect;
 type Product = typeof product.$inferSelect;
@@ -247,11 +261,36 @@ export class CatalogService {
     };
   }
 
+  /** Look up a product by its URL-safe slug (used for public-facing routes). */
+  async getProductBySlug(slug: string): Promise<
+    | (Product & {
+        images: ProductImage[];
+        category: Category | null;
+      })
+    | null
+  > {
+    const [p] = await this.db.select().from(product).where(eq(product.slug, slug));
+    if (!p) return null;
+
+    const [images, categories] = await Promise.all([
+      this.db.select().from(productImage).where(eq(productImage.productId, p.id)),
+      this.db.select().from(category).where(eq(category.id, p.categoryId)),
+    ]);
+    const cat = categories[0] ?? null;
+    return {
+      ...p,
+      images,
+      category: cat,
+    };
+  }
+
   async createProduct(dto: CreateProductDto): Promise<Product & { images: ProductImage[] }> {
     const id = randomUUID();
+    const slug = generateSlug(dto.name);
     await this.db.insert(product).values({
       id,
       name: dto.name,
+      slug,
       description: dto.description,
       priceCents: dto.priceCents,
       stockQuantity: dto.stockQuantity ?? 0,
@@ -284,7 +323,10 @@ export class CatalogService {
     if (!existing) return null;
 
     const updateData: Partial<typeof product.$inferInsert> = {};
-    if (dto.name != null) updateData.name = dto.name;
+    if (dto.name != null) {
+      updateData.name = dto.name;
+      updateData.slug = generateSlug(dto.name);
+    }
     if (dto.description != null) updateData.description = dto.description;
     if (dto.priceCents != null) updateData.priceCents = dto.priceCents;
     if (dto.stockQuantity != null) updateData.stockQuantity = dto.stockQuantity;
@@ -319,7 +361,21 @@ export class CatalogService {
   async deleteProduct(id: string): Promise<boolean> {
     const [existing] = await this.db.select().from(product).where(eq(product.id, id));
     if (!existing) return false;
-    await this.db.delete(product).where(eq(product.id, id));
+    try {
+      await this.db.delete(product).where(eq(product.id, id));
+    } catch (err: unknown) {
+      const dbErr = err as { cause?: { code?: string } };
+      if (dbErr?.cause?.code === '23503' || dbErr?.cause?.code === '23001') {
+        throw new ConflictException({
+          success: false,
+          error: {
+            code: 'PRODUCT_IN_USE',
+            message: 'This product cannot be deleted because it is part of existing orders. Consider keeping it and marking it out of stock instead.',
+          },
+        });
+      }
+      throw err;
+    }
     return true;
   }
 

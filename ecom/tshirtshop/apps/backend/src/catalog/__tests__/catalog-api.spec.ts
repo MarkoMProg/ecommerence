@@ -19,6 +19,7 @@ describe('Catalog API (Controller Integration)', () => {
   const mockProduct = {
     id: 'prod-1',
     name: 'Test Tee',
+    slug: 'test-tee-prod-1',
     description: 'A test',
     priceCents: 2999,
     stockQuantity: 10,
@@ -37,6 +38,7 @@ describe('Catalog API (Controller Integration)', () => {
         pagination: { page: 1, limit: 20, total: 1 },
       }),
       getProductById: jest.fn().mockResolvedValue(mockProduct),
+      getProductBySlug: jest.fn().mockResolvedValue(mockProduct),
       listCategories: jest.fn().mockResolvedValue([mockCategory]),
       getCategoryById: jest.fn().mockResolvedValue(mockCategory),
       getDistinctBrands: jest.fn().mockResolvedValue(['TestBrand']),
@@ -124,16 +126,27 @@ describe('Catalog API (Controller Integration)', () => {
   });
 
   describe('ProductsController.getById', () => {
-    it('should return product when found', async () => {
-      const result = await productsController.getById('prod-1');
+    it('should return product by slug when found', async () => {
+      const result = await productsController.getById('test-tee-prod-1');
       expect(result.success).toBe(true);
       expect(result.data!.id).toBe('prod-1');
       expect(result.data!.name).toBe('Test Tee');
     });
 
-    it('should throw NotFoundException when product not found', async () => {
-      (catalogService.getProductById as jest.Mock).mockResolvedValueOnce(null);
+    it('should return product by UUID when found', async () => {
+      const result = await productsController.getById('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      expect(result.success).toBe(true);
+      expect(result.data!.id).toBe('prod-1');
+    });
+
+    it('should throw NotFoundException when slug not found', async () => {
+      (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(null);
       await expect(productsController.getById('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when UUID not found', async () => {
+      (catalogService.getProductById as jest.Mock).mockResolvedValueOnce(null);
+      await expect(productsController.getById('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -89,9 +89,13 @@ export class ProductsController {
     };
   }
 
-  @Get(':id')
-  async getById(@Param('id') id: string) {
-    const product = await this.catalogService.getProductById(id);
+  @Get(':idOrSlug')
+  async getById(@Param('idOrSlug') idOrSlug: string) {
+    // Try slug first (public-facing), then fall back to UUID (admin/internal)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    const product = isUuid
+      ? await this.catalogService.getProductById(idOrSlug)
+      : await this.catalogService.getProductBySlug(idOrSlug);
     if (!product) {
       throw new NotFoundException({
         success: false,

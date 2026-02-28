@@ -91,7 +91,7 @@ export function CartClient({ initialCart }: CartClientProps) {
                 className="flex flex-col gap-4 bg-white/5 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
               >
                 <Link
-                  href={`/shop/${item.productId}`}
+                  href={`/shop/${item.slug}`}
                   className="flex shrink-0 gap-4 sm:min-w-[200px]"
                 >
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-24 sm:w-24">

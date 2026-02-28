@@ -18,6 +18,7 @@ function apiBase(): string {
 export interface CartItem {
   id: string;
   productId: string;
+  slug: string;
   quantity: number;
   productName: string;
   priceCents: number;

@@ -53,6 +53,7 @@ export interface AdminOrder {
 export interface AdminProduct {
   id: string;
   name: string;
+  slug: string;
   description: string;
   priceCents: number;
   stockQuantity: number;
@@ -240,5 +241,59 @@ export async function adminRefundOrder(orderId: string): Promise<AdminOrder | nu
     return json.success ? json.data : null;
   } catch {
     return null;
+  }
+}
+
+// ─── Bulk Upload ────────────────────────────────────────────────────────────
+
+export interface BulkRowResult {
+  row: number;
+  name: string;
+  status: "created" | "error";
+  productId?: string;
+  error?: string;
+}
+
+export interface BulkUploadResult {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: BulkRowResult[];
+}
+
+/**
+ * Upload a CSV or JSON file for bulk product creation.
+ * Returns the result summary, or null on complete failure.
+ */
+export async function adminBulkUploadProducts(
+  file: File
+): Promise<BulkUploadResult | null> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${apiBase()}/api/v1/admin/products/bulk`, {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    if (!res.ok) {
+      // Try to get error message from response
+      try {
+        const json = (await res.json()) as { error?: { message?: string } };
+        throw new Error(json?.error?.message ?? `Upload failed (${res.status})`);
+      } catch (parseErr) {
+        if (parseErr instanceof Error && parseErr.message !== `Upload failed (${res.status})`) {
+          throw parseErr;
+        }
+        throw new Error(`Upload failed (${res.status})`);
+      }
+    }
+    const json = (await res.json()) as {
+      success: boolean;
+      data: BulkUploadResult;
+    };
+    return json.success ? json.data : null;
+  } catch (err) {
+    throw err;
   }
 }
