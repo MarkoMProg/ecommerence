@@ -27,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authClient.signOut();
     } finally {
+      // Clear 2FA verification flag so next login requires re-verification.
+      sessionStorage.removeItem("2fa_verified");
       window.location.href = "/";
     }
   };

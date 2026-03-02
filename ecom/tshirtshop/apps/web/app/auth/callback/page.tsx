@@ -18,6 +18,10 @@ export default function AuthCallbackPage() {
       try {
         const { data: session } = await authClient.getSession();
         if (session?.user) {
+          if ((session.user as any).twoFactorEnabled) {
+            window.location.href = "/auth/two-factor/verify";
+            return;
+          }
           setStatus("success");
           setTimeout(() => {
             window.location.href = "/";

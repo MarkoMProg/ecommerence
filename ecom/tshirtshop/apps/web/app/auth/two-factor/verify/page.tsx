@@ -34,6 +34,8 @@ export default function TwoFactorVerifyPage() {
         return;
       }
 
+      // Mark 2FA as verified for this browser session so the global guard allows access.
+      sessionStorage.setItem("2fa_verified", "true");
       router.push("/");
       router.refresh();
     } catch {

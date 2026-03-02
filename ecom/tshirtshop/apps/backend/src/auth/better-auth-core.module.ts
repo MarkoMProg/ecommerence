@@ -176,8 +176,9 @@ import * as authSchema from './schema';
           trustedOrigins: [uiUrl],
 
           session: {
-            expiresIn: 60 * 60 * 24 * 7,
-            updateAge: 60 * 60 * 24,
+       
+            expiresIn: 60 * 15,   
+            updateAge: 60 * 5,            
           },
         });
       },

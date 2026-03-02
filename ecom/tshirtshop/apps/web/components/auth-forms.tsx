@@ -60,14 +60,14 @@ function OAuthButtons() {
   const handleGoogle = () => {
     authClient.signIn.social({
       provider: "google",
-      callbackURL: "/auth/callback",
+      callbackURL: `${window.location.origin}/auth/callback`,
     });
   };
 
   const handleFacebook = () => {
     authClient.signIn.social({
       provider: "facebook",
-      callbackURL: "/auth/callback",
+      callbackURL: `${window.location.origin}/auth/callback`,
     });
   };
 
