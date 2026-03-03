@@ -176,9 +176,13 @@ import * as authSchema from './schema';
           trustedOrigins: [uiUrl],
 
           session: {
-       
-            expiresIn: 60 * 15,   
-            updateAge: 60 * 5,            
+            expiresIn: 60 * 60 * 24 * 7,
+            updateAge: 60 * 60 * 24,
+            cookieCache: {
+              enabled: true,
+              maxAge: 60 * 15,
+              strategy: 'jwt',
+            },
           },
         });
       },
