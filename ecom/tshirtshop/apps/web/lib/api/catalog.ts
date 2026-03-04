@@ -164,7 +164,7 @@ export async function fetchProducts(options?: {
   brand?: string;
   minPrice?: number;
   maxPrice?: number;
-  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc';
+  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc' | 'rating-desc';
 }): Promise<{ products: ProductDisplay[]; pagination: { page: number; limit: number; total: number } }> {
   const params = new URLSearchParams();
   if (options?.page) params.set('page', String(options.page));

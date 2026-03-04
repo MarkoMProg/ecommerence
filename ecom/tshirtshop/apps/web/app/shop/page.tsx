@@ -26,7 +26,8 @@ export default async function ShopPage({
     params.sort === "price-asc" ||
     params.sort === "price-desc" ||
     params.sort === "name-asc" ||
-    params.sort === "name-desc"
+    params.sort === "name-desc" ||
+    params.sort === "rating-desc"
       ? params.sort
       : undefined;
 
@@ -164,7 +165,16 @@ export default async function ShopPage({
             </div>
             <div className="mt-2 sm:mt-4">
               <p className="truncate text-xs font-medium text-white sm:text-base">{product.name}</p>
-              <p className="text-xs text-[#E6C068] sm:text-sm">${product.price}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-[#E6C068] sm:text-sm">${product.price}</p>
+                {product.reviewCount != null && product.reviewCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-white/60">
+                    <span className="text-[#E6C068]">★</span>
+                    {product.averageRating?.toFixed(1)}
+                    <span>({product.reviewCount})</span>
+                  </span>
+                )}
+              </div>
             </div>
           </Link>
         ))}

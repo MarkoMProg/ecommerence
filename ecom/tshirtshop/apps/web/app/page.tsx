@@ -8,7 +8,7 @@ export default async function HomePage() {
 
   try {
     const [productsRes, categoriesData] = await Promise.all([
-      fetchProducts({ limit: 4 }),
+      fetchProducts({ limit: 4, sort: 'rating-desc' }),
       fetchCategories(),
     ]);
     featuredProducts = productsRes.products.slice(0, 4);
@@ -82,7 +82,15 @@ export default async function HomePage() {
                 </div>
                 <div className="mt-2 sm:mt-4">
                   <p className="truncate text-xs font-medium text-white sm:text-base">{product.name}</p>
-                  <p className="text-xs text-[#E6C068] sm:text-sm">${product.price}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-[#E6C068] sm:text-sm">${product.price}</p>
+                    {product.reviewCount != null && product.reviewCount > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-white/60">
+                        <span className="text-[#E6C068]">★</span>
+                        {product.averageRating?.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}

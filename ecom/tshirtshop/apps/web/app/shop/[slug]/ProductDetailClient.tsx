@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { ThumbsUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart } from "@/lib/api/cart";
 import {
@@ -9,6 +10,8 @@ import {
   voteReviewHelpful,
   type Review,
 } from "@/lib/api/reviews";
+import { useAuth } from "@/components/auth-provider";
+import { ReviewForm } from "@/components/review-form";
 
 interface ProductDetailClientProps {
   product: ProductDisplay;
@@ -24,8 +27,22 @@ export default function ProductDetailClient({
   const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [votingId, setVotingId] = useState<string | null>(null);
+  const [helpfulVotes, setHelpfulVotes] = useState<Set<string>>(new Set());
+  const { session } = useAuth();
+  const isLoggedIn = !!session?.user;
 
   const sizes = ["XS", "S", "M", "L", "XL"];
+
+  // Load persisted helpful votes from localStorage on mount (keyed by user ID so votes are per-user)
+  useEffect(() => {
+    const storageKey = `helpful_votes_${session?.user?.id ?? "guest"}`;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) setHelpfulVotes(new Set(JSON.parse(stored) as string[]));
+    } catch {
+      // ignore
+    }
+  }, [session?.user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,15 +54,36 @@ export default function ProductDetailClient({
     };
   }, [product.id]);
 
-  const handleHelpful = async (reviewId: string) => {
+  const handleHelpfulToggle = async (reviewId: string) => {
+    if (!isLoggedIn) return; // require auth
     setVotingId(reviewId);
-    const result = await voteReviewHelpful(reviewId, true);
-    if (result && reviews) {
-      setReviews(
-        reviews.map((r) =>
-          r.id === reviewId ? { ...r, helpfulCount: result.helpfulCount } : r
-        )
+    const alreadyVoted = helpfulVotes.has(reviewId);
+    const result = await voteReviewHelpful(reviewId, !alreadyVoted);
+    if (result) {
+      // Update review count in list
+      setReviews((prev) =>
+        prev
+          ? prev.map((r) =>
+              r.id === reviewId ? { ...r, helpfulCount: result.helpfulCount } : r
+            )
+          : prev
       );
+      // Toggle vote state and persist to localStorage
+      setHelpfulVotes((prev) => {
+        const next = new Set(prev);
+        if (alreadyVoted) {
+          next.delete(reviewId);
+        } else {
+          next.add(reviewId);
+        }
+        const storageKey = `helpful_votes_${session?.user?.id ?? "guest"}`;
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
     }
     setVotingId(null);
   };
@@ -239,6 +277,58 @@ export default function ProductDetailClient({
         >
           Reviews
         </h2>
+
+        {/* Review summary bar */}
+        {reviews && reviews.length > 0 && (
+          <div className="mb-6 flex items-center gap-3 sm:mb-8">
+            <span className="text-3xl font-bold text-white">
+              {(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)}
+            </span>
+            <div>
+              <span className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span
+                    key={star}
+                    className={
+                      star <=
+                      Math.round(
+                        reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                      )
+                        ? "text-[#E6C068]"
+                        : "text-white/30"
+                    }
+                  >
+                    ★
+                  </span>
+                ))}
+              </span>
+              <p className="text-xs text-white/60">
+                Based on {reviews.length} review{reviews.length === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Write a review — visible only when logged in */}
+        {isLoggedIn && (
+          <div className="mb-8">
+            <ReviewForm
+              productId={product.id}
+              onReviewCreated={(newReview) => {
+                setReviews((prev) => (prev ? [newReview, ...prev] : [newReview]));
+              }}
+            />
+          </div>
+        )}
+        {!isLoggedIn && (
+          <p className="mb-8 text-sm text-white/60">
+            <Link href="/login" className="text-[#FF4D00] hover:underline">
+              Sign in
+            </Link>{" "}
+            to leave a review.
+          </p>
+        )}
+
         {reviews === null ? (
           <p className="text-sm text-white/60">Loading reviews…</p>
         ) : reviews.length === 0 ? (
@@ -278,11 +368,21 @@ export default function ProductDetailClient({
                 <p className="mb-3 text-sm text-white/80">{r.body}</p>
                 <button
                   type="button"
-                  onClick={() => handleHelpful(r.id)}
-                  disabled={votingId === r.id}
-                  className="text-xs text-white/60 hover:text-white disabled:opacity-50"
+                  onClick={() => handleHelpfulToggle(r.id)}
+                  disabled={votingId === r.id || !isLoggedIn}
+                  title={!isLoggedIn ? "Sign in to mark as helpful" : helpfulVotes.has(r.id) ? "Remove helpful vote" : "Mark as helpful"}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    helpfulVotes.has(r.id)
+                      ? "border-[#FF4D00]/60 bg-[#FF4D00]/10 text-[#FF4D00] hover:bg-[#FF4D00]/20"
+                      : "border-white/10 bg-white/5 text-white/60 hover:border-white/30 hover:text-white"
+                  }`}
                 >
-                  Helpful ({r.helpfulCount})
+                  <ThumbsUp
+                    size={13}
+                    className={helpfulVotes.has(r.id) ? "fill-[#FF4D00]" : ""}
+                    strokeWidth={helpfulVotes.has(r.id) ? 0 : 1.8}
+                  />
+                  Helpful{r.helpfulCount > 0 ? ` (${r.helpfulCount})` : ""}
                 </button>
               </li>
             ))}

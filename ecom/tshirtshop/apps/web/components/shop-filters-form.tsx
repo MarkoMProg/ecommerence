@@ -102,6 +102,7 @@ export function ShopFiltersForm({
           <option value="price-desc">Price: High to Low</option>
           <option value="name-asc">Name: A–Z</option>
           <option value="name-desc">Name: Z–A</option>
+          <option value="rating-desc">Top Rated</option>
         </select>
       </div>
       <button
