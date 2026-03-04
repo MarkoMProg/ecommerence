@@ -51,7 +51,8 @@ export class ProductsController {
         sort === 'price-asc' ||
         sort === 'price-desc' ||
         sort === 'name-asc' ||
-        sort === 'name-desc'
+        sort === 'name-desc' ||
+        sort === 'rating-desc'
           ? sort
           : undefined,
     });

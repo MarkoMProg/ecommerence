@@ -12,6 +12,7 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
+import { ReviewModule } from './review/review.module';
 import { betterAuth } from 'better-auth';
 import * as express from 'express';
 
@@ -34,6 +35,7 @@ type BetterAuthInstance = ReturnType<typeof betterAuth>;
     OrderModule,
     AdminModule,
     UploadModule,
+    ReviewModule,
   ],
   controllers: [],
   providers: [],

@@ -1,4 +1,4 @@
-/*import {
+import {
   Controller,
   Get,
   Post,
@@ -28,7 +28,7 @@ import {
 export class ReviewsController {
   constructor(private readonly reviewService: ReviewService) {}
 
-  
+  /** List reviews for a product. Public. Sorted by helpfulness (REV-004). */
   @Get('products/:productId/reviews')
   @AllowAnonymous()
   async listByProduct(
@@ -49,7 +49,7 @@ export class ReviewsController {
     };
   }
 
-
+  /** Create a review. Requires auth + verified purchase. */
   @Post('products/:productId/reviews')
   @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -82,7 +82,7 @@ export class ReviewsController {
     };
   }
 
-
+  /** Update own review. Requires auth. */
   @Patch('reviews/:id')
   @UseGuards(BetterAuthGuard)
   async update(
@@ -114,7 +114,7 @@ export class ReviewsController {
     };
   }
 
-  
+  /** Delete own review. Requires auth. */
   @Delete('reviews/:id')
   @HttpCode(HttpStatus.OK)
   @UseGuards(BetterAuthGuard)
@@ -128,7 +128,7 @@ export class ReviewsController {
     };
   }
 
-
+  /** Vote a review as helpful (REV-004). Requires auth. */
   @Post('reviews/:id/helpful')
   @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -147,4 +147,3 @@ export class ReviewsController {
     };
   }
 }
-  */

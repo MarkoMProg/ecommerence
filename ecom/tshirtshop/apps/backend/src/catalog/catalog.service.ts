@@ -4,6 +4,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { category, product, productImage } from './schema';
+import { ReviewService } from '../review/review.service';
 
 /**
  * Generate a URL-safe slug from a product name.
@@ -61,7 +62,8 @@ export type ProductSortOption =
   | 'price-asc'
   | 'price-desc'
   | 'name-asc'
-  | 'name-desc';
+  | 'name-desc'
+  | 'rating-desc';
 
 export interface ListProductsQuery {
   page?: number;
@@ -87,6 +89,7 @@ export class CatalogService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
+    private readonly reviewService: ReviewService,
   ) {}
 
   async listCategories(): Promise<Category[]> {
@@ -158,7 +161,7 @@ export class CatalogService {
   }
 
   async listProducts(query: ListProductsQuery = {}): Promise<{
-    data: (Product & { images: ProductImage[]; category: Category | null })[];
+    data: (Product & { images: ProductImage[]; category: Category | null; averageRating?: number; reviewCount?: number })[];
     pagination: { page: number; limit: number; total: number };
   }> {
     const page = Math.max(1, query.page ?? 1);
@@ -233,8 +236,25 @@ export class CatalogService {
       category: categoryMap.get(p.categoryId) ?? null,
     }));
 
+    // Enrich with rating stats
+    const productIds = enriched.map((p) => p.id);
+    const ratingsMap = await this.reviewService.getProductsRatingStats(productIds);
+    const withRatings = enriched.map((p) => {
+      const stats = ratingsMap.get(p.id);
+      return {
+        ...p,
+        averageRating: stats?.averageRating ?? 0,
+        reviewCount: stats?.reviewCount ?? 0,
+      };
+    });
+
+    // If sorting by rating, sort in-memory after enrichment
+    if (sortOption === 'rating-desc') {
+      withRatings.sort((a, b) => b.averageRating - a.averageRating || b.reviewCount - a.reviewCount);
+    }
+
     return {
-      data: enriched,
+      data: withRatings,
       pagination: { page, limit, total },
     };
   }
@@ -243,21 +263,26 @@ export class CatalogService {
     | (Product & {
         images: ProductImage[];
         category: Category | null;
+        averageRating?: number;
+        reviewCount?: number;
       })
     | null
   > {
     const [p] = await this.db.select().from(product).where(eq(product.id, id));
     if (!p) return null;
 
-    const [images, categories] = await Promise.all([
+    const [images, categories, ratingStats] = await Promise.all([
       this.db.select().from(productImage).where(eq(productImage.productId, id)),
       this.db.select().from(category).where(eq(category.id, p.categoryId)),
+      this.reviewService.getProductRatingStats(id),
     ]);
     const cat = categories[0] ?? null;
     return {
       ...p,
       images,
       category: cat,
+      averageRating: ratingStats.averageRating,
+      reviewCount: ratingStats.reviewCount,
     };
   }
 
@@ -266,21 +291,26 @@ export class CatalogService {
     | (Product & {
         images: ProductImage[];
         category: Category | null;
+        averageRating?: number;
+        reviewCount?: number;
       })
     | null
   > {
     const [p] = await this.db.select().from(product).where(eq(product.slug, slug));
     if (!p) return null;
 
-    const [images, categories] = await Promise.all([
+    const [images, categories, ratingStats] = await Promise.all([
       this.db.select().from(productImage).where(eq(productImage.productId, p.id)),
       this.db.select().from(category).where(eq(category.id, p.categoryId)),
+      this.reviewService.getProductRatingStats(p.id),
     ]);
     const cat = categories[0] ?? null;
     return {
       ...p,
       images,
       category: cat,
+      averageRating: ratingStats.averageRating,
+      reviewCount: ratingStats.reviewCount,
     };
   }
 

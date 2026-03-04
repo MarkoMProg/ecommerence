@@ -176,11 +176,11 @@ import * as authSchema from './schema';
           trustedOrigins: [uiUrl],
 
           session: {
-            expiresIn: 60 * 60 * 24 * 7,
-            updateAge: 60 * 60 * 24,
+            expiresIn: 60 * 60 * 24 * 2, 
+            updateAge: 60 * 60 * 24, 
             cookieCache: {
               enabled: true,
-              maxAge: 60 * 15,
+              maxAge: 60 * 5,  
               strategy: 'jwt',
             },
           },
