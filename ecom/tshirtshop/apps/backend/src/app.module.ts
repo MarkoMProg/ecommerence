@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
 import { ReviewModule } from './review/review.module';
 import { AddressModule } from './address/address.module';
+import { BillingModule } from './billing/billing.module';
 import { betterAuth } from 'better-auth';
 import * as express from 'express';
 
@@ -38,6 +39,7 @@ type BetterAuthInstance = ReturnType<typeof betterAuth>;
     UploadModule,
     ReviewModule,
     AddressModule,
+    BillingModule,
   ],
   controllers: [],
   providers: [],

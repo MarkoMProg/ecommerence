@@ -7,6 +7,8 @@ import type { Cart } from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/checkout";
 import { fetchMyAddresses } from "@/lib/api/addresses";
 import type { SavedAddress } from "@/lib/api/addresses";
+import { fetchMyPaymentMethods } from "@/lib/api/billing";
+import type { SavedPaymentMethod } from "@/lib/api/billing";
 import { useAuth } from "@/components/auth-provider";
 import {
   Select,
@@ -111,6 +113,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
+  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethod | null>(null);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -135,6 +138,15 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
         }
       })
       .catch(() => { /* guest or unauthenticated — ignore */ });
+
+    fetchMyPaymentMethods()
+      .then((pms) => {
+        if (cancelled) return;
+        const def = pms.find((p) => p.isDefault) ?? pms[0] ?? null;
+        setDefaultPaymentMethod(def);
+      })
+      .catch(() => { /* Stripe not configured or not logged in */ });
+
     return () => { cancelled = true; };
   }, [session?.user]);
 
@@ -370,14 +382,32 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
             Payment
           </h2>
-          <div className="rounded-md border border-dashed border-white/20 bg-white/5 p-6 text-center">
-            <p className="text-sm text-white/60">
-              Payment is collected securely after you place your order.
-            </p>
-            <p className="mt-2 text-xs text-white/40">
-              You may be redirected to Stripe Checkout if configured.
-            </p>
-          </div>
+          {defaultPaymentMethod ? (
+            <div className="rounded-md border border-[#FF4D00]/20 bg-[#FF4D00]/5 p-4">
+              <p className="mb-1 text-xs uppercase tracking-widest text-white/50">
+                Saved card on file
+              </p>
+              <p className="text-sm font-medium text-white">
+                {defaultPaymentMethod.brand.charAt(0).toUpperCase() + defaultPaymentMethod.brand.slice(1)}{" "}
+                ····{defaultPaymentMethod.last4}
+              </p>
+              <p className="mt-0.5 text-xs text-white/50">
+                Expires {String(defaultPaymentMethod.expMonth).padStart(2, "0")}/{defaultPaymentMethod.expYear}
+              </p>
+              <p className="mt-3 text-xs text-white/40">
+                This card will appear as an option on the Stripe payment page. You can choose a different method there.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed border-white/20 bg-white/5 p-6 text-center">
+              <p className="text-sm text-white/60">
+                Payment is collected securely after you place your order.
+              </p>
+              <p className="mt-2 text-xs text-white/40">
+                You may be redirected to Stripe Checkout if configured.
+              </p>
+            </div>
+          )}
         </section>
       </div>
 

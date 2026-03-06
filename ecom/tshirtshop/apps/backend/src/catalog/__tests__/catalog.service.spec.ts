@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DATABASE_CONNECTION } from '../../database/database-connection';
 import { CatalogService } from '../catalog.service';
+import { ReviewService } from '../../review/review.service';
 
 /** Creates a thenable chain for drizzle-style mocks */
 function thenable<T>(value: T): { then: (fn: (v: T) => void) => void; from: () => any; where: () => any; orderBy: () => any; limit: () => any; offset: () => any } {
@@ -68,6 +69,13 @@ describe('CatalogService', () => {
         {
           provide: DATABASE_CONNECTION,
           useValue: mockDb,
+        },
+        {
+          provide: ReviewService,
+          useValue: {
+            getProductsRatingStats: jest.fn().mockResolvedValue({}),
+            getProductRatingStats: jest.fn().mockResolvedValue({ average: 0, count: 0 }),
+          },
         },
       ],
     }).compile();

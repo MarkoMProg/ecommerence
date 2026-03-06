@@ -11,10 +11,15 @@ import {
   HttpStatus,
   BadRequestException,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import { eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { DATABASE_CONNECTION } from '../database/database-connection';
+import { user as authUserTable } from '../auth/schema';
 import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { CheckoutService } from './checkout.service';
 import { validateShippingAddress } from './dto/checkout.dto';
@@ -27,6 +32,8 @@ import { OrderService } from './order.service';
 @UseGuards(OptionalAuthGuard)
 export class CheckoutController {
   constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: NodePgDatabase,
     private readonly checkoutService: CheckoutService,
     private readonly cartService: CartService,
     private readonly stripeService: StripeService,
@@ -116,12 +123,23 @@ export class CheckoutController {
       couponCode,
     );
 
+    // Look up Stripe customer ID so saved payment methods appear at checkout (BILL-001)
+    let stripeCustomerId: string | null = null;
+    if (user) {
+      const [u] = await this.db
+        .select({ stripeCustomerId: authUserTable.stripeCustomerId })
+        .from(authUserTable)
+        .where(eq(authUserTable.id, user.id));
+      stripeCustomerId = u?.stripeCustomerId ?? null;
+    }
+
     let checkoutUrl: string | null = null;
     if (this.stripeService.isConfigured() && order.status === 'pending') {
       checkoutUrl = await this.stripeService.createCheckoutSession(
         order.id,
         order.totalCents,
         'usd',
+        stripeCustomerId,
       );
     }
 
@@ -170,10 +188,21 @@ export class CheckoutController {
         error: { code: 'STRIPE_NOT_CONFIGURED', message: 'Payment is not available' },
       });
     }
+    // Look up Stripe customer for this order's user if available
+    let orderCustomerId: string | null = null;
+    if (order.userId) {
+      const [u] = await this.db
+        .select({ stripeCustomerId: authUserTable.stripeCustomerId })
+        .from(authUserTable)
+        .where(eq(authUserTable.id, order.userId));
+      orderCustomerId = u?.stripeCustomerId ?? null;
+    }
+
     const checkoutUrl = await this.stripeService.createCheckoutSession(
       order.id,
       order.totalCents,
       'usd',
+      orderCustomerId,
     );
     if (!checkoutUrl) {
       throw new BadRequestException({

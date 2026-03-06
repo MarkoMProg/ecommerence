@@ -6,6 +6,7 @@ import { AdminGuard } from '../guards/admin.guard';
 import { OrderService } from '../../order/order.service';
 import { CatalogService } from '../../catalog/catalog.service';
 import { BulkUploadService } from '../../catalog/bulk-upload.service';
+import { ReviewService } from '../../review/review.service';
 
 /**
  * AdminController integration tests.
@@ -61,6 +62,13 @@ describe('AdminController', () => {
         { provide: OrderService, useValue: orderService },
         { provide: CatalogService, useValue: { createProduct: jest.fn() } },
         { provide: BulkUploadService, useValue: new BulkUploadService() },
+        {
+          provide: ReviewService,
+          useValue: {
+            listAllForAdmin: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+            adminDelete: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     })
       .overrideGuard(AdminGuard)

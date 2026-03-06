@@ -18,6 +18,8 @@ export const user = pgTable('user', {
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires'),
+  /** Stripe Customer ID — set when user first saves a payment method (BILL-001) */
+  stripeCustomerId: text('stripe_customer_id'),
 });
 
 export const session = pgTable(
