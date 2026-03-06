@@ -80,7 +80,7 @@ export default function AdminProductsPage() {
           <Button asChild variant="outline">
             <Link href="/admin/products/bulk">Bulk Upload</Link>
           </Button>
-          <Button asChild>
+          <Button asChild className="bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90">
             <Link href="/admin/products/new">+ New Product</Link>
           </Button>
         </div>

@@ -56,8 +56,9 @@ function FormSuccess({ message }: { message: string | null }) {
   );
 }
 
-function OAuthButtons() {
+function OAuthButtons({ redirectTo }: { redirectTo?: string }) {
   const handleGoogle = () => {
+    if (redirectTo) sessionStorage.setItem("auth_redirect", redirectTo);
     authClient.signIn.social({
       provider: "google",
       callbackURL: `${window.location.origin}/auth/callback`,
@@ -65,6 +66,7 @@ function OAuthButtons() {
   };
 
   const handleFacebook = () => {
+    if (redirectTo) sessionStorage.setItem("auth_redirect", redirectTo);
     authClient.signIn.social({
       provider: "facebook",
       callbackURL: `${window.location.origin}/auth/callback`,
@@ -76,7 +78,7 @@ function OAuthButtons() {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
         onClick={handleGoogle}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -103,7 +105,7 @@ function OAuthButtons() {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
         onClick={handleFacebook}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
@@ -114,10 +116,10 @@ function OAuthButtons() {
 
       <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300" />
+          <div className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">
+          <span className="bg-[#0A0A0A] px-2 text-white/50">
             Or continue with email
           </span>
         </div>
@@ -127,8 +129,10 @@ function OAuthButtons() {
 }
 
 export function LoginForm({
+  redirectTo = "/",
   onForgotPassword,
 }: {
+  redirectTo?: string;
   onForgotPassword?: () => void;
 }) {
   const router = useRouter();
@@ -163,9 +167,9 @@ export function LoginForm({
         {
           async onSuccess(context) {
             if ((context.data as any)?.twoFactorRedirect) {
-              router.push("/auth/two-factor/verify");
+              router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
             } else {
-              router.push("/");
+              router.push(redirectTo);
             }
           },
         },
@@ -177,7 +181,7 @@ export function LoginForm({
           msg.toLowerCase().includes("two factor") ||
           (result as any)?.data?.twoFactorRedirect
         ) {
-          router.push("/auth/two-factor/verify");
+          router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
           return;
         }
         setFormError(msg);
@@ -216,8 +220,13 @@ export function LoginForm({
   if (twoFactorRequired) {
     return (
       <form onSubmit={handle2fa} className="space-y-4 max-w-md mx-auto">
-        <h2 className="text-2xl font-bold">Two-Factor Authentication</h2>
-        <p className="text-gray-600 text-sm">
+        <h2
+          className="text-2xl font-bold uppercase tracking-tight text-white"
+          style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+        >
+          Two-Factor Authentication
+        </h2>
+        <p className="text-sm text-white/60">
           Enter the 6-digit code from your authenticator app.
         </p>
         <FormError message={formError} />
@@ -241,7 +250,7 @@ export function LoginForm({
         </div>
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
           disabled={isLoading || twoFactorCode.length !== 6}
         >
           {isLoading ? "Verifying..." : "Verify"}
@@ -260,8 +269,13 @@ export function LoginForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Sign In</h2>
-      <OAuthButtons />
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Sign In
+      </h2>
+      <OAuthButtons redirectTo={redirectTo} />
       <FormError message={formError} />
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
@@ -304,7 +318,11 @@ export function LoginForm({
         </Button>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+        disabled={isLoading}
+      >
         {isLoading ? "Signing in..." : "Sign In"}
       </Button>
     </form>
@@ -396,7 +414,12 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Sign Up</h2>
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Sign Up
+      </h2>
       <OAuthButtons />
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
@@ -464,7 +487,7 @@ export function SignUpForm() {
 
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
         disabled={isLoading}
       >
         {isLoading ? "Signing up..." : "Sign Up"}
@@ -512,8 +535,13 @@ export function ForgotPasswordForm({ onBack }: { onBack?: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Forgot Password</h2>
-      <p className="text-gray-600 text-sm">
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Forgot Password
+      </h2>
+      <p className="text-sm text-white/60">
         Enter your email and we&apos;ll send you a link to reset your password.
       </p>
       <FormError message={formError} />
@@ -529,7 +557,11 @@ export function ForgotPasswordForm({ onBack }: { onBack?: () => void }) {
           autoComplete="email"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+        disabled={isLoading}
+      >
         {isLoading ? "Sending..." : "Send Reset Link"}
       </Button>
       {onBack && (
@@ -587,7 +619,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Reset Password</h2>
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Reset Password
+      </h2>
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
       <div className="space-y-2">
@@ -615,7 +652,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
           autoComplete="new-password"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+        disabled={isLoading}
+      >
         {isLoading ? "Resetting..." : "Reset Password"}
       </Button>
     </form>

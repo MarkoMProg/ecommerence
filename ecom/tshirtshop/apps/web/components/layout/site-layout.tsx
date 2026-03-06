@@ -38,7 +38,7 @@ function TwoFactorGuard() {
 
     const verified = sessionStorage.getItem("2fa_verified") === "true";
     if (!verified) {
-      window.location.replace("/auth/two-factor/verify");
+      window.location.replace(`/auth/two-factor/verify?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [session, isLoading, pathname]);
 
@@ -46,6 +46,18 @@ function TwoFactorGuard() {
 }
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdmin = pathname.startsWith("/admin");
+
+  if (isAdmin) {
+    return (
+      <>
+        <TwoFactorGuard />
+        {children}
+      </>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <TwoFactorGuard />

@@ -16,15 +16,18 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     async function verify() {
       try {
+        const redirect = sessionStorage.getItem("auth_redirect") ?? "/";
+        sessionStorage.removeItem("auth_redirect");
+
         const { data: session } = await authClient.getSession();
         if (session?.user) {
           if ((session.user as any).twoFactorEnabled) {
-            window.location.href = "/auth/two-factor/verify";
+            window.location.href = `/auth/two-factor/verify?redirect=${encodeURIComponent(redirect)}`;
             return;
           }
           setStatus("success");
           setTimeout(() => {
-            window.location.href = "/";
+            window.location.href = redirect;
           }, 500);
         } else {
           setStatus("error");
@@ -38,38 +41,36 @@ export default function AuthCallbackPage() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      {status === "loading" && (
-        <div className="text-center">
-          <div className="animate-pulse text-gray-500 text-lg">
-            Completing sign in...
+    <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div className="w-full max-w-md text-center">
+        {status === "loading" && (
+          <div className="animate-pulse text-white/60">Completing sign in...</div>
+        )}
+
+        {status === "success" && (
+          <div className="text-white/80">
+            <p className="text-lg font-medium">Signed in successfully!</p>
+            <p className="mt-1 text-sm text-white/60">Redirecting...</p>
           </div>
-        </div>
-      )}
+        )}
 
-      {status === "success" && (
-        <div className="text-center text-green-700">
-          <p className="text-lg font-medium">Signed in successfully!</p>
-          <p className="text-sm text-gray-500">Redirecting...</p>
-        </div>
-      )}
-
-      {status === "error" && (
-        <div className="text-center">
-          <p className="text-lg font-medium text-red-700">
-            Authentication failed
-          </p>
-          <p className="text-gray-600 text-sm mb-4">
-            We could not complete your sign in. Please try again.
-          </p>
-          <a
-            href="/"
-            className="inline-block bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Go to Sign In
-          </a>
-        </div>
-      )}
+        {status === "error" && (
+          <div className="rounded-lg border border-white/10 bg-[#1A1A1A] p-8">
+            <p className="text-lg font-medium text-white">
+              Authentication failed
+            </p>
+            <p className="mt-2 text-sm text-white/60">
+              We could not complete your sign in. Please try again.
+            </p>
+            <a
+              href="/auth/login"
+              className="mt-6 inline-block rounded-md bg-[#FF4D00] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#FF4D00]/90"
+            >
+              Go to Sign In
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

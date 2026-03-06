@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { fetchCategories } from "@/lib/api/catalog";
 import type { ApiCategory } from "@/lib/api/catalog";
 import {
@@ -147,9 +148,10 @@ function ImageManager({
       <button
         type="button"
         onClick={add}
-        className="w-full rounded-lg border border-dashed border-white/20 py-3 text-sm text-white/40 hover:border-white/40 hover:text-white/70 transition-colors"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/20 py-3 text-sm text-white/40 transition-colors hover:border-white/40 hover:text-white/70"
       >
-        ＋ Add image
+        <Plus className="size-4" />
+        Add image
       </button>
     </div>
   );

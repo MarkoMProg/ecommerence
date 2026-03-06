@@ -3,13 +3,14 @@ import { BetterAuthCoreModule } from '../auth/better-auth-core.module';
 import { DatabaseModule } from '../database/database.module';
 import { OrderModule } from '../order/order.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { ReviewModule } from '../review/review.module';
 import { AdminController } from './admin.controller';
 import { AdminGuard } from './guards/admin.guard';
 import { BulkUploadService } from '../catalog/bulk-upload.service';
 
 
 @Module({
-  imports: [BetterAuthCoreModule, DatabaseModule, OrderModule, CatalogModule],
+  imports: [BetterAuthCoreModule, DatabaseModule, OrderModule, CatalogModule, ReviewModule],
   controllers: [AdminController],
   providers: [AdminGuard, BulkUploadService],
   exports: [AdminGuard],

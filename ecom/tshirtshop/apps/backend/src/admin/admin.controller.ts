@@ -1,10 +1,12 @@
-import { Controller, Get, Patch, Post, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Delete, Patch, Post, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { MulterFile } from '../common/multer-file.types';
 import { memoryStorage } from 'multer';
 import { AdminGuard } from './guards/admin.guard';
 import { OrderService } from '../order/order.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { BulkUploadService, type BulkUploadResult, type BulkRowResult } from '../catalog/bulk-upload.service';
+import { ReviewService } from '../review/review.service';
 
 
 @Controller('api/v1/admin')
@@ -14,6 +16,7 @@ export class AdminController {
     private readonly orderService: OrderService,
     private readonly catalogService: CatalogService,
     private readonly bulkUploadService: BulkUploadService,
+    private readonly reviewService: ReviewService,
   ) {}
 
  
@@ -78,6 +81,35 @@ export class AdminController {
     };
   }
 
+  // ─── Reviews ────────────────────────────────────────────────────────────
+
+  /** List all reviews across all products (admin moderation). Supports pagination. */
+  @Get('reviews')
+  async getReviews(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('productId') productId?: string,
+  ) {
+    const result = await this.reviewService.listAllForAdmin({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 50,
+      productId: productId?.trim() || undefined,
+    });
+    return {
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      message: 'Reviews retrieved',
+    };
+  }
+
+  /** Delete any review (admin override). */
+  @Delete('reviews/:reviewId')
+  async deleteReview(@Param('reviewId') reviewId: string) {
+    await this.reviewService.adminDelete(reviewId.trim());
+    return { success: true, data: null, message: 'Review deleted' };
+  }
+
   // ─── Bulk Product Upload ────────────────────────────────────────────────
 
   @Post('products/bulk')
@@ -99,7 +131,7 @@ export class AdminController {
     }),
   )
   async bulkUploadProducts(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
   ) {
     if (!file) {
       throw new BadRequestException({

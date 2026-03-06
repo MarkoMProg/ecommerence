@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 
 const baseNavLinks = [
@@ -52,11 +53,9 @@ export function Header() {
           aria-label={menuOpen ? "Close menu" : "Open menu"}
         >
           {menuOpen ? (
-            <span className="text-xl">×</span>
+            <X className="size-6" />
           ) : (
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <Menu className="size-6" />
           )}
         </button>
       </div>

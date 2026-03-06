@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ThumbsUp } from "lucide-react";
+import { ThumbsUp, Star, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart } from "@/lib/api/cart";
 import {
@@ -167,17 +167,15 @@ export default function ProductDetailClient({
           {(product.reviewCount != null && product.reviewCount > 0) && (
             <div className="mb-6 flex items-center gap-2 text-sm text-white/80 sm:mb-8">
               <span className="flex" aria-label={`${product.averageRating ?? 0} out of 5 stars`}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={
-                      star <= (product.averageRating ?? 0)
-                        ? "text-[#E6C068]"
-                        : "text-white/30"
-                    }
-                  >
-                    ★
-                  </span>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`size-4 ${
+                      s <= (product.averageRating ?? 0)
+                        ? "fill-[#E6C068] text-[#E6C068]"
+                        : "fill-none text-white/30"
+                    }`}
+                  />
                 ))}
               </span>
               <span>
@@ -256,9 +254,11 @@ export default function ProductDetailClient({
               <span className="text-sm font-medium uppercase tracking-wider text-white">
                 {section.title}
               </span>
-              <span className="text-white/60">
-                {accordionOpen === section.id ? "−" : "+"}
-              </span>
+              {accordionOpen === section.id ? (
+                <ChevronUp className="size-4 text-white/60" />
+              ) : (
+                <ChevronDown className="size-4 text-white/60" />
+              )}
             </button>
             {accordionOpen === section.id && (
               <div className="pb-4 text-sm leading-relaxed text-white/80">
@@ -286,20 +286,18 @@ export default function ProductDetailClient({
             </span>
             <div>
               <span className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={
-                      star <=
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`size-4 ${
+                      s <=
                       Math.round(
                         reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
                       )
-                        ? "text-[#E6C068]"
-                        : "text-white/30"
-                    }
-                  >
-                    ★
-                  </span>
+                        ? "fill-[#E6C068] text-[#E6C068]"
+                        : "fill-none text-white/30"
+                    }`}
+                  />
                 ))}
               </span>
               <p className="text-xs text-white/60">
@@ -341,16 +339,16 @@ export default function ProductDetailClient({
                 className="rounded-lg border border-white/10 bg-white/5 p-4"
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="flex text-[#E6C068]">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <span
-                        key={star}
-                        className={
-                          star <= r.rating ? "text-[#E6C068]" : "text-white/30"
-                        }
-                      >
-                        ★
-                      </span>
+                  <span className="flex">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={`size-4 ${
+                          s <= r.rating
+                            ? "fill-[#E6C068] text-[#E6C068]"
+                            : "fill-none text-white/30"
+                        }`}
+                      />
                     ))}
                   </span>
                   <span className="text-sm font-medium text-white">

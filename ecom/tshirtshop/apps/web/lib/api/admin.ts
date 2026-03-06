@@ -244,6 +244,60 @@ export async function adminRefundOrder(orderId: string): Promise<AdminOrder | nu
   }
 }
 
+// ─── Reviews (admin) ────────────────────────────────────────────────────────
+
+export interface AdminReview {
+  id: string;
+  productId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  helpfulCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** List all reviews (admin). Returns null on error. */
+export async function fetchAdminReviews(opts?: {
+  page?: number;
+  limit?: number;
+  productId?: string;
+}): Promise<{ data: AdminReview[]; pagination: { page: number; limit: number; total: number } } | null> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.page != null) params.set("page", String(opts.page));
+    if (opts?.limit != null) params.set("limit", String(opts.limit));
+    if (opts?.productId) params.set("productId", opts.productId);
+    const qs = params.toString();
+    const res = await adminFetch(`/api/v1/admin/reviews${qs ? `?${qs}` : ""}`);
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      success: boolean;
+      data: AdminReview[];
+      pagination: { page: number; limit: number; total: number };
+    };
+    return json.success ? { data: json.data, pagination: json.pagination } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Admin-delete any review (override). Returns true on success. */
+export async function adminDeleteReview(reviewId: string): Promise<boolean> {
+  if (!reviewId?.trim()) return false;
+  try {
+    const res = await adminFetch(
+      `/api/v1/admin/reviews/${encodeURIComponent(reviewId.trim())}`,
+      { method: "DELETE" }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Bulk Upload ────────────────────────────────────────────────────────────
 
 export interface BulkRowResult {

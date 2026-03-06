@@ -324,6 +324,76 @@ export class ReviewService {
   }
 
   /**
+   * List all reviews across all products for admin moderation.
+   * Sorted by creation date descending.
+   */
+  async listAllForAdmin(opts: {
+    page?: number;
+    limit?: number;
+    productId?: string;
+  }): Promise<{
+    data: ReviewDto[];
+    pagination: { page: number; limit: number; total: number };
+  }> {
+    const safePage = Math.max(1, opts.page ?? 1);
+    const safeLimit = Math.min(100, Math.max(1, opts.limit ?? 50));
+    const offset = (safePage - 1) * safeLimit;
+
+    const where = opts.productId ? eq(review.productId, opts.productId) : undefined;
+
+    const [data, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(review)
+        .where(where)
+        .orderBy(desc(review.createdAt))
+        .limit(safeLimit)
+        .offset(offset),
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(review)
+        .where(where),
+    ]);
+
+    const total = countResult[0]?.count ?? 0;
+    return {
+      data: data.map((r) => ({
+        id: r.id,
+        productId: r.productId,
+        userId: r.userId,
+        userName: r.userName,
+        rating: r.rating,
+        title: r.title,
+        body: r.body,
+        helpfulCount: r.helpfulCount,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      })),
+      pagination: { page: safePage, limit: safeLimit, total },
+    };
+  }
+
+  /**
+   * Admin override delete — bypasses ownership check.
+   */
+  async adminDelete(reviewId: string): Promise<void> {
+    const [existing] = await this.db
+      .select({ id: review.id })
+      .from(review)
+      .where(eq(review.id, reviewId))
+      .limit(1);
+
+    if (!existing) {
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Review not found' },
+      });
+    }
+
+    await this.db.delete(review).where(eq(review.id, reviewId));
+  }
+
+  /**
    * Get aggregate rating stats for a single product.
    * Returns averageRating (rounded to 1 decimal) and reviewCount.
    */

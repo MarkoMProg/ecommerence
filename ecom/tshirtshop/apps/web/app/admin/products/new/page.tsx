@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { fetchCategories } from "@/lib/api/catalog";
 import type { ApiCategory } from "@/lib/api/catalog";
 import { adminCreateProduct, adminUploadImage } from "@/lib/api/admin";
@@ -189,9 +190,10 @@ function ImageManager({
       <button
         type="button"
         onClick={add}
-        className="w-full rounded-lg border border-dashed border-white/20 py-3 text-sm text-white/40 hover:border-white/40 hover:text-white/70 transition-colors"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/20 py-3 text-sm text-white/40 transition-colors hover:border-white/40 hover:text-white/70"
       >
-        ＋ Add image
+        <Plus className="size-4" />
+        Add image
       </button>
     </div>
   );
@@ -276,7 +278,7 @@ export default function AdminNewProductPage() {
         >
           New Product
         </h1>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="border-white/20">
           <Link href="/admin/products">Cancel</Link>
         </Button>
       </div>
@@ -451,7 +453,11 @@ export default function AdminNewProductPage() {
 
         {/* ── Actions ── */}
         <div className="flex gap-3">
-          <Button type="submit" disabled={submitting}>
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+          >
             {submitting ? "Creating…" : "Create Product"}
           </Button>
           <Button variant="outline" asChild>
