@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ThumbsUp, Star, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart } from "@/lib/api/cart";
+import { useCartCount } from "@/lib/cart-count-context";
 import {
   fetchProductReviews,
   voteReviewHelpful,
@@ -30,6 +31,7 @@ export default function ProductDetailClient({
   const [helpfulVotes, setHelpfulVotes] = useState<Set<string>>(new Set());
   const { session } = useAuth();
   const isLoggedIn = !!session?.user;
+  const { setCount } = useCartCount();
 
   const sizes = ["XS", "S", "M", "L", "XL"];
 
@@ -213,7 +215,8 @@ export default function ProductDetailClient({
             onClick={async () => {
               setAddStatus("loading");
               try {
-                await addToCart(product.id, 1);
+                const result = await addToCart(product.id, 1);
+                setCount(result.cart.itemCount);
                 setAddStatus("success");
               } catch {
                 setAddStatus("error");

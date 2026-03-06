@@ -8,6 +8,7 @@ import {
   removeFromCart,
 } from "@/lib/api/cart";
 import { clearCartIdClient, getCartIdClient } from "@/lib/cart-cookie";
+import { useCartCount } from "@/lib/cart-count-context";
 
 interface CartClientProps {
   initialCart: Cart | null;
@@ -15,6 +16,7 @@ interface CartClientProps {
 
 export function CartClient({ initialCart }: CartClientProps) {
   const [cart, setCart] = useState<Cart | null>(initialCart);
+  const { setCount } = useCartCount();
 
   useEffect(() => {
     if (initialCart?.userId && getCartIdClient()) {
@@ -32,9 +34,11 @@ export function CartClient({ initialCart }: CartClientProps) {
       if (quantity < 1) {
         const updated = await removeFromCart(productId);
         setCart(updated);
+        setCount(updated.itemCount);
       } else {
         const updated = await updateCartItemQuantity(productId, quantity);
         setCart(updated);
+        setCount(updated.itemCount);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update");
@@ -50,6 +54,7 @@ export function CartClient({ initialCart }: CartClientProps) {
     try {
       const updated = await removeFromCart(productId);
       setCart(updated);
+      setCount(updated.itemCount);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove");
     } finally {

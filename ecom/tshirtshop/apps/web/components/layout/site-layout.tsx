@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { Footer } from "./footer";
 import { useAuth } from "@/components/auth-provider";
+import { CartCountProvider } from "@/lib/cart-count-context";
 
 /** Pages that are part of the auth flow — guard must never redirect here to avoid loops */
 const AUTH_PATHS = [
@@ -59,11 +60,13 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <TwoFactorGuard />
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
-    </div>
+    <CartCountProvider>
+      <div className="flex min-h-screen flex-col">
+        <TwoFactorGuard />
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </div>
+    </CartCountProvider>
   );
 }
