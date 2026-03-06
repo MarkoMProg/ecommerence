@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { MulterFile } from '../../common/multer-file.types';
 import { AdminController } from '../admin.controller';
 import { AdminGuard } from '../guards/admin.guard';
 import { OrderService } from '../../order/order.service';
@@ -202,7 +203,7 @@ describe('AdminController', () => {
       catalogService.createProduct = jest.fn();
     });
 
-    const makeMockFile = (content: string, name = 'products.json'): Express.Multer.File => ({
+    const makeMockFile = (content: string, name = 'products.json'): MulterFile => ({
       buffer: Buffer.from(content),
       originalname: name,
       fieldname: 'file',

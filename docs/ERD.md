@@ -84,6 +84,7 @@ erDiagram
     product {
         text id PK
         text name
+        text slug UK
         text description
         integer priceCents
         integer stockQuantity
@@ -101,6 +102,7 @@ erDiagram
         text id PK
         text productId FK
         text imageUrl
+        text altText
         boolean isPrimary
     }
     
@@ -135,6 +137,8 @@ erDiagram
         integer subtotalCents
         integer shippingCents
         integer totalCents
+        text stripeSessionId "PAY-004"
+        timestamp paidAt "PAY-004"
         timestamp createdAt
         timestamp updatedAt
     }

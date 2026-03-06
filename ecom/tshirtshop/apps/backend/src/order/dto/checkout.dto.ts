@@ -17,7 +17,10 @@ export interface ValidationError {
 }
 
 /** Supported shipping countries. Must match frontend select options. */
-const SUPPORTED_COUNTRIES = ['US', 'CA', 'GB'] as const;
+const SUPPORTED_COUNTRIES = [
+  'EE', 'LV', 'LT', 'FI', 'SE', 'NO', 'DK', 'DE', 'FR', 'NL', 'BE', 'PL', 'ES', 'IT', 'AT', 'IE', 'PT',
+  'CZ', 'GR', 'RO', 'HU', 'BG', 'HR', 'SK', 'SI', 'LU', 'CY', 'MT', 'GB', 'US', 'CA', 'CH', 'IS',
+] as const;
 
 /** Max lengths per DB/spec. */
 const MAX_LENGTHS = {
@@ -35,6 +38,36 @@ const POSTAL_PATTERNS: Record<string, RegExp> = {
   US: /^\d{5}([\s-]?\d{4})?$/,
   CA: /^[A-Za-z]\d[A-Za-z][\s-]?\d[A-Za-z]\d$/i,
   GB: /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}$/i,
+  EE: /^\d{5}$/,
+  LV: /^(LV-)?\d{4}$/i,
+  LT: /^(LT-)?\d{5}$/i,
+  FI: /^\d{5}$/,
+  SE: /^\d{3}\s?\d{2}$/,
+  NO: /^\d{4}$/,
+  DK: /^\d{4}$/,
+  DE: /^\d{5}$/,
+  FR: /^\d{5}$/,
+  NL: /^\d{4}\s?[A-Za-z]{2}$/i,
+  BE: /^\d{4}$/,
+  PL: /^\d{2}-\d{3}$|^\d{5}$/,
+  ES: /^\d{5}$/,
+  IT: /^\d{5}$/,
+  AT: /^\d{4}$/,
+  PT: /^\d{4}-\d{3}$|^\d{7}$/,
+  CZ: /^\d{3}\s?\d{2}$|^\d{5}$/,
+  GR: /^\d{3}\s?\d{2}$|^\d{5}$/,
+  RO: /^\d{6}$/,
+  HU: /^\d{4}$/,
+  BG: /^\d{4}$/,
+  HR: /^\d{5}$/,
+  SK: /^\d{3}\s?\d{2}$|^\d{5}$/,
+  SI: /^\d{4}$/,
+  LU: /^\d{4}$/,
+  CY: /^\d{4}$/,
+  MT: /^[A-Za-z]{3}\s?\d{2,4}$/i,
+  CH: /^\d{4}$/,
+  IS: /^\d{3}$/,
+  IE: /^[A-Za-z0-9\s-]{3,10}$/i,
 };
 
 function normalizePostalCode(s: string): string {

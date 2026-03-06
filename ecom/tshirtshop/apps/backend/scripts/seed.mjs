@@ -31,6 +31,12 @@ const CATEGORIES = [
   { id: '5', name: 'Posters', slug: 'posters' },
 ];
 
+/** Generate URL-safe slug from name + id suffix. */
+function slugify(name, id) {
+  const base = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `${base}-${String(id).slice(0, 6)}`;
+}
+
 const PRODUCTS = [
   {
     id: '1',
@@ -87,6 +93,15 @@ const PRODUCTS = [
     brand: 'Darkloom',
     imageUrl: 'https://placehold.co/600x600/1a1a1a/ffffff?text=Critical+Hit',
   },
+  {
+    id: 'free-checkout-test',
+    name: 'Free Checkout Test Item',
+    description: 'Zero-cost item for testing the checkout flow. No payment required.',
+    priceCents: 0,
+    categoryId: '1',
+    brand: 'Darkloom',
+    imageUrl: 'https://placehold.co/600x600/1a1a1a/ffffff?text=Free+Test',
+  },
 ];
 
 async function seed() {
@@ -94,7 +109,8 @@ async function seed() {
   const client = await pool.connect();
 
   try {
-    // Clear in FK order
+    // Clear in FK order (order cascades to order_item; order_item RESTRICTs product delete)
+    await client.query('DELETE FROM "order"');
     await client.query('DELETE FROM product_image');
     await client.query('DELETE FROM product');
     await client.query('DELETE FROM category');
@@ -110,11 +126,12 @@ async function seed() {
 
     console.log('[seed] Inserting products...');
     for (const p of PRODUCTS) {
+      const slug = slugify(p.name, p.id);
       await client.query(
-        `INSERT INTO product (id, name, description, price_cents, stock_quantity, category_id, brand,
+        `INSERT INTO product (id, name, slug, description, price_cents, stock_quantity, category_id, brand,
           weight_metric, weight_imperial, dimension_metric, dimension_imperial, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, 50, $5, $6, NULL, NULL, NULL, NULL, NOW(), NOW())`,
-        [p.id, p.name, p.description, p.priceCents, p.categoryId, p.brand],
+         VALUES ($1, $2, $3, $4, $5, 50, $6, $7, NULL, NULL, NULL, NULL, NOW(), NOW())`,
+        [p.id, p.name, slug, p.description, p.priceCents, p.categoryId, p.brand],
       );
       await client.query(
         `INSERT INTO product_image (id, product_id, image_url, is_primary)

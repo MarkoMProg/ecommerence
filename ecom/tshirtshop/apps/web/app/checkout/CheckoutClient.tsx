@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/checkout";
+import { fetchMyAddresses } from "@/lib/api/addresses";
+import type { SavedAddress } from "@/lib/api/addresses";
+import { useAuth } from "@/components/auth-provider";
 import {
   Select,
   SelectContent,
@@ -81,6 +84,11 @@ const initialAddress: ShippingAddress = {
 const FREE_SHIPPING_CENTS = 7500;
 const DEFAULT_SHIPPING_CENTS = 599;
 
+/** FRESHP100 = free shipping. Case-insensitive. */
+function isFreeShippingCoupon(code: string): boolean {
+  return code?.trim().toUpperCase() === "FRESHP100";
+}
+
 function isAddressValid(a: ShippingAddress): boolean {
   return !!(
     a.fullName?.trim() &&
@@ -94,11 +102,65 @@ function isAddressValid(a: ShippingAddress): boolean {
 
 export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) {
   const router = useRouter();
+  const { session } = useAuth();
   const [address, setAddress] = useState<ShippingAddress>(initialAddress);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [placeStatus, setPlaceStatus] = useState<"idle" | "loading" | "error">("idle");
   const [placeError, setPlaceError] = useState<string | null>(null);
 
-  const shippingCents = cart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
+
+  useEffect(() => {
+    if (!session?.user) return;
+    let cancelled = false;
+    fetchMyAddresses()
+      .then((data) => {
+        if (cancelled) return;
+        setSavedAddresses(data);
+        const defaultShipping = data.find((a) => a.isDefaultShipping);
+        if (defaultShipping) {
+          setSelectedAddressId(defaultShipping.id);
+          setAddress({
+            fullName: defaultShipping.fullName,
+            line1: defaultShipping.line1,
+            line2: defaultShipping.line2 ?? "",
+            city: defaultShipping.city,
+            stateOrProvince: defaultShipping.stateOrRegion,
+            postalCode: defaultShipping.postalCode,
+            country: defaultShipping.country,
+            phone: defaultShipping.phone ?? "",
+          });
+        }
+      })
+      .catch(() => { /* guest or unauthenticated — ignore */ });
+    return () => { cancelled = true; };
+  }, [session?.user]);
+
+  function applySelectedAddress(id: string) {
+    setSelectedAddressId(id);
+    if (id === "manual") {
+      setAddress(initialAddress);
+      return;
+    }
+    const addr = savedAddresses.find((a) => a.id === id);
+    if (!addr) return;
+    setAddress({
+      fullName: addr.fullName,
+      line1: addr.line1,
+      line2: addr.line2 ?? "",
+      city: addr.city,
+      stateOrProvince: addr.stateOrRegion,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      phone: addr.phone ?? "",
+    });
+  }
+
+  const freeShippingByCoupon = appliedCoupon ? isFreeShippingCoupon(appliedCoupon) : false;
+  const shippingCents =
+    freeShippingByCoupon || cart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
   const totalCents = cart.totalCents + shippingCents;
   const totalDollars = (totalCents / 100).toFixed(2);
   const subtotalDollars = (cart.totalCents / 100).toFixed(2);
@@ -126,7 +188,8 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           country: address.country.trim(),
           phone: address.phone.trim() || undefined,
         },
-        cart.id
+        cart.id,
+        appliedCoupon
       );
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -154,6 +217,29 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
             Shipping address
           </h2>
+
+          {savedAddresses.length > 0 && (
+            <div className="mb-6">
+              <label className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+                Use saved address
+              </label>
+              <Select value={selectedAddressId} onValueChange={applySelectedAddress}>
+                <SelectTrigger className="min-h-[44px] w-full px-4 py-2">
+                  <SelectValue placeholder="Select a saved address…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedAddresses.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label} — {a.fullName}, {a.city}
+                      {a.isDefaultShipping ? " (Default)" : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="manual">Enter new address manually</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <form id="checkout-form" className="grid gap-4 sm:grid-cols-2" onSubmit={handlePlaceOrder}>
             <div className="sm:col-span-2">
               <label htmlFor="checkout-fullName" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
@@ -334,6 +420,57 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
               );
             })}
           </ul>
+          <div className="mb-4">
+            <label htmlFor="checkout-coupon" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+              Coupon
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="checkout-coupon"
+                type="text"
+                value={appliedCoupon ?? couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value);
+                  if (!appliedCoupon) setPlaceError(null);
+                }}
+                placeholder={appliedCoupon ? appliedCoupon : "Enter code"}
+                disabled={!!appliedCoupon}
+                className="min-h-[44px] flex-1 rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00] disabled:opacity-70"
+              />
+              {appliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppliedCoupon(null);
+                    setCouponCode("");
+                  }}
+                  className="min-h-[44px] rounded-md border border-white/20 px-4 py-2 text-xs uppercase tracking-wider text-white/80 hover:bg-white/5"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = couponCode.trim();
+                    if (!code) return;
+                    if (isFreeShippingCoupon(code)) {
+                      setAppliedCoupon(code.toUpperCase());
+                      setPlaceError(null);
+                    } else {
+                      setPlaceError("Invalid coupon code");
+                    }
+                  }}
+                  className="min-h-[44px] shrink-0 rounded-md bg-white/10 px-4 py-2 text-xs uppercase tracking-wider text-white hover:bg-white/20"
+                >
+                  Apply
+                </button>
+              )}
+            </div>
+            {appliedCoupon && (
+              <p className="mt-1 text-xs text-[#4ADE80]">Free shipping applied</p>
+            )}
+          </div>
           <div className="mb-6 space-y-2">
             <div className="flex justify-between text-sm text-white/80">
               <span>Subtotal</span>

@@ -21,6 +21,8 @@
     "db:push": "node scripts/db-push.mjs",
     "db:generate": "node -r dotenv/config ../../node_modules/drizzle-kit/bin.cjs generate",
     "db:seed": "node scripts/seed.mjs",
+    "db:add-slug": "node scripts/db-add-slug.mjs",
+    "db:add-free-product": "node scripts/db-add-free-product.mjs",
     "db:bootstrap-admin": "node scripts/bootstrap-admin-role.mjs"
   },
   "dependencies": {

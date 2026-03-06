@@ -89,7 +89,7 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         ...validAddress,
         country: 'XX',
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.country' && e.message.includes('US, CA, GB'))).toBe(true);
+      expect(errors.some((e) => e.field === 'shippingAddress.country' && e.message.includes('country must be one of'))).toBe(true);
     });
 
     it('should error on invalid US postal code', () => {

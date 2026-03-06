@@ -156,6 +156,7 @@ import * as authSchema from './schema';
 
           plugins: [
             twoFactor({
+              skipVerificationOnEnable: true,
               issuer: 'Darkloom',
             }),
             bearer(),

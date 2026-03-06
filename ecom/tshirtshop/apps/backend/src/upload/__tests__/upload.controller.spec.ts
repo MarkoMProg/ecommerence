@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { Request } from 'express';
+import type { MulterFile } from '../../common/multer-file.types';
 import { UploadController } from '../upload.controller';
 import { BetterAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
@@ -11,7 +12,7 @@ jest.mock('@thallesp/nestjs-better-auth', () => ({
 const mockBetterAuthGuard = { canActivate: jest.fn().mockReturnValue(true) };
 
 /** Build a minimal fake Multer file object for testing. */
-function mockFile(filename = 'test.jpg'): Express.Multer.File {
+function mockFile(filename = 'test.jpg'): MulterFile {
   return {
     fieldname: 'file',
     originalname: filename,

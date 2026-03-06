@@ -46,7 +46,7 @@ export async function cancelOrder(orderId: string): Promise<Order | null> {
   try {
     const res = await fetch(
       `${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}/cancel`,
-      { method: "POST" },
+      { method: "POST", credentials: "include" },
     );
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: Order | null };

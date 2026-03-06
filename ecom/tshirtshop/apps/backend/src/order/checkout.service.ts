@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import { CartService } from '../cart/cart.service';
+import { applyCoupon } from './coupons';
 import type { ShippingAddressInput } from './dto/checkout.dto';
 
 export interface OrderItemDto {
@@ -45,6 +46,7 @@ export interface OrderSummaryDto {
   totalCents: number;
   itemCount: number;
   freeShippingThresholdCents: number;
+  couponApplied?: boolean;
 }
 
 @Injectable()
@@ -56,14 +58,18 @@ export class CheckoutService {
   ) {}
 
   /**
-   * Get order summary for cart (CHK-003). Applies shipping rules; no order created.
+   * Get order summary for cart (CHK-003). Applies shipping rules and optional coupon; no order created.
    */
-  async getOrderSummary(cartId: string): Promise<OrderSummaryDto | null> {
+  async getOrderSummary(cartId: string, couponCode?: string | null): Promise<OrderSummaryDto | null> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData || !cartData.items.length) return null;
 
+    const coupon = couponCode ? applyCoupon(couponCode) : null;
+    const freeShippingByCoupon = coupon?.freeShipping ?? false;
     const shippingCents =
-      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+      freeShippingByCoupon || cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+        ? 0
+        : DEFAULT_SHIPPING_CENTS;
 
     return {
       subtotalCents: cartData.totalCents,
@@ -71,6 +77,7 @@ export class CheckoutService {
       totalCents: cartData.totalCents + shippingCents,
       itemCount: cartData.itemCount,
       freeShippingThresholdCents: FREE_SHIPPING_THRESHOLD_CENTS,
+      couponApplied: coupon ? true : false,
     };
   }
 
@@ -83,6 +90,7 @@ export class CheckoutService {
     cartId: string,
     shippingAddress: ShippingAddressInput,
     userId?: string | null,
+    couponCode?: string | null,
   ): Promise<OrderDto> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData) {
@@ -98,8 +106,12 @@ export class CheckoutService {
     const now = new Date();
     const orderId = randomUUID();
 
+    const coupon = couponCode ? applyCoupon(couponCode) : null;
+    const freeShippingByCoupon = coupon?.freeShipping ?? false;
     const shippingCents =
-      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+      freeShippingByCoupon || cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+        ? 0
+        : DEFAULT_SHIPPING_CENTS;
     const totalCents = cartData.totalCents + shippingCents;
 
     await this.db.insert(order).values({
@@ -132,6 +144,8 @@ export class CheckoutService {
         createdAt: now,
       });
     }
+
+    await this.cartService.clearCart(cartId);
 
     const [o] = await this.db.select().from(order).where(eq(order.id, orderId));
     if (!o) throw new Error('Order creation failed');

@@ -176,6 +176,11 @@ export class CartService {
     return this.enrichCartWithItems(c);
   }
 
+  /** Remove all items from cart. Used after order is completed. */
+  async clearCart(cartId: string): Promise<void> {
+    await this.db.delete(cartItem).where(eq(cartItem.cartId, cartId));
+  }
+
   async removeItem(cartId: string, productId: string): Promise<CartWithItems> {
     const [existingCart] = await this.db.select().from(cart).where(eq(cart.id, cartId));
     if (!existingCart) {

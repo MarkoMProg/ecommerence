@@ -8,6 +8,7 @@ import { fetchMyOrders } from "@/lib/api/orders";
 import type { Order } from "@/lib/api/orders";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AddressesSection } from "./addresses/AddressesSection";
 
 function formatDate(iso: string): string {
   try {
@@ -108,6 +109,12 @@ export default function AccountPage() {
             <Button variant="outline" asChild>
               <Link href="/">Continue Shopping</Link>
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-[#1A1A1A]">
+          <CardContent className="pt-6">
+            <AddressesSection />
           </CardContent>
         </Card>
 

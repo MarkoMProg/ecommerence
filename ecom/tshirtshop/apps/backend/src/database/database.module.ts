@@ -8,6 +8,7 @@ import * as catalogSchema from '../catalog/schema';
 import * as cartSchema from '../cart/schema';
 import * as orderSchema from '../order/schema';
 import * as reviewSchema from '../review/schema';
+import * as addressSchema from '../address/schema';
 
 
 @Module({
@@ -26,6 +27,7 @@ import * as reviewSchema from '../review/schema';
             ...cartSchema,
             ...orderSchema,
             ...reviewSchema,
+            ...addressSchema,
           },
         });
       },

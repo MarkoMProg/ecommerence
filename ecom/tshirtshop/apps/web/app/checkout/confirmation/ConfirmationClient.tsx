@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Order } from "@/lib/api/orders";
 import { fetchOrder } from "@/lib/api/orders";
-import { verifyPayment, VerifyPaymentError } from "@/lib/api/checkout";
+import { verifyPayment, getPaymentUrlForOrder, VerifyPaymentError } from "@/lib/api/checkout";
 import { CancelOrderButton } from "./CancelOrderButton";
 
 function paymentErrorMessage(e: unknown): string {
@@ -35,6 +35,7 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
   const [order, setOrder] = useState<Order | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +102,19 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
   if (!order) return null;
 
   const isPaid = order.status === "paid";
+  const isPending = order.status === "pending";
+
+  async function handleCompletePayment() {
+    if (paymentLoading || !orderId) return;
+    setPaymentLoading(true);
+    try {
+      const url = await getPaymentUrlForOrder(orderId);
+      window.location.href = url;
+    } catch {
+      setError("Could not start payment. Please try again.");
+      setPaymentLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -118,6 +132,18 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
         </p>
         {orderId && (
           <p className="mb-6 font-mono text-sm text-white/60">Order ID: {orderId}</p>
+        )}
+        {isPending && (
+          <div className="mb-6 flex flex-col items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCompletePayment}
+              disabled={paymentLoading}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-[#FF4D00] px-6 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90 disabled:opacity-50"
+            >
+              {paymentLoading ? "Redirecting…" : "Complete payment"}
+            </button>
+          </div>
         )}
         {orderId && order && (
           <CancelOrderButton orderId={orderId} status={order.status} />
