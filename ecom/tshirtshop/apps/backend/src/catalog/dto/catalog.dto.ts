@@ -16,6 +16,18 @@ export interface CreateProductBody {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  /** Comma-separated sizes, e.g. "XS,S,M,L,XL". Omit or null for products with no size selection. */
+  sizeOptions?: string;
+  /** e.g. "100% combed cotton, 320gsm" */
+  material?: string;
+  /** Apparel fit, e.g. "Oversized" */
+  fit?: string;
+  /** e.g. "Machine wash cold. Tumble dry low." */
+  careInstructions?: string;
+  /** Prints/posters: "Portrait" or "Landscape" */
+  orientation?: string;
+  /** Prints/posters: e.g. "Ships unframed" */
+  framingInfo?: string;
   /** Images array: each item has a url and optional alt text. First image is primary. */
   images?: ProductImageInput[];
 }
@@ -31,6 +43,12 @@ export interface UpdateProductBody {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
   /** When provided, replaces all existing images for the product. */
   images?: ProductImageInput[];
 }

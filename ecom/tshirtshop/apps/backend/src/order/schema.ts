@@ -61,6 +61,8 @@ export const orderItem = pgTable('order_item', {
   quantity: integer('quantity').notNull(),
   priceCentsAtOrder: integer('price_cents_at_order').notNull(),
   productNameAtOrder: text('product_name_at_order').notNull(),
+  /** Snapshot of the selected option at order time (e.g. size "M"). NULL = no option. */
+  selectedOptionAtOrder: text('selected_option_at_order'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

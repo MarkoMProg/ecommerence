@@ -3,6 +3,8 @@
 export interface AddCartItemBody {
   productId: string;
   quantity?: number;
+  /** Selected option for this line item, e.g. size "M". Optional. */
+  selectedOption?: string;
 }
 
 export interface ValidationError {

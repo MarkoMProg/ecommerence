@@ -84,7 +84,7 @@ export class CartController {
   async addItem(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
-    @Body() body: { productId?: string; quantity?: number },
+    @Body() body: { productId?: string; quantity?: number; selectedOption?: string },
   ) {
     const errors = validateAddCartItem(body);
     if (errors.length > 0) {
@@ -100,6 +100,9 @@ export class CartController {
 
     const productId = (body.productId as string).trim();
     const quantity = body.quantity != null ? Math.max(1, Math.floor(body.quantity)) : 1;
+    const selectedOption = typeof body.selectedOption === 'string' && body.selectedOption.trim()
+      ? body.selectedOption.trim()
+      : null;
     const user = (req as any).user as { id: string } | null;
     const guestCartId = cartIdHeader?.trim();
 
@@ -114,12 +117,13 @@ export class CartController {
           userCart = await this.cartService.mergeGuestCartIntoUser(guestCartId, user.id);
         }
       }
-      cart = await this.cartService.addItem(userCart.id, productId, quantity);
+      cart = await this.cartService.addItem(userCart.id, productId, quantity, selectedOption);
     } else {
       const result = await this.cartService.getOrCreateCartAndAddItem(
         guestCartId,
         productId,
         quantity,
+        selectedOption,
       );
       cart = result.cart;
       created = result.created;

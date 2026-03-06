@@ -23,6 +23,8 @@ export interface CartItem {
   productName: string;
   priceCents: number;
   imageUrl: string | null;
+  /** Selected option for this line item (e.g. size "M"). Null when product has no options. */
+  selectedOption: string | null;
 }
 
 export interface Cart {
@@ -97,13 +99,16 @@ export interface AddToCartResult {
 export async function addToCart(
   productId: string,
   quantity = 1,
+  selectedOption?: string | null,
 ): Promise<AddToCartResult> {
   const cartId = getCartIdClient();
+  const body: { productId: string; quantity: number; selectedOption?: string } = { productId, quantity };
+  if (selectedOption) body.selectedOption = selectedOption;
   const res = await fetch(`${apiBase()}/api/v1/cart/items`, {
     method: "POST",
     headers: cartHeaders(cartId),
     credentials: "include",
-    body: JSON.stringify({ productId, quantity }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = (await res.json()).error;

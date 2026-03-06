@@ -116,7 +116,12 @@ export function CartClient({ initialCart }: CartClientProps) {
                     <p className="truncate font-medium text-white sm:line-clamp-2">
                       {item.productName}
                     </p>
-                    <p className="text-sm text-[#E6C068]">${itemTotal}</p>
+                    {item.selectedOption && (
+                      <p className="mt-0.5 text-xs text-white/50">
+                        Size: {item.selectedOption}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-sm text-[#E6C068]">${itemTotal}</p>
                   </div>
                 </Link>
                 <div className="flex flex-1 items-center justify-between gap-4 sm:justify-end">

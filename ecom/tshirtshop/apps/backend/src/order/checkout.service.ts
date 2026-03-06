@@ -14,6 +14,7 @@ export interface OrderItemDto {
   quantity: number;
   priceCentsAtOrder: number;
   productNameAtOrder: string;
+  selectedOptionAtOrder: string | null;
 }
 
 export interface OrderDto {
@@ -141,6 +142,7 @@ export class CheckoutService {
         quantity: item.quantity,
         priceCentsAtOrder: item.priceCents,
         productNameAtOrder: item.productName,
+        selectedOptionAtOrder: item.selectedOption ?? null,
         createdAt: now,
       });
     }
@@ -176,6 +178,7 @@ export class CheckoutService {
         quantity: i.quantity,
         priceCentsAtOrder: i.priceCentsAtOrder,
         productNameAtOrder: i.productNameAtOrder,
+        selectedOptionAtOrder: i.selectedOptionAtOrder ?? null,
       })),
       createdAt: o.createdAt,
     };

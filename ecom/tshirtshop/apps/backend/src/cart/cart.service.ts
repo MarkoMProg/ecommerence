@@ -14,6 +14,8 @@ export interface CartItemWithProduct {
   productName: string;
   priceCents: number;
   imageUrl: string | null;
+  /** Selected option for this line item (e.g. size "M"). Null when product has no options. */
+  selectedOption: string | null;
 }
 
 export interface CartWithItems {
@@ -100,7 +102,7 @@ export class CartService {
     }
     let userCartData = await this.getOrCreateUserCart(userId);
     for (const item of guestCart.items) {
-      userCartData = await this.addItem(userCartData.id, item.productId, item.quantity);
+      userCartData = await this.addItem(userCartData.id, item.productId, item.quantity, item.selectedOption);
     }
     await this.db.delete(cart).where(eq(cart.id, guestCartId));
     return userCartData;
@@ -111,22 +113,23 @@ export class CartService {
     cartId: string | undefined,
     productId: string,
     quantity: number,
+    selectedOption?: string | null,
   ): Promise<{ cart: CartWithItems; created: boolean }> {
     let cartData: CartWithItems;
     let created = false;
     if (cartId) {
       const existing = await this.getCartById(cartId);
       if (existing) {
-        cartData = await this.addItem(cartId, productId, quantity);
+        cartData = await this.addItem(cartId, productId, quantity, selectedOption);
       } else {
         cartData = await this.createGuestCart();
         created = true;
-        cartData = await this.addItem(cartData.id, productId, quantity);
+        cartData = await this.addItem(cartData.id, productId, quantity, selectedOption);
       }
     } else {
       cartData = await this.createGuestCart();
       created = true;
-      cartData = await this.addItem(cartData.id, productId, quantity);
+      cartData = await this.addItem(cartData.id, productId, quantity, selectedOption);
     }
     return { cart: cartData, created };
   }
@@ -135,6 +138,7 @@ export class CartService {
     cartId: string,
     productId: string,
     quantity = 1,
+    selectedOption?: string | null,
   ): Promise<CartWithItems> {
     if (quantity < 1) quantity = 1;
 
@@ -157,7 +161,12 @@ export class CartService {
       const newQty = existingItem.quantity + quantity;
       await this.db
         .update(cartItem)
-        .set({ quantity: newQty, updatedAt: new Date() })
+        .set({
+          quantity: newQty,
+          updatedAt: new Date(),
+          // Update the selected option if a new one is provided (last-selection-wins)
+          ...(selectedOption !== undefined ? { selectedOption: selectedOption ?? null } : {}),
+        })
         .where(eq(cartItem.id, existingItem.id));
     } else {
       const id = randomUUID();
@@ -166,6 +175,7 @@ export class CartService {
         cartId,
         productId,
         quantity,
+        selectedOption: selectedOption ?? null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -247,6 +257,7 @@ export class CartService {
         quantity: cartItem.quantity,
         productName: product.name,
         priceCents: product.priceCents,
+        selectedOption: cartItem.selectedOption,
       })
       .from(cartItem)
       .innerJoin(product, eq(cartItem.productId, product.id))
@@ -280,6 +291,7 @@ export class CartService {
       productName: i.productName,
       priceCents: i.priceCents,
       imageUrl: primaryByProduct.get(i.productId) ?? null,
+      selectedOption: i.selectedOption ?? null,
     }));
 
     const itemCount = enriched.reduce((sum, i) => sum + i.quantity, 0);

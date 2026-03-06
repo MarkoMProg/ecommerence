@@ -39,6 +39,12 @@ export interface CreateProductDto {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
   images?: ProductImageEntry[];
 }
 
@@ -53,6 +59,12 @@ export interface UpdateProductDto {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
   /** When provided, replaces all existing product images. */
   images?: ProductImageEntry[];
 }
@@ -330,6 +342,12 @@ export class CatalogService {
       weightImperial: dto.weightImperial ?? null,
       dimensionMetric: dto.dimensionMetric ?? null,
       dimensionImperial: dto.dimensionImperial ?? null,
+      sizeOptions: dto.sizeOptions ?? null,
+      material: dto.material ?? null,
+      fit: dto.fit ?? null,
+      careInstructions: dto.careInstructions ?? null,
+      orientation: dto.orientation ?? null,
+      framingInfo: dto.framingInfo ?? null,
     });
 
     const imageInputs = dto.images ?? [];
@@ -366,6 +384,12 @@ export class CatalogService {
     if (dto.weightImperial != null) updateData.weightImperial = dto.weightImperial;
     if (dto.dimensionMetric != null) updateData.dimensionMetric = dto.dimensionMetric;
     if (dto.dimensionImperial != null) updateData.dimensionImperial = dto.dimensionImperial;
+    if (dto.sizeOptions != null) updateData.sizeOptions = dto.sizeOptions;
+    if (dto.material != null) updateData.material = dto.material;
+    if (dto.fit != null) updateData.fit = dto.fit;
+    if (dto.careInstructions != null) updateData.careInstructions = dto.careInstructions;
+    if (dto.orientation != null) updateData.orientation = dto.orientation;
+    if (dto.framingInfo != null) updateData.framingInfo = dto.framingInfo;
 
     if (Object.keys(updateData).length > 0) {
       await this.db.update(product).set(updateData).where(eq(product.id, id));

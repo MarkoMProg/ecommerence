@@ -21,6 +21,8 @@ export interface OrderItemDto {
   quantity: number;
   priceCentsAtOrder: number;
   productNameAtOrder: string;
+  /** Snapshot of the selected option at order time (e.g. size "M"). Null when no option was selected. */
+  selectedOptionAtOrder: string | null;
 }
 
 export interface OrderDto {
@@ -125,6 +127,7 @@ export class OrderService {
         quantity: i.quantity,
         priceCentsAtOrder: i.priceCentsAtOrder,
         productNameAtOrder: i.productNameAtOrder,
+        selectedOptionAtOrder: i.selectedOptionAtOrder ?? null,
       })),
       createdAt: o.createdAt,
     };
