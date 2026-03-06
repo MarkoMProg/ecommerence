@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useCartCount } from "@/lib/cart-count-context";
+import { SearchModal } from "@/components/search-modal";
 
 const DESKTOP_NAV = [
   { href: "/shop", label: "Shop" },
@@ -47,6 +48,7 @@ function CartButton() {
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { session } = useAuth();
   const { count } = useCartCount();
@@ -136,10 +138,10 @@ export function Header() {
 
           {/* Right: Utility icons */}
           <div className="flex flex-1 items-center justify-end gap-0.5">
-            {/* Search — placeholder for future wiring */}
             <button
               type="button"
-              aria-label="Search"
+              aria-label="Search products"
+              onClick={() => setSearchOpen(true)}
               className="flex h-10 w-10 items-center justify-center text-white/55 transition-colors duration-200 hover:text-white"
             >
               <Search className="size-[18px]" strokeWidth={1.5} />
@@ -200,6 +202,9 @@ export function Header() {
         aria-hidden="true"
         onClick={() => setMenuOpen(false)}
       />
+
+      {/* ── Search modal ────────────────────────────────────── */}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* ── Mobile navigation drawer ────────────────────────── */}
       <div
