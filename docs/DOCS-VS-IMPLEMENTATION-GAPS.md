@@ -1,6 +1,6 @@
 # Documentation vs Implementation — Gap Analysis
 
-**Generated:** 2026-03-04  
+**Generated:** 2026-03-07  
 **Purpose:** Identify requirements and standards from docs that are not yet implemented or addressed.
 
 ---
@@ -9,7 +9,7 @@
 
 This document cross-references the project documentation against the current implementation. Items listed are **required or specified in docs** but **not yet implemented** or only partially addressed.
 
-**Recent (2026-03-04):** Stripe payment (PAY-001–004), order confirmation with Complete payment / Cancel order, coupons, product slugs, cart cleared on order. Many gaps from 2026-02-18 are now closed.
+**Recent (2026-03-07):** Product archive/unarchive, bulk upload, filtering/sorting confirmed implemented, ERD done, test status updated (289 pass, 2 fail). RBAC: AdminGuard + 2FA; ADMIN_EMAILS fallback.
 
 ---
 
@@ -29,7 +29,7 @@ This document cross-references the project documentation against the current imp
 | **OAuth login** | ⚠️ PARTIAL | AUTH-007: Google OAuth done; Facebook not configured. |
 | **CAPTCHA during registration** | ⚠️ PARTIAL | AUTH-008: Optional for dev; not enforced in production config. |
 | **Unit tests (JWT, validation, product model)** | ✅ DONE | TEST-001 to TEST-003. |
-| **API integration tests** | ⚠️ PARTIAL | TEST-004: catalog-api, admin, review pass; catalog.service.spec.ts fails (ReviewService mock needed). |
+| **API integration tests** | ⚠️ PARTIAL | catalog-api, admin, review, bulk-upload pass; catalog-api.spec.ts: 2 tests fail (getById NotFound — mock both getProductById and getProductBySlug). |
 | **Security tests** | ❌ NOT DONE | Injection, sanitization, malformed data. |
 
 ### 2.2 Commerce — Implemented
@@ -82,7 +82,7 @@ The domain-modules doc defines models. Current status:
 | **Standard response format** | ✅ | Catalog: `{ success, data, message }`; pagination on list. |
 | **Error response format** | ✅ | Catalog: `{ success: false, error: { code, message } }` on 404/validation. |
 | **Pagination** | ✅ | Products list returns `pagination: { page, limit, total }`. |
-| **Filtering/sorting query params** | ❌ | Not implemented for product catalog. |
+| **Filtering/sorting query params** | ✅ | Implemented: category, brand, minPrice, maxPrice, sort (price-asc, price-desc, name-asc, name-desc, rating-desc). |
 | **Rate limiting** | ❌ | Not implemented per security-standards. |
 | **Documentation** | ❌ | No OpenAPI/Swagger or endpoint docs. |
 
@@ -109,7 +109,7 @@ The domain-modules doc defines models. Current status:
 | **TLS/HTTPS** | ❌ | Not configured for local; deployment may differ. |
 | **Encryption at rest** | ❌ | PII encryption not verified. |
 | **Rate limiting** | ❌ | Login, password reset, payment endpoints. |
-| **RBAC** | ❌ | No role-based access control. |
+| **RBAC** | ⚠️ | AdminGuard enforces role + 2FA; ADMIN_EMAILS fallback for bootstrap. No fine-grained roles (USER/ADMIN/SUPPORT/SALES). |
 | **Input sanitization** | ⚠️ | DTOs exist for auth; catalog not implemented. |
 | **Protection vs XSS, CSRF** | ⚠️ | Not explicitly verified. |
 | **Secure logging** | ⚠️ | No sensitive data in logs — not verified. |
@@ -146,7 +146,7 @@ The domain-modules doc defines models. Current status:
 | Deliverable | Status |
 |-------------|--------|
 | Complete source code | In progress |
-| ERD documentation | ❌ NOT DONE |
+| ERD documentation | ✅ DONE (`docs/ERD.md`) |
 | Setup instructions | ✅ environment-setup.md exists |
 | Usage guide | ❌ Not found |
 | Performance analysis report | ❌ NOT DONE |
@@ -168,7 +168,7 @@ The domain-modules doc defines models. Current status:
 
 ### Critical (Blocks full test pass)
 
-1. **Fix catalog.service.spec.ts** — CatalogService now depends on ReviewService; add ReviewService mock to test module.
+1. **Fix catalog-api.spec.ts** — ProductsController.getById tries both getProductById and getProductBySlug; tests for NotFound must mock both to return null.
 
 ### High (Doc compliance)
 
