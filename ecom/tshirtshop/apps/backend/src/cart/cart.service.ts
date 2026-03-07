@@ -1,10 +1,11 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { cart, cartItem } from './schema';
 import { product, productImage } from '../catalog/schema';
+import { InventoryService } from '../inventory/inventory.service';
 
 export interface CartItemWithProduct {
   id: string;
@@ -16,6 +17,8 @@ export interface CartItemWithProduct {
   imageUrl: string | null;
   /** Selected option for this line item (e.g. size "M"). Null when product has no options. */
   selectedOption: string | null;
+  /** Current stock quantity for the product. Used for cart-level stock warnings on the frontend. */
+  stockQuantity: number;
 }
 
 export interface CartWithItems {
@@ -31,6 +34,7 @@ export class CartService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async getCartById(cartId: string): Promise<CartWithItems | null> {
@@ -157,6 +161,11 @@ export class CartService {
       .from(cartItem)
       .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)));
 
+    // Stock check: total cart quantity after this add must not exceed available stock
+    const currentCartQty = existingItem?.quantity ?? 0;
+    const newTotalQty = currentCartQty + quantity;
+    await this.inventoryService.assertSufficientStock(productId, newTotalQty, existingProduct.name);
+
     if (existingItem) {
       const newQty = existingItem.quantity + quantity;
       await this.db
@@ -238,6 +247,9 @@ export class CartService {
       throw new NotFoundException({ code: 'ITEM_NOT_FOUND', message: 'Item not found in cart' });
     }
 
+    // Stock check: new quantity must not exceed available stock
+    await this.inventoryService.assertSufficientStock(productId, quantity);
+
     await this.db
       .update(cartItem)
       .set({ quantity, updatedAt: new Date() })
@@ -258,6 +270,7 @@ export class CartService {
         productName: product.name,
         priceCents: product.priceCents,
         selectedOption: cartItem.selectedOption,
+        stockQuantity: product.stockQuantity,
       })
       .from(cartItem)
       .innerJoin(product, eq(cartItem.productId, product.id))
@@ -292,6 +305,7 @@ export class CartService {
       priceCents: i.priceCents,
       imageUrl: primaryByProduct.get(i.productId) ?? null,
       selectedOption: i.selectedOption ?? null,
+      stockQuantity: i.stockQuantity ?? 0,
     }));
 
     const itemCount = enriched.reduce((sum, i) => sum + i.quantity, 0);

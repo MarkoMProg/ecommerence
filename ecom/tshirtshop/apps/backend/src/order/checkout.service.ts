@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import { CartService } from '../cart/cart.service';
+import { InventoryService } from '../inventory/inventory.service';
 import { applyCoupon } from './coupons';
 import type { ShippingAddressInput } from './dto/checkout.dto';
 
@@ -56,6 +57,7 @@ export class CheckoutService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
     private readonly cartService: CartService,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   /**
@@ -101,6 +103,22 @@ export class CheckoutService {
       throw new BadRequestException({
         code: 'CART_EMPTY',
         message: 'Cannot checkout with an empty cart',
+      });
+    }
+
+    // Optimistic stock pre-check (no row lock). The authoritative atomic decrement
+    // happens in order.service.ts when payment is confirmed.
+    const stockCheck = await this.inventoryService.validateStockForItems(
+      cartData.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+    );
+    if (!stockCheck.ok) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_STOCK',
+          message: 'Some items in your cart are no longer available in the requested quantity',
+          details: stockCheck.failures,
+        },
       });
     }
 

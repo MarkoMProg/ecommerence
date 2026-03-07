@@ -99,6 +99,8 @@ export interface ProductDisplay {
   careInstructions: string | null;
   orientation: string | null;
   framingInfo: string | null;
+  /** Current available stock. 0 = out of stock. */
+  stockQuantity: number;
   /** REV-003: average star rating 0–5, number of reviews */
   averageRating?: number;
   reviewCount?: number;
@@ -131,6 +133,7 @@ function mapProduct(p: ApiProduct): ProductDisplay {
     careInstructions: p.careInstructions ?? null,
     orientation: p.orientation ?? null,
     framingInfo: p.framingInfo ?? null,
+    stockQuantity: p.stockQuantity ?? 0,
     averageRating: p.averageRating,
     reviewCount: p.reviewCount,
   };

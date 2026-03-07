@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ThumbsUp, Star, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
-import { addToCart } from "@/lib/api/cart";
+import { addToCart, StockError } from "@/lib/api/cart";
 import { useCartCount } from "@/lib/cart-count-context";
 import {
   fetchProductReviews,
@@ -63,10 +63,14 @@ export default function ProductDetailClient({
   // A product "requires" an option only when it actually has size data
   const requiresOption = isApparel && (product.sizeOptions?.length ?? 0) > 0;
 
+  const isOutOfStock = product.stockQuantity <= 0;
+  const isLowStock = !isOutOfStock && product.stockQuantity < 10;
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState<string | null>("description");
   const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [addError, setAddError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [votingId, setVotingId] = useState<string | null>(null);
   const [helpfulVotes, setHelpfulVotes] = useState<Set<string>>(new Set());
@@ -241,9 +245,21 @@ export default function ProductDetailClient({
           >
             {product.name}
           </h1>
-          <p className="mb-2 text-xl text-[#E6C068] sm:mb-4 sm:text-2xl">
-            ${product.price.toFixed(2)}
-          </p>
+          <div className="mb-2 flex flex-wrap items-center gap-3 sm:mb-4">
+            <p className="text-xl text-[#E6C068] sm:text-2xl">
+              ${product.price.toFixed(2)}
+            </p>
+            {isOutOfStock && (
+              <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider text-white/60">
+                Out of stock
+              </span>
+            )}
+          </div>
+          {isLowStock && (
+            <p className="mb-4 text-xs font-medium text-amber-400 sm:mb-6">
+              Only {product.stockQuantity} left in stock — act fast
+            </p>
+          )}
           {(product.reviewCount != null && product.reviewCount > 0) && (
             <div className="mb-6 flex items-center gap-2 text-sm text-white/80 sm:mb-8">
               <span className="flex" aria-label={`${product.averageRating ?? 0} out of 5 stars`}>
@@ -307,27 +323,40 @@ export default function ProductDetailClient({
           )}
 
           {/* Add to Cart */}
-          <button
-            className="mb-6 min-h-[48px] w-full rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-all hover:bg-[#FF4D00]/90 hover:shadow-[0_0_24px_rgba(255,77,0,0.3)] disabled:opacity-70 sm:mb-8"
-            onClick={async () => {
-              if (requiresOption && !selectedSize) {
-                setSizeError(true);
-                return;
-              }
-              setSizeError(false);
-              setAddStatus("loading");
-              try {
-                const result = await addToCart(product.id, 1, selectedSize ?? undefined);
-                setCount(result.cart.itemCount);
-                setAddStatus("success");
-              } catch {
-                setAddStatus("error");
-              }
-            }}
-            disabled={addStatus === "loading"}
-          >
-            {addStatus === "loading" ? "Adding…" : "Add to Cart"}
-          </button>
+          {isOutOfStock ? (
+            <button
+              className="mb-6 min-h-[48px] w-full cursor-not-allowed rounded-md border border-white/20 bg-white/5 py-4 text-sm font-medium uppercase tracking-wider text-white/40 sm:mb-8"
+              disabled
+            >
+              Out of Stock
+            </button>
+          ) : (
+            <button
+              className="mb-6 min-h-[48px] w-full rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-all hover:bg-[#FF4D00]/90 hover:shadow-[0_0_24px_rgba(255,77,0,0.3)] disabled:opacity-70 sm:mb-8"
+              onClick={async () => {
+                if (requiresOption && !selectedSize) {
+                  setSizeError(true);
+                  return;
+                }
+                setSizeError(false);
+                setAddStatus("loading");
+                setAddError(null);
+                try {
+                  const result = await addToCart(product.id, 1, selectedSize ?? undefined);
+                  setCount(result.cart.itemCount);
+                  setAddStatus("success");
+                } catch (err) {
+                  if (err instanceof StockError) {
+                    setAddError(err.message);
+                  }
+                  setAddStatus("error");
+                }
+              }}
+              disabled={addStatus === "loading"}
+            >
+              {addStatus === "loading" ? "Adding…" : "Add to Cart"}
+            </button>
+          )}
           {addStatus === "success" && (
             <p className="mb-6 text-sm text-[#4ADE80] sm:mb-8">
               {selectedSize ? `Size ${selectedSize} added to cart. ` : "Added to cart. "}
@@ -336,7 +365,7 @@ export default function ProductDetailClient({
           )}
           {addStatus === "error" && (
             <p className="mb-6 text-sm text-red-400 sm:mb-8">
-              Could not add to cart. Please try again.
+              {addError ?? "Could not add to cart. Please try again."}
             </p>
           )}
         </div>

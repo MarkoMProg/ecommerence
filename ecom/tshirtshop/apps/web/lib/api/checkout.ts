@@ -82,6 +82,9 @@ export async function createOrder(
     const body = await res.json();
     const err = body?.error;
     const msg = err?.message ?? "Failed to create order";
+    if (err?.code === "INSUFFICIENT_STOCK" && Array.isArray(err?.details)) {
+      throw new InsufficientStockError(msg, err.details as StockFailureDetail[]);
+    }
     const details = err?.details;
     throw new Error(details?.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
@@ -89,6 +92,24 @@ export async function createOrder(
   const json = (await res.json()) as { success: boolean; data: { order: Order; checkoutUrl: string | null } };
   if (!json.success || !json.data?.order) throw new Error("Invalid response from checkout API");
   return json.data;
+}
+
+export interface StockFailureDetail {
+  productId: string;
+  productName: string;
+  required: number;
+  available: number;
+}
+
+/** Thrown when one or more cart items has insufficient stock at order creation. */
+export class InsufficientStockError extends Error {
+  constructor(
+    message: string,
+    public readonly failures: StockFailureDetail[]
+  ) {
+    super(message);
+    this.name = "InsufficientStockError";
+  }
 }
 
 /** Error codes from verify-payment (PAY-003). */

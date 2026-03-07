@@ -25,6 +25,20 @@ export interface CartItem {
   imageUrl: string | null;
   /** Selected option for this line item (e.g. size "M"). Null when product has no options. */
   selectedOption: string | null;
+  /** Current available stock. Used to show per-item stock warnings in the cart. */
+  stockQuantity: number;
+}
+
+/** Thrown by addToCart when the backend rejects due to stock constraints. */
+export class StockError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "OUT_OF_STOCK" | "INSUFFICIENT_STOCK",
+    public readonly available: number
+  ) {
+    super(message);
+    this.name = "StockError";
+  }
 }
 
 export interface Cart {
@@ -111,7 +125,16 @@ export async function addToCart(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = (await res.json()).error;
+    const body = await res.json();
+    const err = body?.error;
+    const code = err?.code as string | undefined;
+    if (code === "OUT_OF_STOCK" || code === "INSUFFICIENT_STOCK") {
+      throw new StockError(
+        err?.message ?? "Item unavailable",
+        code,
+        err?.available ?? 0
+      );
+    }
     throw new Error(err?.message ?? "Failed to add to cart");
   }
   const json = (await res.json()) as {

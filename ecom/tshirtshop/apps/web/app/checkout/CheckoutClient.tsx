@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
-import { createOrder } from "@/lib/api/checkout";
+import { createOrder, InsufficientStockError } from "@/lib/api/checkout";
 import { fetchMyAddresses } from "@/lib/api/addresses";
 import type { SavedAddress } from "@/lib/api/addresses";
 import { fetchMyPaymentMethods } from "@/lib/api/billing";
@@ -110,6 +110,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [placeStatus, setPlaceStatus] = useState<"idle" | "loading" | "error">("idle");
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [stockError, setStockError] = useState<string | null>(null);
 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
@@ -188,6 +189,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
     if (!canPlace || placeStatus === "loading") return;
     setPlaceStatus("loading");
     setPlaceError(null);
+    setStockError(null);
     try {
       const { order, checkoutUrl } = await createOrder(
         {
@@ -209,7 +211,20 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
         router.push(`/checkout/confirmation?orderId=${order.id}`);
       }
     } catch (err) {
-      setPlaceError(err instanceof Error ? err.message : "Failed to create order");
+      if (err instanceof InsufficientStockError) {
+        const names = err.failures.map((f) =>
+          f.available === 0
+            ? `${f.productName} (out of stock)`
+            : `${f.productName} (only ${f.available} available)`
+        );
+        setStockError(
+          names.length === 1
+            ? `${names[0]} — please update your cart before continuing.`
+            : `Some items are no longer available: ${names.join(", ")}. Please update your cart.`
+        );
+      } else {
+        setPlaceError(err instanceof Error ? err.message : "Failed to create order");
+      }
     } finally {
       setPlaceStatus("idle");
     }
@@ -518,6 +533,15 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
             <span className="text-[#E6C068]">${totalDollars}</span>
           </div>
 
+          {stockError && (
+            <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              <p className="mb-1 font-medium">Some items are no longer available</p>
+              <p className="text-xs text-amber-200/80">{stockError}</p>
+              <Link href="/cart" className="mt-2 inline-block text-xs font-medium text-amber-300 underline hover:text-amber-100">
+                Review your cart →
+              </Link>
+            </div>
+          )}
           {placeError && (
             <p className="mb-4 text-sm text-red-400">{placeError}</p>
           )}
