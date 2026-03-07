@@ -374,7 +374,7 @@ export class CatalogService {
     return { ...created, images };
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto): Promise<Product | null> {
+  async updateProduct(id: string, dto: UpdateProductDto): Promise<(Product & { images: ProductImage[] }) | null> {
     const [existing] = await this.db.select().from(product).where(eq(product.id, id));
     if (!existing) return null;
 
