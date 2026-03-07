@@ -63,14 +63,23 @@ export interface AdminProduct {
   weightImperial?: string | null;
   dimensionMetric?: string | null;
   dimensionImperial?: string | null;
+  sizeOptions?: string | null;
+  material?: string | null;
+  fit?: string | null;
+  careInstructions?: string | null;
+  orientation?: string | null;
+  framingInfo?: string | null;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
   images: { id: string; productId: string; imageUrl: string; altText: string | null; isPrimary: boolean }[];
   category: { id: string; name: string; slug: string } | null;
 }
 
-/** Fetch product list for admin. GET is public. */
+/** Fetch product list for admin (includes archived). */
 export async function fetchAdminProducts(): Promise<AdminProduct[] | null> {
   try {
-    const res = await adminFetch("/api/v1/products?limit=500");
+    const res = await adminFetch("/api/v1/products?limit=500&includeArchived=true");
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: AdminProduct[] };
     return json.success ? json.data : null;
@@ -152,6 +161,12 @@ export async function adminCreateProduct(body: {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
   images?: ProductImageInput[];
 }): Promise<unknown | null> {
   try {
@@ -181,6 +196,13 @@ export async function adminUpdateProduct(
     weightImperial?: string;
     dimensionMetric?: string;
     dimensionImperial?: string;
+    sizeOptions?: string;
+    material?: string;
+    fit?: string;
+    careInstructions?: string;
+    orientation?: string;
+    framingInfo?: string;
+    isArchived?: boolean;
     images?: ProductImageInput[];
   }
 ): Promise<unknown | null> {
@@ -197,11 +219,40 @@ export async function adminUpdateProduct(
   }
 }
 
-/** Delete product (admin). Returns true on success. */
-export async function adminDeleteProduct(id: string): Promise<boolean> {
+export interface DeleteProductResult {
+  success: boolean;
+  /** 409 = product is in existing orders and cannot be hard-deleted */
+  conflict: boolean;
+  message: string;
+}
+
+/** Delete product (admin). Returns a result object with conflict detection. */
+export async function adminDeleteProduct(id: string): Promise<DeleteProductResult> {
   try {
     const res = await adminFetch(`/api/v1/products/${encodeURIComponent(id)}`, {
       method: "DELETE",
+    });
+    if (res.ok) return { success: true, conflict: false, message: "Deleted." };
+    if (res.status === 409) {
+      try {
+        const json = (await res.json()) as { error?: { message?: string } };
+        return { success: false, conflict: true, message: json?.error?.message ?? "Product is part of existing orders." };
+      } catch {
+        return { success: false, conflict: true, message: "Product is part of existing orders." };
+      }
+    }
+    return { success: false, conflict: false, message: `Delete failed (${res.status}).` };
+  } catch {
+    return { success: false, conflict: false, message: "Network error." };
+  }
+}
+
+/** Archive or unarchive a product (soft-delete). */
+export async function adminSetProductArchived(id: string, archived: boolean): Promise<boolean> {
+  try {
+    const res = await adminFetch(`/api/v1/products/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ isArchived: archived }),
     });
     return res.ok;
   } catch {

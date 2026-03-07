@@ -42,6 +42,8 @@ export const product = pgTable('product', {
   orientation: text('orientation'),
   /** Prints/posters only: e.g. "Ships unframed" */
   framingInfo: text('framing_info'),
+  /** Soft-delete: archived products are hidden from the public storefront. */
+  isArchived: boolean('is_archived').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

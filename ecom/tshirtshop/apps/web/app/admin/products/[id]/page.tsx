@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { fetchCategories } from "@/lib/api/catalog";
-import type { ApiCategory } from "@/lib/api/catalog";
+import { fetchCategories, type ApiCategory } from "@/lib/api/catalog";
 import {
   fetchAdminProduct,
   adminUpdateProduct,
@@ -24,19 +23,57 @@ interface ImageEntry {
   uploading: boolean;
 }
 
-// ─── Shared components ────────────────────────────────────────────────────────
+type ProductType = "apparel" | "print" | "other";
 
-function FormField(props: {
+interface FormState {
+  name: string;
+  description: string;
+  priceCents: string;
+  stockQuantity: string;
+  categoryId: string;
+  brand: string;
+  productType: ProductType;
+  weightMetric: string;
+  weightImperial: string;
+  dimensionMetric: string;
+  dimensionImperial: string;
+  sizeOptions: string;
+  material: string;
+  fit: string;
+  careInstructions: string;
+  orientation: string;
+  framingInfo: string;
+  isArchived: boolean;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function detectProductType(p: AdminProduct): ProductType {
+  if (p.orientation || p.framingInfo) return "print";
+  if (p.sizeOptions || p.material || p.fit || p.careInstructions) return "apparel";
+  return "apparel";
+}
+
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+function FormField({
+  id,
+  label,
+  hint,
+  children,
+}: {
   id: string;
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <Label htmlFor={props.id} className="text-white/80">
-        {props.label}
+      <Label htmlFor={id} className="text-white/80">
+        {label}
       </Label>
-      <div className="mt-1">{props.children}</div>
+      {hint && <p className="mb-1 text-xs text-white/40">{hint}</p>}
+      <div className="mt-1">{children}</div>
     </div>
   );
 }
@@ -52,12 +89,8 @@ function ImageManager({
 
   const update = (index: number, patch: Partial<ImageEntry>) =>
     onChange(images.map((img, i) => (i === index ? { ...img, ...patch } : img)));
-
-  const remove = (index: number) =>
-    onChange(images.filter((_, i) => i !== index));
-
-  const add = () =>
-    onChange([...images, { url: "", uploading: false }]);
+  const remove = (index: number) => onChange(images.filter((_, i) => i !== index));
+  const add = () => onChange([...images, { url: "", uploading: false }]);
 
   const handleFile = async (index: number, file: File) => {
     update(index, { uploading: true, url: "" });
@@ -94,52 +127,40 @@ function ImageManager({
               {img.uploading ? (
                 <span className="text-xs text-white/40 animate-pulse">Uploading…</span>
               ) : img.url ? (
-                <img
-                  src={img.url}
-                  alt={`Product image ${i + 1}`}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff30' d='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z'/%3E%3C/svg%3E";
-                  }}
-                />
+                <img src={img.url} alt="" className="h-full w-full object-cover" />
               ) : (
                 <svg className="h-8 w-8 text-white/20" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                 </svg>
               )}
             </div>
-
-            <div className="flex-1 space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={img.url}
-                  onChange={(e) => update(i, { url: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  className="bg-white/5 text-sm font-mono"
-                  disabled={img.uploading}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputs.current[i]?.click()}
-                  disabled={img.uploading}
-                  className="shrink-0 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
-                >
-                  {img.uploading ? "…" : "Upload"}
-                </button>
-                <input
-                  ref={(el) => { fileInputs.current[i] = el; }}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFile(i, file);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
-
+            <div className="flex-1 flex gap-2">
+              <Input
+                value={img.url}
+                onChange={(e) => update(i, { url: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+                className="bg-white/5 text-sm font-mono"
+                disabled={img.uploading}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputs.current[i]?.click()}
+                disabled={img.uploading}
+                className="shrink-0 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
+              >
+                {img.uploading ? "…" : "Upload"}
+              </button>
+              <input
+                ref={(el) => { fileInputs.current[i] = el; }}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFile(i, file);
+                  e.target.value = "";
+                }}
+              />
             </div>
           </div>
         </div>
@@ -157,72 +178,85 @@ function ImageManager({
   );
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminEditProductPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+
   const [product, setProduct] = useState<AdminProduct | null>(null);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [images, setImages] = useState<ImageEntry[]>([]);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     name: "",
     description: "",
     priceCents: "",
     stockQuantity: "0",
     categoryId: "",
     brand: "",
+    productType: "apparel",
     weightMetric: "",
     weightImperial: "",
     dimensionMetric: "",
     dimensionImperial: "",
+    sizeOptions: "",
+    material: "",
+    fit: "",
+    careInstructions: "",
+    orientation: "",
+    framingInfo: "",
+    isArchived: false,
   });
 
   useEffect(() => {
-    Promise.all([fetchAdminProduct(id), fetchCategories()]).then(
-      ([p, cats]) => {
-        setProduct(p ?? null);
-        setCategories(cats);
-        if (p) {
-          setForm({
-            name: p.name,
-            description: p.description,
-            priceCents: (p.priceCents / 100).toFixed(2),
-            stockQuantity: String(p.stockQuantity),
-            categoryId: p.categoryId,
-            brand: p.brand,
-            weightMetric: p.weightMetric ?? "",
-            weightImperial: p.weightImperial ?? "",
-            dimensionMetric: p.dimensionMetric ?? "",
-            dimensionImperial: p.dimensionImperial ?? "",
-          });
-          setImages(
-            p.images.map((img) => ({
-              url: img.imageUrl,
-              uploading: false,
-            }))
-          );
-        }
+    Promise.all([fetchAdminProduct(id), fetchCategories()]).then(([p, cats]) => {
+      setCategories(cats);
+      if (p) {
+        setProduct(p);
+        setForm({
+          name: p.name,
+          description: p.description,
+          priceCents: (p.priceCents / 100).toFixed(2),
+          stockQuantity: String(p.stockQuantity),
+          categoryId: p.categoryId,
+          brand: p.brand,
+          productType: detectProductType(p),
+          weightMetric: p.weightMetric ?? "",
+          weightImperial: p.weightImperial ?? "",
+          dimensionMetric: p.dimensionMetric ?? "",
+          dimensionImperial: p.dimensionImperial ?? "",
+          sizeOptions: p.sizeOptions ?? "",
+          material: p.material ?? "",
+          fit: p.fit ?? "",
+          careInstructions: p.careInstructions ?? "",
+          orientation: p.orientation ?? "",
+          framingInfo: p.framingInfo ?? "",
+          isArchived: p.isArchived,
+        });
+        setImages(p.images.map((img) => ({ url: img.imageUrl, uploading: false })));
       }
-    );
+    });
   }, [id]);
 
   const set =
-    (key: keyof typeof form) =>
-    (
-      e: React.ChangeEvent<
-        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-      >
-    ) =>
+    (key: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const setChecked =
+    (key: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, [key]: e.target.checked }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
     setError(null);
+    setSuccess(false);
 
     const price = Math.round(parseFloat(form.priceCents) * 100);
     const stock = parseInt(form.stockQuantity, 10) || 0;
@@ -251,16 +285,22 @@ export default function AdminEditProductPage() {
       weightImperial: form.weightImperial.trim() || undefined,
       dimensionMetric: form.dimensionMetric.trim() || undefined,
       dimensionImperial: form.dimensionImperial.trim() || undefined,
-      images: validImages.map((img) => ({
-        url: img.url.trim(),
-      })),
+      sizeOptions: form.productType === "apparel" && form.sizeOptions.trim() ? form.sizeOptions.trim() : undefined,
+      material: form.productType === "apparel" && form.material.trim() ? form.material.trim() : undefined,
+      fit: form.productType === "apparel" && form.fit.trim() ? form.fit.trim() : undefined,
+      careInstructions: form.productType === "apparel" && form.careInstructions.trim() ? form.careInstructions.trim() : undefined,
+      orientation: form.productType === "print" && form.orientation.trim() ? form.orientation.trim() : undefined,
+      framingInfo: form.productType === "print" && form.framingInfo.trim() ? form.framingInfo.trim() : undefined,
+      isArchived: form.isArchived,
+      images: validImages.map((img) => ({ url: img.url.trim() })),
     });
     setSubmitting(false);
 
     if (result) {
-      router.push("/admin/products");
+      setSuccess(true);
+      setTimeout(() => router.push("/admin/products"), 800);
     } else {
-      setError("Failed to update product.");
+      setError("Failed to update product. Check all fields and try again.");
     }
   };
 
@@ -278,12 +318,17 @@ export default function AdminEditProductPage() {
   return (
     <>
       <div className="mb-8 flex items-center justify-between">
-        <h1
-          className="text-2xl font-bold uppercase tracking-tight text-white sm:text-4xl"
-          style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
-        >
-          Edit Product
-        </h1>
+        <div>
+          <h1
+            className="text-2xl font-bold uppercase tracking-tight text-white sm:text-4xl"
+            style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+          >
+            Edit Product
+          </h1>
+          <p className="mt-1 font-mono text-xs text-white/30">
+            slug: {product.slug}
+          </p>
+        </div>
         <Button variant="outline" asChild>
           <Link href="/admin/products">Cancel</Link>
         </Button>
@@ -293,6 +338,27 @@ export default function AdminEditProductPage() {
         {error && (
           <div className="rounded border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-200">
             {error}
+          </div>
+        )}
+        {success && (
+          <div className="rounded border border-green-500/50 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+            Saved — redirecting…
+          </div>
+        )}
+
+        {/* ── Archive status banner ── */}
+        {form.isArchived && (
+          <div className="flex items-center justify-between rounded border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
+            <p className="text-sm text-yellow-200">
+              This product is archived and hidden from the storefront.
+            </p>
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, isArchived: false }))}
+              className="text-xs text-yellow-300 underline hover:text-yellow-100"
+            >
+              Unarchive
+            </button>
           </div>
         )}
 
@@ -305,13 +371,7 @@ export default function AdminEditProductPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField id="name" label="Product Name *">
-              <Input
-                id="name"
-                value={form.name}
-                onChange={set("name")}
-                className="bg-white/5"
-                required
-              />
+              <Input id="name" value={form.name} onChange={set("name")} className="bg-white/5" required />
             </FormField>
 
             <FormField id="description" label="Description *">
@@ -320,12 +380,12 @@ export default function AdminEditProductPage() {
                 value={form.description}
                 onChange={set("description")}
                 rows={5}
-                className="w-full rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00]"
                 required
               />
             </FormField>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <FormField id="category" label="Category *">
                 <select
                   id="category"
@@ -336,21 +396,26 @@ export default function AdminEditProductPage() {
                 >
                   <option value="">Select category…</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </FormField>
 
               <FormField id="brand" label="Brand *">
-                <Input
-                  id="brand"
-                  value={form.brand}
-                  onChange={set("brand")}
-                  className="bg-white/5"
-                  required
-                />
+                <Input id="brand" value={form.brand} onChange={set("brand")} className="bg-white/5" required />
+              </FormField>
+
+              <FormField id="productType" label="Product Type">
+                <select
+                  id="productType"
+                  value={form.productType}
+                  onChange={set("productType")}
+                  className="w-full rounded-md border border-white/20 bg-[#0A0A0A] px-3 py-2 text-sm text-white [color-scheme:dark]"
+                >
+                  <option value="apparel">Apparel / Clothing</option>
+                  <option value="print">Print / Poster</option>
+                  <option value="other">Other</option>
+                </select>
               </FormField>
             </div>
           </CardContent>
@@ -387,6 +452,70 @@ export default function AdminEditProductPage() {
             </FormField>
           </CardContent>
         </Card>
+
+        {/* ── Apparel details (conditional) ── */}
+        {form.productType === "apparel" && (
+          <Card className="border-white/10 bg-[#1A1A1A]">
+            <CardHeader>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/60">
+                Apparel Details{" "}
+                <span className="font-normal normal-case text-white/30">(optional)</span>
+              </h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField id="sizeOptions" label="Available Sizes" hint="Comma-separated. e.g. XS,S,M,L,XL,XXL">
+                <Input
+                  id="sizeOptions"
+                  value={form.sizeOptions}
+                  onChange={set("sizeOptions")}
+                  placeholder="XS,S,M,L,XL"
+                  className="bg-white/5"
+                />
+              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField id="material" label="Material">
+                  <Input id="material" value={form.material} onChange={set("material")} placeholder="e.g. 100% combed cotton, 320gsm" className="bg-white/5" />
+                </FormField>
+                <FormField id="fit" label="Fit">
+                  <Input id="fit" value={form.fit} onChange={set("fit")} placeholder="e.g. Oversized / True to size" className="bg-white/5" />
+                </FormField>
+              </div>
+              <FormField id="careInstructions" label="Care Instructions">
+                <Input id="careInstructions" value={form.careInstructions} onChange={set("careInstructions")} placeholder="e.g. Machine wash cold. Tumble dry low." className="bg-white/5" />
+              </FormField>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Print details (conditional) ── */}
+        {form.productType === "print" && (
+          <Card className="border-white/10 bg-[#1A1A1A]">
+            <CardHeader>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/60">
+                Print / Poster Details{" "}
+                <span className="font-normal normal-case text-white/30">(optional)</span>
+              </h2>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <FormField id="orientation" label="Orientation">
+                <select
+                  id="orientation"
+                  value={form.orientation}
+                  onChange={set("orientation")}
+                  className="w-full rounded-md border border-white/20 bg-[#0A0A0A] px-3 py-2 text-sm text-white [color-scheme:dark]"
+                >
+                  <option value="">Select…</option>
+                  <option value="Portrait">Portrait</option>
+                  <option value="Landscape">Landscape</option>
+                  <option value="Square">Square</option>
+                </select>
+              </FormField>
+              <FormField id="framingInfo" label="Framing Info">
+                <Input id="framingInfo" value={form.framingInfo} onChange={set("framingInfo")} placeholder="e.g. Ships unframed" className="bg-white/5" />
+              </FormField>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── Shipping / dimensions ── */}
         <Card className="border-white/10 bg-[#1A1A1A]">
@@ -427,9 +556,38 @@ export default function AdminEditProductPage() {
           </CardContent>
         </Card>
 
+        {/* ── Visibility ── */}
+        <Card className="border-white/10 bg-[#1A1A1A]">
+          <CardHeader>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/60">
+              Visibility
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={form.isArchived}
+                onChange={setChecked("isArchived")}
+                className="h-4 w-4 rounded border-white/30 bg-white/5 accent-[#FF4D00]"
+              />
+              <div>
+                <span className="text-sm font-medium text-white">Archive this product</span>
+                <p className="text-xs text-white/40">
+                  Archived products are hidden from the store but kept in the database. You can unarchive at any time.
+                </p>
+              </div>
+            </label>
+          </CardContent>
+        </Card>
+
         {/* ── Actions ── */}
         <div className="flex gap-3">
-          <Button type="submit" disabled={submitting}>
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+          >
             {submitting ? "Saving…" : "Save Changes"}
           </Button>
           <Button variant="outline" asChild>

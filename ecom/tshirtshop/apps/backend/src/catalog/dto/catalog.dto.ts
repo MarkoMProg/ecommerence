@@ -49,6 +49,8 @@ export interface UpdateProductBody {
   careInstructions?: string;
   orientation?: string;
   framingInfo?: string;
+  /** Soft-delete: hide from public storefront without losing data. */
+  isArchived?: boolean;
   /** When provided, replaces all existing images for the product. */
   images?: ProductImageInput[];
 }

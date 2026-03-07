@@ -38,6 +38,7 @@ export class ProductsController {
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
     @Query('sort') sort?: string,
+    @Query('includeArchived') includeArchived?: string,
   ) {
     const result = await this.catalogService.listProducts({
       page: page ? parseInt(page, 10) : undefined,
@@ -55,6 +56,7 @@ export class ProductsController {
         sort === 'rating-desc'
           ? sort
           : undefined,
+      includeArchived: includeArchived === 'true',
     });
     return {
       success: true,
@@ -136,6 +138,12 @@ export class ProductsController {
       weightImperial: body.weightImperial,
       dimensionMetric: body.dimensionMetric,
       dimensionImperial: body.dimensionImperial,
+      sizeOptions: body.sizeOptions,
+      material: body.material,
+      fit: body.fit,
+      careInstructions: body.careInstructions,
+      orientation: body.orientation,
+      framingInfo: body.framingInfo,
       images: body.images,
     });
     return {

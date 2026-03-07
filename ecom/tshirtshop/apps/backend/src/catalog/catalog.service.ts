@@ -65,6 +65,8 @@ export interface UpdateProductDto {
   careInstructions?: string;
   orientation?: string;
   framingInfo?: string;
+  /** Soft-delete: hide from public storefront without losing data. */
+  isArchived?: boolean;
   /** When provided, replaces all existing product images. */
   images?: ProductImageEntry[];
 }
@@ -89,6 +91,8 @@ export interface ListProductsQuery {
   maxPrice?: number;
   /** Sort: newest (default), price-asc, price-desc, name-asc, name-desc */
   sort?: ProductSortOption;
+  /** When true, include archived products (admin-only usage). Default: false */
+  includeArchived?: boolean;
 }
 
 /** Escape %, _, \ for safe use in ILIKE pattern */
@@ -181,6 +185,10 @@ export class CatalogService {
     const offset = (page - 1) * limit;
 
     const conditions: SQL[] = [];
+    // Hide archived products from the public storefront unless explicitly requested
+    if (!query.includeArchived) {
+      conditions.push(eq(product.isArchived, false));
+    }
     if (query.category) {
       const cat = await this.getCategoryBySlug(query.category);
       if (cat) {
@@ -390,6 +398,7 @@ export class CatalogService {
     if (dto.careInstructions != null) updateData.careInstructions = dto.careInstructions;
     if (dto.orientation != null) updateData.orientation = dto.orientation;
     if (dto.framingInfo != null) updateData.framingInfo = dto.framingInfo;
+    if (dto.isArchived != null) updateData.isArchived = dto.isArchived;
 
     if (Object.keys(updateData).length > 0) {
       await this.db.update(product).set(updateData).where(eq(product.id, id));
@@ -409,7 +418,9 @@ export class CatalogService {
     }
 
     const [updated] = await this.db.select().from(product).where(eq(product.id, id));
-    return updated ?? null;
+    if (!updated) return null;
+    const updatedImages = await this.db.select().from(productImage).where(eq(productImage.productId, id));
+    return { ...updated, images: updatedImages };
   }
 
   async deleteProduct(id: string): Promise<boolean> {

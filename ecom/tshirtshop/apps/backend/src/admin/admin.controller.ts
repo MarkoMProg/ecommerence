@@ -193,6 +193,12 @@ export class AdminController {
           weightImperial: entry.weightImperial,
           dimensionMetric: entry.dimensionMetric,
           dimensionImperial: entry.dimensionImperial,
+          sizeOptions: entry.sizeOptions,
+          material: entry.material,
+          fit: entry.fit,
+          careInstructions: entry.careInstructions,
+          orientation: entry.orientation,
+          framingInfo: entry.framingInfo,
           images: entry.images,
         });
         results.push({ row: i + 1, name: entry.name, status: 'created', productId: created.id });
