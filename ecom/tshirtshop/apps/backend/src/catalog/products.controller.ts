@@ -94,11 +94,10 @@ export class ProductsController {
 
   @Get(':idOrSlug')
   async getById(@Param('idOrSlug') idOrSlug: string) {
-    // Try slug first (public-facing), then fall back to UUID (admin/internal)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
-    const product = isUuid
-      ? await this.catalogService.getProductById(idOrSlug)
-      : await this.catalogService.getProductBySlug(idOrSlug);
+    // Try by id column first (works for any id shape: UUID, numeric, slug-like).
+    // Fall back to slug lookup so public storefront URLs still work.
+    const byId = await this.catalogService.getProductById(idOrSlug);
+    const product = byId ?? (await this.catalogService.getProductBySlug(idOrSlug));
     if (!product) {
       throw new NotFoundException({
         success: false,
