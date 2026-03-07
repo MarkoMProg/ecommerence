@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { Archive, ArchiveRestore } from "lucide-react";
 import {
@@ -154,9 +154,8 @@ export default function AdminProductsPage() {
             </thead>
             <tbody className="divide-y divide-white/10">
               {filtered?.map((product) => (
-                <>
+                <Fragment key={product.id}>
                   <tr
-                    key={product.id}
                     className={product.isArchived ? "bg-white/[0.02] opacity-60" : "bg-[#1A1A1A]/50"}
                   >
                     <td className="px-4 py-3">
@@ -250,7 +249,7 @@ export default function AdminProductsPage() {
                   </tr>
                   {/* Inline error below the row */}
                   {actionError?.id === product.id && (
-                    <tr key={`${product.id}-err`} className="bg-red-500/5">
+                    <tr className="bg-red-500/5">
                       <td
                         colSpan={7}
                         className="px-4 py-2 text-xs text-red-300"
@@ -268,7 +267,7 @@ export default function AdminProductsPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
