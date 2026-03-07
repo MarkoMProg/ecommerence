@@ -9,6 +9,7 @@ import {
   type AdminOrder,
 } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
+import { AdminSelect } from "@/components/ui/admin-select";
 
 const STATUS_OPTIONS = ["pending", "paid", "shipped", "completed", "cancelled", "refunded"] as const;
 
@@ -121,18 +122,17 @@ export default function AdminOrdersPage() {
                   </td>
                   <td className="px-4 py-3 text-white/80">{order.shippingFullName}</td>
                   <td className="px-4 py-3">
-                    <select
+                    <AdminSelect
                       value={order.status}
                       onChange={(e) => handleStatusChange(order.id, e.target.value)}
                       disabled={updating === order.id}
-                      className="rounded border border-white/20 bg-white/5 px-2 py-1 text-white disabled:opacity-50 [color-scheme:dark]"
                     >
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
                       ))}
-                    </select>
+                    </AdminSelect>
                   </td>
                   <td className="px-4 py-3 font-medium text-[#E6C068]">
                     ${(order.totalCents / 100).toFixed(2)}

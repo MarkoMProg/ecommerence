@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AdminSelect } from "@/components/ui/admin-select";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -387,18 +388,17 @@ export default function AdminEditProductPage() {
 
             <div className="grid gap-4 sm:grid-cols-3">
               <FormField id="category" label="Category *">
-                <select
+                <AdminSelect
                   id="category"
                   value={form.categoryId}
                   onChange={set("categoryId")}
-                  className="w-full rounded-md border border-white/20 bg-[#0A0A0A] px-3 py-2 text-sm text-white [color-scheme:dark]"
                   required
                 >
                   <option value="">Select category…</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
-                </select>
+                </AdminSelect>
               </FormField>
 
               <FormField id="brand" label="Brand *">
@@ -406,16 +406,15 @@ export default function AdminEditProductPage() {
               </FormField>
 
               <FormField id="productType" label="Product Type">
-                <select
+                <AdminSelect
                   id="productType"
                   value={form.productType}
                   onChange={set("productType")}
-                  className="w-full rounded-md border border-white/20 bg-[#0A0A0A] px-3 py-2 text-sm text-white [color-scheme:dark]"
                 >
                   <option value="apparel">Apparel / Clothing</option>
                   <option value="print">Print / Poster</option>
                   <option value="other">Other</option>
-                </select>
+                </AdminSelect>
               </FormField>
             </div>
           </CardContent>
@@ -498,17 +497,16 @@ export default function AdminEditProductPage() {
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <FormField id="orientation" label="Orientation">
-                <select
+                <AdminSelect
                   id="orientation"
                   value={form.orientation}
                   onChange={set("orientation")}
-                  className="w-full rounded-md border border-white/20 bg-[#0A0A0A] px-3 py-2 text-sm text-white [color-scheme:dark]"
                 >
                   <option value="">Select…</option>
                   <option value="Portrait">Portrait</option>
                   <option value="Landscape">Landscape</option>
                   <option value="Square">Square</option>
-                </select>
+                </AdminSelect>
               </FormField>
               <FormField id="framingInfo" label="Framing Info">
                 <Input id="framingInfo" value={form.framingInfo} onChange={set("framingInfo")} placeholder="e.g. Ships unframed" className="bg-white/5" />
