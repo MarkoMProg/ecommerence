@@ -6,6 +6,7 @@ import { ThumbsUp, Star, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart, StockError } from "@/lib/api/cart";
 import { useCart } from "@/lib/cart-count-context";
+import { useCartDrawer } from "@/lib/cart-drawer-context";
 import {
   fetchProductReviews,
   voteReviewHelpful,
@@ -78,10 +79,10 @@ export default function ProductDetailClient({
   const isLoggedIn = !!session?.user;
   const {
     setCart: setCartContext,
-    openDrawer,
     triggerBadgePop,
     setLastAddedProductId,
   } = useCart();
+  const { openDrawer } = useCartDrawer();
 
   useEffect(() => {
     const storageKey = `helpful_votes_${session?.user?.id ?? "guest"}`;
@@ -355,7 +356,7 @@ export default function ProductDetailClient({
                   setCartContext(result.cart);
                   triggerBadgePop();
                   setLastAddedProductId(product.id);
-                  openDrawer();
+                  openDrawer(result.cart);
                   setAddStatus("success");
                   setTimeout(() => setAddStatus("idle"), 1500);
                 } catch (err) {

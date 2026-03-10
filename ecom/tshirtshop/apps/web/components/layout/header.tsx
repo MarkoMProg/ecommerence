@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useCart } from "@/lib/cart-count-context";
+import { useCartDrawer } from "@/lib/cart-drawer-context";
 import { SearchModal } from "@/components/search-modal";
 
 const DESKTOP_NAV = [
@@ -24,11 +25,12 @@ const DRAWER_NAV = [
 ];
 
 function CartButton() {
-  const { count, badgePop, openDrawer } = useCart();
+  const { count, badgePop } = useCart();
+  const { openDrawer } = useCartDrawer();
   return (
     <button
       type="button"
-      onClick={openDrawer}
+      onClick={() => openDrawer()}
       className="relative flex h-10 w-10 items-center justify-center text-white/55 transition-colors duration-200 hover:text-white"
       aria-label={
         count > 0 ? `Cart, ${count} item${count !== 1 ? "s" : ""}` : "Cart, empty"
@@ -53,7 +55,8 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { session } = useAuth();
-  const { count, openDrawer } = useCart();
+  const { count } = useCart();
+  const { openDrawer } = useCartDrawer();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -282,7 +285,7 @@ export function Header() {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  openDrawer();
+                  openDrawer(undefined);
                 }}
                 className="flex min-h-[44px] w-full items-center justify-between text-[13px] uppercase text-white/60 transition-colors hover:text-white"
                 style={{ letterSpacing: "0.1em" }}

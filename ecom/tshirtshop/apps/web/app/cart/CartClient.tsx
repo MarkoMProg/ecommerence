@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/cart";
 import { clearCartIdClient, getCartIdClient } from "@/lib/cart-cookie";
 import { useCart } from "@/lib/cart-count-context";
+import { CART_UPDATED_EVENT } from "@/lib/cart-drawer-context";
 
 interface CartClientProps {
   initialCart: Cart | null;
@@ -23,6 +24,15 @@ export function CartClient({ initialCart }: CartClientProps) {
       clearCartIdClient();
     }
   }, [initialCart?.userId]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ cart: Cart }>).detail;
+      if (detail?.cart) setCart(detail.cart);
+    };
+    window.addEventListener(CART_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(CART_UPDATED_EVENT, handler);
+  }, []);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
