@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import { CartService } from '../cart/cart.service';
+import { InventoryService } from '../inventory/inventory.service';
+import { applyCoupon } from './coupons';
 import type { ShippingAddressInput } from './dto/checkout.dto';
 
 export interface OrderItemDto {
@@ -13,6 +15,7 @@ export interface OrderItemDto {
   quantity: number;
   priceCentsAtOrder: number;
   productNameAtOrder: string;
+  selectedOptionAtOrder: string | null;
 }
 
 export interface OrderDto {
@@ -45,6 +48,7 @@ export interface OrderSummaryDto {
   totalCents: number;
   itemCount: number;
   freeShippingThresholdCents: number;
+  couponApplied?: boolean;
 }
 
 @Injectable()
@@ -53,17 +57,22 @@ export class CheckoutService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
     private readonly cartService: CartService,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   /**
-   * Get order summary for cart (CHK-003). Applies shipping rules; no order created.
+   * Get order summary for cart (CHK-003). Applies shipping rules and optional coupon; no order created.
    */
-  async getOrderSummary(cartId: string): Promise<OrderSummaryDto | null> {
+  async getOrderSummary(cartId: string, couponCode?: string | null): Promise<OrderSummaryDto | null> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData || !cartData.items.length) return null;
 
+    const coupon = couponCode ? applyCoupon(couponCode) : null;
+    const freeShippingByCoupon = coupon?.freeShipping ?? false;
     const shippingCents =
-      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+      freeShippingByCoupon || cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+        ? 0
+        : DEFAULT_SHIPPING_CENTS;
 
     return {
       subtotalCents: cartData.totalCents,
@@ -71,6 +80,7 @@ export class CheckoutService {
       totalCents: cartData.totalCents + shippingCents,
       itemCount: cartData.itemCount,
       freeShippingThresholdCents: FREE_SHIPPING_THRESHOLD_CENTS,
+      couponApplied: coupon ? true : false,
     };
   }
 
@@ -83,6 +93,7 @@ export class CheckoutService {
     cartId: string,
     shippingAddress: ShippingAddressInput,
     userId?: string | null,
+    couponCode?: string | null,
   ): Promise<OrderDto> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData) {
@@ -95,11 +106,31 @@ export class CheckoutService {
       });
     }
 
+    // Optimistic stock pre-check (no row lock). The authoritative atomic decrement
+    // happens in order.service.ts when payment is confirmed.
+    const stockCheck = await this.inventoryService.validateStockForItems(
+      cartData.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+    );
+    if (!stockCheck.ok) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_STOCK',
+          message: 'Some items in your cart are no longer available in the requested quantity',
+          details: stockCheck.failures,
+        },
+      });
+    }
+
     const now = new Date();
     const orderId = randomUUID();
 
+    const coupon = couponCode ? applyCoupon(couponCode) : null;
+    const freeShippingByCoupon = coupon?.freeShipping ?? false;
     const shippingCents =
-      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+      freeShippingByCoupon || cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+        ? 0
+        : DEFAULT_SHIPPING_CENTS;
     const totalCents = cartData.totalCents + shippingCents;
 
     await this.db.insert(order).values({
@@ -129,9 +160,12 @@ export class CheckoutService {
         quantity: item.quantity,
         priceCentsAtOrder: item.priceCents,
         productNameAtOrder: item.productName,
+        selectedOptionAtOrder: item.selectedOption ?? null,
         createdAt: now,
       });
     }
+
+    await this.cartService.clearCart(cartId);
 
     const [o] = await this.db.select().from(order).where(eq(order.id, orderId));
     if (!o) throw new Error('Order creation failed');
@@ -162,6 +196,7 @@ export class CheckoutService {
         quantity: i.quantity,
         priceCentsAtOrder: i.priceCentsAtOrder,
         productNameAtOrder: i.productNameAtOrder,
+        selectedOptionAtOrder: i.selectedOptionAtOrder ?? null,
       })),
       createdAt: o.createdAt,
     };

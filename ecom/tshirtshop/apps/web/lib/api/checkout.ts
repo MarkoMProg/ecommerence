@@ -59,10 +59,14 @@ export interface CreateOrderResponse {
 /** Create order from cart. Pass cartId (e.g. cart.id) or omit to use cookie. Call from client only. */
 export async function createOrder(
   shippingAddress: ShippingAddress,
-  cartId?: string | null
+  cartId?: string | null,
+  couponCode?: string | null
 ): Promise<CreateOrderResponse> {
   const id = cartId ?? getCartIdClient();
   if (!id?.trim()) throw new Error("No cart");
+
+  const body: { shippingAddress: ShippingAddress; couponCode?: string } = { shippingAddress };
+  if (couponCode?.trim()) body.couponCode = couponCode.trim();
 
   const res = await fetch(`${apiBase()}/api/v1/checkout`, {
     method: "POST",
@@ -71,13 +75,16 @@ export async function createOrder(
       "X-Cart-Id": id,
     },
     credentials: "include",
-    body: JSON.stringify({ shippingAddress }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const body = await res.json();
     const err = body?.error;
     const msg = err?.message ?? "Failed to create order";
+    if (err?.code === "INSUFFICIENT_STOCK" && Array.isArray(err?.details)) {
+      throw new InsufficientStockError(msg, err.details as StockFailureDetail[]);
+    }
     const details = err?.details;
     throw new Error(details?.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
@@ -85,6 +92,24 @@ export async function createOrder(
   const json = (await res.json()) as { success: boolean; data: { order: Order; checkoutUrl: string | null } };
   if (!json.success || !json.data?.order) throw new Error("Invalid response from checkout API");
   return json.data;
+}
+
+export interface StockFailureDetail {
+  productId: string;
+  productName: string;
+  required: number;
+  available: number;
+}
+
+/** Thrown when one or more cart items has insufficient stock at order creation. */
+export class InsufficientStockError extends Error {
+  constructor(
+    message: string,
+    public readonly failures: StockFailureDetail[]
+  ) {
+    super(message);
+    this.name = "InsufficientStockError";
+  }
 }
 
 /** Error codes from verify-payment (PAY-003). */
@@ -105,6 +130,24 @@ export class VerifyPaymentError extends Error {
     super(message);
     this.name = "VerifyPaymentError";
   }
+}
+
+/** Get Stripe Checkout URL for an existing pending order. Redirect user to returned URL to complete payment. */
+export async function getPaymentUrlForOrder(orderId: string): Promise<string> {
+  if (!orderId?.trim()) throw new Error("Order ID is required");
+  const res = await fetch(
+    `${apiBase()}/api/v1/checkout/${encodeURIComponent(orderId.trim())}/payment-url`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!res.ok) {
+    const body = await res.json();
+    const err = body?.error;
+    const msg = err?.message ?? "Failed to get payment URL";
+    throw new Error(msg);
+  }
+  const json = (await res.json()) as { success: boolean; data: { checkoutUrl: string } };
+  if (!json.success || !json.data?.checkoutUrl) throw new Error("Invalid response from payment URL API");
+  return json.data.checkoutUrl;
 }
 
 /** Verify Stripe payment and mark order as paid. Call after user returns from Stripe Checkout. */

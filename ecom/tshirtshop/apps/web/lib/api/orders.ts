@@ -46,7 +46,7 @@ export async function cancelOrder(orderId: string): Promise<Order | null> {
   try {
     const res = await fetch(
       `${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}/cancel`,
-      { method: "POST" },
+      { method: "POST", credentials: "include" },
     );
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: Order | null };
@@ -69,6 +69,46 @@ export async function fetchMyOrders(): Promise<Order[] | null> {
   } catch {
     return null;
   }
+}
+
+// ─── Reorder ─────────────────────────────────────────────────────────────────
+
+export interface ReorderItemResult {
+  productId: string;
+  productNameAtOrder: string;
+  requestedQuantity: number;
+  addedQuantity: number;
+  currentPriceCents: number;
+  status: "added" | "adjusted" | "unavailable";
+  reason?: string;
+}
+
+export interface ReorderResult {
+  cart: { id: string; items: unknown[]; itemCount: number; totalCents: number };
+  addedCount: number;
+  adjustedCount: number;
+  unavailableCount: number;
+  items: ReorderItemResult[];
+}
+
+/**
+ * Reorder a past order (ORD-006). Requires authentication.
+ * Adds current catalog items to the user's cart using current prices.
+ * Returns detailed per-item result.
+ */
+export async function reorderItems(orderId: string): Promise<ReorderResult> {
+  const res = await fetch(
+    `${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}/reorder`,
+    { method: "POST", credentials: "include" }
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const msg = body?.error?.message ?? "Failed to reorder";
+    throw new Error(msg);
+  }
+  const json = (await res.json()) as { success: boolean; data: ReorderResult };
+  if (!json.success || !json.data) throw new Error("Invalid reorder response");
+  return json.data;
 }
 
 /** Fetch order by ID. Returns null if not found or API unreachable. */

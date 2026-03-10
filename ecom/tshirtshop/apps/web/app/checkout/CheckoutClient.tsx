@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
-import { createOrder } from "@/lib/api/checkout";
+import { createOrder, InsufficientStockError } from "@/lib/api/checkout";
+import { fetchMyAddresses } from "@/lib/api/addresses";
+import type { SavedAddress } from "@/lib/api/addresses";
+import { fetchMyPaymentMethods } from "@/lib/api/billing";
+import type { SavedPaymentMethod } from "@/lib/api/billing";
+import { useAuth } from "@/components/auth-provider";
 import {
   Select,
   SelectContent,
@@ -81,6 +86,11 @@ const initialAddress: ShippingAddress = {
 const FREE_SHIPPING_CENTS = 7500;
 const DEFAULT_SHIPPING_CENTS = 599;
 
+/** FRESHP100 = free shipping. Case-insensitive. */
+function isFreeShippingCoupon(code: string): boolean {
+  return code?.trim().toUpperCase() === "FRESHP100";
+}
+
 function isAddressValid(a: ShippingAddress): boolean {
   return !!(
     a.fullName?.trim() &&
@@ -94,11 +104,76 @@ function isAddressValid(a: ShippingAddress): boolean {
 
 export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) {
   const router = useRouter();
+  const { session } = useAuth();
   const [address, setAddress] = useState<ShippingAddress>(initialAddress);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [placeStatus, setPlaceStatus] = useState<"idle" | "loading" | "error">("idle");
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [stockError, setStockError] = useState<string | null>(null);
 
-  const shippingCents = cart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
+  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethod | null>(null);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    let cancelled = false;
+    fetchMyAddresses()
+      .then((data) => {
+        if (cancelled) return;
+        setSavedAddresses(data);
+        const defaultShipping = data.find((a) => a.isDefaultShipping);
+        if (defaultShipping) {
+          setSelectedAddressId(defaultShipping.id);
+          setAddress({
+            fullName: defaultShipping.fullName,
+            line1: defaultShipping.line1,
+            line2: defaultShipping.line2 ?? "",
+            city: defaultShipping.city,
+            stateOrProvince: defaultShipping.stateOrRegion,
+            postalCode: defaultShipping.postalCode,
+            country: defaultShipping.country,
+            phone: defaultShipping.phone ?? "",
+          });
+        }
+      })
+      .catch(() => { /* guest or unauthenticated — ignore */ });
+
+    fetchMyPaymentMethods()
+      .then((pms) => {
+        if (cancelled) return;
+        const def = pms.find((p) => p.isDefault) ?? pms[0] ?? null;
+        setDefaultPaymentMethod(def);
+      })
+      .catch(() => { /* Stripe not configured or not logged in */ });
+
+    return () => { cancelled = true; };
+  }, [session?.user]);
+
+  function applySelectedAddress(id: string) {
+    setSelectedAddressId(id);
+    if (id === "manual") {
+      setAddress(initialAddress);
+      return;
+    }
+    const addr = savedAddresses.find((a) => a.id === id);
+    if (!addr) return;
+    setAddress({
+      fullName: addr.fullName,
+      line1: addr.line1,
+      line2: addr.line2 ?? "",
+      city: addr.city,
+      stateOrProvince: addr.stateOrRegion,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      phone: addr.phone ?? "",
+    });
+  }
+
+  const freeShippingByCoupon = appliedCoupon ? isFreeShippingCoupon(appliedCoupon) : false;
+  const shippingCents =
+    freeShippingByCoupon || cart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
   const totalCents = cart.totalCents + shippingCents;
   const totalDollars = (totalCents / 100).toFixed(2);
   const subtotalDollars = (cart.totalCents / 100).toFixed(2);
@@ -114,6 +189,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
     if (!canPlace || placeStatus === "loading") return;
     setPlaceStatus("loading");
     setPlaceError(null);
+    setStockError(null);
     try {
       const { order, checkoutUrl } = await createOrder(
         {
@@ -126,7 +202,8 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           country: address.country.trim(),
           phone: address.phone.trim() || undefined,
         },
-        cart.id
+        cart.id,
+        appliedCoupon
       );
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -134,7 +211,20 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
         router.push(`/checkout/confirmation?orderId=${order.id}`);
       }
     } catch (err) {
-      setPlaceError(err instanceof Error ? err.message : "Failed to create order");
+      if (err instanceof InsufficientStockError) {
+        const names = err.failures.map((f) =>
+          f.available === 0
+            ? `${f.productName} (out of stock)`
+            : `${f.productName} (only ${f.available} available)`
+        );
+        setStockError(
+          names.length === 1
+            ? `${names[0]} — please update your cart before continuing.`
+            : `Some items are no longer available: ${names.join(", ")}. Please update your cart.`
+        );
+      } else {
+        setPlaceError(err instanceof Error ? err.message : "Failed to create order");
+      }
     } finally {
       setPlaceStatus("idle");
     }
@@ -154,6 +244,29 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
             Shipping address
           </h2>
+
+          {savedAddresses.length > 0 && (
+            <div className="mb-6">
+              <label className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+                Use saved address
+              </label>
+              <Select value={selectedAddressId} onValueChange={applySelectedAddress}>
+                <SelectTrigger className="min-h-[44px] w-full px-4 py-2">
+                  <SelectValue placeholder="Select a saved address…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedAddresses.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label} — {a.fullName}, {a.city}
+                      {a.isDefaultShipping ? " (Default)" : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="manual">Enter new address manually</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <form id="checkout-form" className="grid gap-4 sm:grid-cols-2" onSubmit={handlePlaceOrder}>
             <div className="sm:col-span-2">
               <label htmlFor="checkout-fullName" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
@@ -284,14 +397,32 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
             Payment
           </h2>
-          <div className="rounded-md border border-dashed border-white/20 bg-white/5 p-6 text-center">
-            <p className="text-sm text-white/60">
-              Payment is collected securely after you place your order.
-            </p>
-            <p className="mt-2 text-xs text-white/40">
-              You may be redirected to Stripe Checkout if configured.
-            </p>
-          </div>
+          {defaultPaymentMethod ? (
+            <div className="rounded-md border border-[#FF4D00]/20 bg-[#FF4D00]/5 p-4">
+              <p className="mb-1 text-xs uppercase tracking-widest text-white/50">
+                Saved card on file
+              </p>
+              <p className="text-sm font-medium text-white">
+                {defaultPaymentMethod.brand.charAt(0).toUpperCase() + defaultPaymentMethod.brand.slice(1)}{" "}
+                ····{defaultPaymentMethod.last4}
+              </p>
+              <p className="mt-0.5 text-xs text-white/50">
+                Expires {String(defaultPaymentMethod.expMonth).padStart(2, "0")}/{defaultPaymentMethod.expYear}
+              </p>
+              <p className="mt-3 text-xs text-white/40">
+                This card will appear as an option on the Stripe payment page. You can choose a different method there.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed border-white/20 bg-white/5 p-6 text-center">
+              <p className="text-sm text-white/60">
+                Payment is collected securely after you place your order.
+              </p>
+              <p className="mt-2 text-xs text-white/40">
+                You may be redirected to Stripe Checkout if configured.
+              </p>
+            </div>
+          )}
         </section>
       </div>
 
@@ -334,6 +465,57 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
               );
             })}
           </ul>
+          <div className="mb-4">
+            <label htmlFor="checkout-coupon" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
+              Coupon
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="checkout-coupon"
+                type="text"
+                value={appliedCoupon ?? couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value);
+                  if (!appliedCoupon) setPlaceError(null);
+                }}
+                placeholder={appliedCoupon ? appliedCoupon : "Enter code"}
+                disabled={!!appliedCoupon}
+                className="min-h-[44px] flex-1 rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00] disabled:opacity-70"
+              />
+              {appliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppliedCoupon(null);
+                    setCouponCode("");
+                  }}
+                  className="min-h-[44px] rounded-md border border-white/20 px-4 py-2 text-xs uppercase tracking-wider text-white/80 hover:bg-white/5"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = couponCode.trim();
+                    if (!code) return;
+                    if (isFreeShippingCoupon(code)) {
+                      setAppliedCoupon(code.toUpperCase());
+                      setPlaceError(null);
+                    } else {
+                      setPlaceError("Invalid coupon code");
+                    }
+                  }}
+                  className="min-h-[44px] shrink-0 rounded-md bg-white/10 px-4 py-2 text-xs uppercase tracking-wider text-white hover:bg-white/20"
+                >
+                  Apply
+                </button>
+              )}
+            </div>
+            {appliedCoupon && (
+              <p className="mt-1 text-xs text-[#4ADE80]">Free shipping applied</p>
+            )}
+          </div>
           <div className="mb-6 space-y-2">
             <div className="flex justify-between text-sm text-white/80">
               <span>Subtotal</span>
@@ -351,6 +533,15 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
             <span className="text-[#E6C068]">${totalDollars}</span>
           </div>
 
+          {stockError && (
+            <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              <p className="mb-1 font-medium">Some items are no longer available</p>
+              <p className="text-xs text-amber-200/80">{stockError}</p>
+              <Link href="/cart" className="mt-2 inline-block text-xs font-medium text-amber-300 underline hover:text-amber-100">
+                Review your cart →
+              </Link>
+            </div>
+          )}
           {placeError && (
             <p className="mb-4 text-sm text-red-400">{placeError}</p>
           )}

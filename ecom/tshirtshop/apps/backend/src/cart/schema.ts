@@ -32,6 +32,8 @@ export const cartItem = pgTable(
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
     quantity: integer('quantity').notNull().default(1),
+    /** Selected option at time of add (e.g. size "M"). NULL = product has no options. */
+    selectedOption: text('selected_option'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()

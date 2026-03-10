@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { fetchAdminOrders } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
@@ -269,9 +270,10 @@ export default function AdminUserDetailPage() {
       <div className="mb-8">
         <Link
           href="/admin/users"
-          className="text-sm text-white/60 hover:text-white"
+          className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white"
         >
-          ← Back to Users
+          <ArrowLeft className="size-4" />
+          Back to Users
         </Link>
       </div>
 

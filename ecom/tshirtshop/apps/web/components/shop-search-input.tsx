@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchSearchSuggestions } from "@/lib/api/catalog";
+import { useDebounce } from "@/lib/use-debounce";
 
 const DEBOUNCE_MS = 250;
 const SUGGESTION_LIMIT = 8;
@@ -14,15 +15,6 @@ export interface ShopSearchInputProps {
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
-}
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
 }
 
 type SuggestionAction =

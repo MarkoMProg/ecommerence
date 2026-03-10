@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  ShieldCheck,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  QrCode,
+  KeyRound,
+} from "lucide-react";
 
 const RECAPTCHA_SITEKEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY || "";
 
@@ -56,8 +64,9 @@ function FormSuccess({ message }: { message: string | null }) {
   );
 }
 
-function OAuthButtons() {
+function OAuthButtons({ redirectTo }: { redirectTo?: string }) {
   const handleGoogle = () => {
+    if (redirectTo) sessionStorage.setItem("auth_redirect", redirectTo);
     authClient.signIn.social({
       provider: "google",
       callbackURL: `${window.location.origin}/auth/callback`,
@@ -65,6 +74,7 @@ function OAuthButtons() {
   };
 
   const handleFacebook = () => {
+    if (redirectTo) sessionStorage.setItem("auth_redirect", redirectTo);
     authClient.signIn.social({
       provider: "facebook",
       callbackURL: `${window.location.origin}/auth/callback`,
@@ -76,7 +86,7 @@ function OAuthButtons() {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
         onClick={handleGoogle}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -103,7 +113,7 @@ function OAuthButtons() {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
         onClick={handleFacebook}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
@@ -114,10 +124,10 @@ function OAuthButtons() {
 
       <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300" />
+          <div className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">
+          <span className="bg-[#0A0A0A] px-2 text-white/50">
             Or continue with email
           </span>
         </div>
@@ -127,8 +137,10 @@ function OAuthButtons() {
 }
 
 export function LoginForm({
+  redirectTo = "/",
   onForgotPassword,
 }: {
+  redirectTo?: string;
   onForgotPassword?: () => void;
 }) {
   const router = useRouter();
@@ -163,9 +175,9 @@ export function LoginForm({
         {
           async onSuccess(context) {
             if ((context.data as any)?.twoFactorRedirect) {
-              router.push("/auth/two-factor/verify");
+              router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
             } else {
-              router.push("/");
+              router.push(redirectTo);
             }
           },
         },
@@ -177,7 +189,7 @@ export function LoginForm({
           msg.toLowerCase().includes("two factor") ||
           (result as any)?.data?.twoFactorRedirect
         ) {
-          router.push("/auth/two-factor/verify");
+          router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
           return;
         }
         setFormError(msg);
@@ -216,8 +228,13 @@ export function LoginForm({
   if (twoFactorRequired) {
     return (
       <form onSubmit={handle2fa} className="space-y-4 max-w-md mx-auto">
-        <h2 className="text-2xl font-bold">Two-Factor Authentication</h2>
-        <p className="text-gray-600 text-sm">
+        <h2
+          className="text-2xl font-bold uppercase tracking-tight text-white"
+          style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+        >
+          Two-Factor Authentication
+        </h2>
+        <p className="text-sm text-white/60">
           Enter the 6-digit code from your authenticator app.
         </p>
         <FormError message={formError} />
@@ -241,7 +258,7 @@ export function LoginForm({
         </div>
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
           disabled={isLoading || twoFactorCode.length !== 6}
         >
           {isLoading ? "Verifying..." : "Verify"}
@@ -260,8 +277,13 @@ export function LoginForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Sign In</h2>
-      <OAuthButtons />
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Sign In
+      </h2>
+      <OAuthButtons redirectTo={redirectTo} />
       <FormError message={formError} />
       <div className="space-y-2">
         <Label htmlFor="login-email">Email</Label>
@@ -304,7 +326,11 @@ export function LoginForm({
         </Button>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+        disabled={isLoading}
+      >
         {isLoading ? "Signing in..." : "Sign In"}
       </Button>
     </form>
@@ -396,7 +422,12 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Sign Up</h2>
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Sign Up
+      </h2>
       <OAuthButtons />
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
@@ -464,7 +495,7 @@ export function SignUpForm() {
 
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
         disabled={isLoading}
       >
         {isLoading ? "Signing up..." : "Sign Up"}
@@ -512,8 +543,13 @@ export function ForgotPasswordForm({ onBack }: { onBack?: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Forgot Password</h2>
-      <p className="text-gray-600 text-sm">
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Forgot Password
+      </h2>
+      <p className="text-sm text-white/60">
         Enter your email and we&apos;ll send you a link to reset your password.
       </p>
       <FormError message={formError} />
@@ -529,7 +565,11 @@ export function ForgotPasswordForm({ onBack }: { onBack?: () => void }) {
           autoComplete="email"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+        disabled={isLoading}
+      >
         {isLoading ? "Sending..." : "Send Reset Link"}
       </Button>
       {onBack && (
@@ -587,7 +627,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">Reset Password</h2>
+      <h2
+        className="text-2xl font-bold uppercase tracking-tight text-white"
+        style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+      >
+        Reset Password
+      </h2>
       <FormError message={formError} />
       <FormSuccess message={formSuccess} />
       <div className="space-y-2">
@@ -615,7 +660,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
           autoComplete="new-password"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90"
+        disabled={isLoading}
+      >
         {isLoading ? "Resetting..." : "Reset Password"}
       </Button>
     </form>
@@ -626,25 +675,41 @@ export function TwoFactorSetupForm() {
   const [totpURI, setTotpURI] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "enable" | "disable" | null
+  >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [step, setStep] = useState<"start" | "verify" | "done">("start");
 
-  const handleEnable = async () => {
+  const inputCls =
+    "w-full rounded-md border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00] transition-colors";
+  const labelCls =
+    "mb-1.5 block text-[10px] uppercase tracking-widest text-white/50";
+
+  const clearActionState = () => {
+    setPendingAction(null);
+    setPassword("");
+    setShowPassword(false);
+    setFormError(null);
+  };
+
+  const handleEnable = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     setFormError(null);
     try {
-      const pass = prompt("Please enter your current password:") || "";
-      const result = await authClient.twoFactor.enable({
-        password: pass,
-      });
+      const result = await authClient.twoFactor.enable({ password });
       if (result?.error) {
         setFormError(result.error.message || "Failed to enable 2FA");
         return;
       }
       setTotpURI((result as any)?.data?.totpURI ?? null);
       setBackupCodes((result as any)?.data?.backupCodes ?? []);
+      clearActionState();
       setStep("verify");
     } catch {
       setFormError("An unexpected error occurred");
@@ -672,17 +737,17 @@ export function TwoFactorSetupForm() {
     }
   };
 
-  const handleDisable = async () => {
+  const handleDisable = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     setFormError(null);
     try {
-      const pass =
-        prompt("Please enter your current password to disable 2FA:") || "";
-      const result = await authClient.twoFactor.disable({ password: pass });
+      const result = await authClient.twoFactor.disable({ password });
       if (result?.error) {
         setFormError(result.error.message || "Failed to disable 2FA");
         return;
       }
+      clearActionState();
       setFormSuccess("Two-factor authentication has been disabled.");
     } catch {
       setFormError("An unexpected error occurred");
@@ -693,76 +758,269 @@ export function TwoFactorSetupForm() {
 
   if (step === "start") {
     return (
-      <div className="space-y-4 max-w-md mx-auto">
-        <h2 className="text-2xl font-bold">Two-Factor Authentication</h2>
-        <p className="text-gray-600 text-sm">
-          Add an extra layer of security to your account using an authenticator
-          app (e.g., Google Authenticator, Authy).
-        </p>
-        <FormError message={formError} />
-        <FormSuccess message={formSuccess} />
-        <div className="flex gap-3">
-          <Button
-            onClick={handleEnable}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            {isLoading ? "Setting up..." : "Enable 2FA"}
-          </Button>
-          <Button
-            onClick={handleDisable}
-            disabled={isLoading}
-            variant="destructive"
-            className="flex-1"
-          >
-            Disable 2FA
-          </Button>
+      <div className="w-full max-w-md mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#FF4D00]/30 bg-[#FF4D00]/10">
+            <ShieldCheck className="h-5 w-5 text-[#FF4D00]" />
+          </div>
+          <div>
+            <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold uppercase tracking-tight text-white">
+              Two-Factor Auth
+            </h2>
+            <p className="text-[11px] text-white/50 uppercase tracking-wider">
+              Authenticator app
+            </p>
+          </div>
         </div>
+
+        <p className="text-sm text-white/60 leading-relaxed">
+          Add an extra layer of security using an authenticator app such as{" "}
+          <span className="text-white/80">Google Authenticator</span> or{" "}
+          <span className="text-white/80">Authy</span>.
+        </p>
+
+        <FormError message={formError} />
+
+        {formSuccess && (
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <p className="text-sm text-emerald-300">{formSuccess}</p>
+          </div>
+        )}
+
+        {/* Enable password confirmation */}
+        {pendingAction === "enable" && (
+          <form
+            onSubmit={handleEnable}
+            className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-4"
+          >
+            <p className="text-[11px] uppercase tracking-widest text-[#FF4D00]">
+              Confirm to Enable
+            </p>
+            <div>
+              <label htmlFor="2fa-enable-pw" className={labelCls}>
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  id="2fa-enable-pw"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  required
+                  className={`${inputCls} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={isLoading || !password}
+                className="flex-1 rounded-md bg-[#FF4D00] px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+              >
+                {isLoading ? "Setting up…" : "Continue →"}
+              </button>
+              <button
+                type="button"
+                onClick={clearActionState}
+                className="rounded-md border border-white/20 px-4 py-2.5 text-[11px] uppercase tracking-wider text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Disable password confirmation */}
+        {pendingAction === "disable" && (
+          <form
+            onSubmit={handleDisable}
+            className="rounded-xl border border-red-500/20 bg-red-500/[0.05] p-5 space-y-4"
+          >
+            <p className="text-[11px] uppercase tracking-widest text-red-400">
+              Confirm Disable 2FA
+            </p>
+            <p className="text-xs text-white/50">
+              This will remove the extra security layer from your account.
+            </p>
+            <div>
+              <label htmlFor="2fa-disable-pw" className={labelCls}>
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  id="2fa-disable-pw"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  required
+                  className={`${inputCls} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={isLoading || !password}
+                className="flex-1 rounded-md bg-red-600 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-white hover:bg-red-600/90 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+              >
+                {isLoading ? "Disabling…" : "Disable 2FA"}
+              </button>
+              <button
+                type="button"
+                onClick={clearActionState}
+                className="rounded-md border border-white/20 px-4 py-2.5 text-[11px] uppercase tracking-wider text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Main action buttons — hidden while a pending action is shown */}
+        {!pendingAction && (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(null);
+                setFormSuccess(null);
+                setPendingAction("enable");
+              }}
+              disabled={isLoading}
+              className="flex-1 rounded-md bg-[#FF4D00] px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90 hover:shadow-[0_0_20px_rgba(255,77,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+            >
+              Enable 2FA
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(null);
+                setFormSuccess(null);
+                setPendingAction("disable");
+              }}
+              disabled={isLoading}
+              className="flex-1 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+            >
+              Disable 2FA
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
   if (step === "verify") {
     return (
-      <form onSubmit={handleVerify} className="space-y-4 max-w-md mx-auto">
-        <h2 className="text-2xl font-bold">Scan QR Code</h2>
-        <p className="text-gray-600 text-sm">
-          Scan this QR code with your authenticator app, then enter the code
-          below.
+      <form
+        onSubmit={handleVerify}
+        className="w-full max-w-md mx-auto space-y-6"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#FF4D00]/30 bg-[#FF4D00]/10">
+            <QrCode className="h-5 w-5 text-[#FF4D00]" />
+          </div>
+          <div>
+            <h2 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold uppercase tracking-tight text-white">
+              Scan QR Code
+            </h2>
+            <p className="text-[11px] text-white/50 uppercase tracking-wider">
+              Step 2 of 3 — Link your authenticator
+            </p>
+          </div>
+        </div>
+
+        <p className="text-sm text-white/60 leading-relaxed">
+          Scan the QR code with your authenticator app, then enter the 6-digit
+          code to verify and finish setup.
         </p>
+
         <FormError message={formError} />
 
+        {/* QR Code */}
         {totpURI && (
-          <div className="flex justify-center p-4 bg-white border rounded-lg">
-            {/* QR code rendered as an image using a QR code service or the URI itself */}
-            <div className="text-center">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <div className="rounded-lg bg-white p-3 shadow-[0_0_30px_rgba(255,77,0,0.1)]">
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpURI)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(totpURI)}`}
                 alt="2FA QR Code"
-                width={200}
-                height={200}
+                width={180}
+                height={180}
               />
-              <p className="text-xs text-gray-400 mt-2 break-all">{totpURI}</p>
             </div>
+            <p className="max-w-[260px] break-all text-center font-mono text-[10px] leading-relaxed text-white/25">
+              {totpURI}
+            </p>
           </div>
         )}
 
+        {/* Backup Codes */}
         {backupCodes.length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md">
-            <p className="text-sm font-medium text-yellow-800 mb-2">
-              Save these backup codes in a safe place:
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.07] p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-amber-400" />
+              <p className="text-[11px] font-medium uppercase tracking-widest text-amber-400">
+                Save Your Backup Codes
+              </p>
+            </div>
+            <p className="text-xs text-white/50">
+              Store these somewhere safe. Each code can only be used once if you
+              lose access to your authenticator.
             </p>
-            <div className="grid grid-cols-2 gap-1 font-mono text-sm">
+            <div className="grid grid-cols-2 gap-1.5 font-mono text-xs">
               {backupCodes.map((bc) => (
-                <span key={bc}>{bc}</span>
+                <span
+                  key={bc}
+                  className="rounded border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 tracking-widest text-amber-200"
+                >
+                  {bc}
+                </span>
               ))}
             </div>
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="totp-code">Verification Code</Label>
-          <Input
+        {/* 6-digit code input */}
+        <div>
+          <label
+            htmlFor="totp-code"
+            className="mb-1.5 block text-[10px] uppercase tracking-widest text-white/50"
+          >
+            Verification Code
+          </label>
+          <input
             id="totp-code"
             type="text"
             inputMode="numeric"
@@ -771,27 +1029,43 @@ export function TwoFactorSetupForm() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             required
-            className="text-center text-2xl tracking-widest"
             placeholder="000000"
+            className="w-full rounded-md border border-white/20 bg-white/5 px-3 py-3 text-center font-mono text-2xl tracking-[0.5em] text-white placeholder:text-white/20 focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00] transition-colors"
           />
         </div>
 
-        <Button
+        <button
           type="submit"
-          className="w-full"
           disabled={isLoading || code.length !== 6}
+          className="w-full rounded-md bg-[#FF4D00] px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90 hover:shadow-[0_0_20px_rgba(255,77,0,0.25)] disabled:cursor-not-allowed disabled:opacity-40 transition-all"
         >
-          {isLoading ? "Verifying..." : "Verify & Enable"}
-        </Button>
+          {isLoading ? "Verifying…" : "Verify & Enable 2FA"}
+        </button>
       </form>
     );
   }
 
+  // Done step
   return (
-    <div className="space-y-4 max-w-md mx-auto text-center">
-      <FormSuccess message={formSuccess} />
-      <a href="/" className="text-blue-600 hover:text-blue-800 text-sm">
-        Go to home
+    <div className="w-full max-w-md mx-auto space-y-6 text-center">
+      <div className="flex justify-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10">
+          <ShieldCheck className="h-8 w-8 text-emerald-400" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <h2 className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold uppercase tracking-tight text-white">
+          2FA Enabled
+        </h2>
+        <p className="text-sm text-white/60">
+          Your account is now protected with two-factor authentication.
+        </p>
+      </div>
+      <a
+        href="/account"
+        className="inline-flex items-center gap-2 rounded-md border border-white/20 px-5 py-2.5 text-[11px] uppercase tracking-wider text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+      >
+        Back to Account
       </a>
     </div>
   );

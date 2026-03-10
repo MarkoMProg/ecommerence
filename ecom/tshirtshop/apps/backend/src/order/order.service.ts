@@ -4,6 +4,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import type { OrderStatus } from './schema';
+import { InventoryService } from '../inventory/inventory.service';
 
 /** Valid status transitions. ORD-003 */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -21,6 +22,8 @@ export interface OrderItemDto {
   quantity: number;
   priceCentsAtOrder: number;
   productNameAtOrder: string;
+  /** Snapshot of the selected option at order time (e.g. size "M"). Null when no option was selected. */
+  selectedOptionAtOrder: string | null;
 }
 
 export interface OrderDto {
@@ -46,11 +49,15 @@ export interface OrderDto {
   createdAt: Date;
 }
 
+/** Statuses that indicate stock has already been decremented for the order */
+const PAID_STATUSES: OrderStatus[] = ['paid', 'shipped', 'completed'];
+
 @Injectable()
 export class OrderService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   /**
@@ -125,6 +132,7 @@ export class OrderService {
         quantity: i.quantity,
         priceCentsAtOrder: i.priceCentsAtOrder,
         productNameAtOrder: i.productNameAtOrder,
+        selectedOptionAtOrder: i.selectedOptionAtOrder ?? null,
       })),
       createdAt: o.createdAt,
     };
@@ -133,7 +141,16 @@ export class OrderService {
   /**
    * Mark order as paid if currently pending (PAY-002 idempotency).
    * Stores stripeSessionId and paidAt when provided (PAY-004).
-   * Returns order; no-op if already paid. Used by webhook and verify-payment.
+   * Atomically decrements stock for all order items after marking as paid.
+   *
+   * The "if pending" guard makes this idempotent — stock is decremented exactly
+   * once per order. If a stock decrement fails here (extremely rare race condition
+   * where two users paid simultaneously for the last unit), the order is still
+   * marked as paid (payment is authoritative) and the failure is logged for
+   * admin review. Stock will show negative; admin should restock or cancel.
+   *
+   * Returns order; no-op (returns current state) if already paid.
+   * Used by both the webhook and verify-payment paths.
    */
   async markOrderPaidIfPending(
     orderId: string,
@@ -141,7 +158,7 @@ export class OrderService {
   ): Promise<OrderDto | null> {
     const o = await this.getOrderById(orderId.trim());
     if (!o) return null;
-    if (o.status === 'paid') return o;
+    if (o.status === 'paid') return o; // idempotent — already processed
     if (o.status !== 'pending') return o;
 
     const now = new Date();
@@ -156,6 +173,22 @@ export class OrderService {
         updatedAt: now,
       })
       .where(eq(order.id, orderId.trim()));
+
+    // Atomic stock decrement with row-level locking
+    const stockResult = await this.inventoryService.decrementStockForOrder(
+      o.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+    );
+
+    if (!stockResult.ok) {
+      // WARNING: Payment captured but stock was insufficient — oversell detected.
+      // The order remains paid (payment is authoritative). Admin must resolve manually.
+      // This should only happen when two users pay for the last unit within milliseconds.
+      console.error(
+        `[InventoryService] OVERSELL_WARNING orderId=${orderId}: ` +
+          `stock insufficient for items after payment. Failures:`,
+        stockResult.failures,
+      );
+    }
 
     return this.getOrderById(orderId.trim());
   }
@@ -191,6 +224,20 @@ export class OrderService {
       .update(order)
       .set({ status, updatedAt: new Date() })
       .where(eq(order.id, orderId.trim()));
+
+    // Restore stock when cancelling/refunding a paid order (stock was already decremented at payment)
+    const shouldRestock =
+      (status === 'cancelled' || status === 'refunded') &&
+      PAID_STATUSES.includes(o.status as OrderStatus);
+
+    if (shouldRestock) {
+      const items = await this.db
+        .select({ productId: orderItem.productId, quantity: orderItem.quantity })
+        .from(orderItem)
+        .where(eq(orderItem.orderId, orderId.trim()));
+
+      await this.inventoryService.incrementStockForOrder(items);
+    }
 
     return this.getOrderById(orderId.trim());
   }

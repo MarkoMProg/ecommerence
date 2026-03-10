@@ -49,3 +49,27 @@ ADMIN_EMAILS=your-email@example.com
 **PAY-003 Implementation (2026-02-21):** Payment failure handling. When user cancels Stripe Checkout, redirects to `/checkout?canceled=1`; checkout page shows "Payment was cancelled." banner. Verify-payment returns structured error codes (PAYMENT_NOT_COMPLETE, INVALID_SESSION, AMOUNT_MISMATCH, SESSION_NOT_FOUND, ORDER_NOT_FOUND); confirmation page shows user-friendly messages for each.
 
 **PAY-004 Implementation (2026-02-21):** Payment status tracking. Order schema: `stripeSessionId` (Stripe Checkout Session ID) and `paidAt` (timestamp) stored when order is marked paid via webhook or verify-payment. Order API responses include these fields. Admin orders table shows "Paid" column with paidAt timestamp. Enables reconciliation and future Stripe refund integration (ORD-005).
+
+---
+
+## 2026-03-04 — Complete Payment for Pending Orders
+
+**Added:** `POST /api/v1/checkout/:orderId/payment-url`
+
+**Purpose:** When a user returns from Stripe without paying, the order remains pending. This endpoint creates a new Stripe Checkout Session for that order and returns the checkout URL. Frontend "Complete payment" button calls this and redirects to Stripe.
+
+**Response:** `{ success: true, data: { checkoutUrl: string } }`
+
+**Validation:** Order must exist, status must be `pending`, Stripe must be configured.
+
+---
+
+## 2026-03-04 — Coupons at Checkout
+
+**Added:** Coupon support in checkout flow.
+
+**Backend:** `CheckoutService.getOrderSummary(cartId, couponCode)` and `createOrderFromCart(..., couponCode)`. Coupon codes defined in `src/order/coupons.ts` (e.g. FRESHP100 = free shipping).
+
+**API:** `GET /api/v1/checkout/summary?coupon=CODE`; `POST /api/v1/checkout` body accepts `couponCode`.
+
+**Frontend:** Checkout page has coupon input; applies coupon to order summary.

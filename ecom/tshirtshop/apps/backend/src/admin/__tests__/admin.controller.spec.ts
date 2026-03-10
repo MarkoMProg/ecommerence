@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { MulterFile } from '../../common/multer-file.types';
 import { AdminController } from '../admin.controller';
 import { AdminGuard } from '../guards/admin.guard';
 import { OrderService } from '../../order/order.service';
 import { CatalogService } from '../../catalog/catalog.service';
 import { BulkUploadService } from '../../catalog/bulk-upload.service';
+import { ReviewService } from '../../review/review.service';
 
 /**
  * AdminController integration tests.
@@ -60,6 +62,13 @@ describe('AdminController', () => {
         { provide: OrderService, useValue: orderService },
         { provide: CatalogService, useValue: { createProduct: jest.fn() } },
         { provide: BulkUploadService, useValue: new BulkUploadService() },
+        {
+          provide: ReviewService,
+          useValue: {
+            listAllForAdmin: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+            adminDelete: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     })
       .overrideGuard(AdminGuard)
@@ -202,7 +211,7 @@ describe('AdminController', () => {
       catalogService.createProduct = jest.fn();
     });
 
-    const makeMockFile = (content: string, name = 'products.json'): Express.Multer.File => ({
+    const makeMockFile = (content: string, name = 'products.json'): MulterFile => ({
       buffer: Buffer.from(content),
       originalname: name,
       fieldname: 'file',

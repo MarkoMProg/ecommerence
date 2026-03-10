@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import {
   adminBulkUploadProducts,
   type BulkUploadResult,
@@ -107,7 +108,7 @@ export default function AdminBulkUploadPage() {
                   htmlFor="bulk-file"
                   className="cursor-pointer space-y-2 block"
                 >
-                  <div className="text-4xl text-white/20">📄</div>
+                  <FileText className="size-12 text-white/20" />
                   <p className="text-sm text-white/60">
                     {file ? (
                       <>

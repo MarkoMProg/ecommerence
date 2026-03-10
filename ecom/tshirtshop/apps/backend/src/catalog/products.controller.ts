@@ -38,6 +38,7 @@ export class ProductsController {
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
     @Query('sort') sort?: string,
+    @Query('includeArchived') includeArchived?: string,
   ) {
     const result = await this.catalogService.listProducts({
       page: page ? parseInt(page, 10) : undefined,
@@ -55,6 +56,7 @@ export class ProductsController {
         sort === 'rating-desc'
           ? sort
           : undefined,
+      includeArchived: includeArchived === 'true',
     });
     return {
       success: true,
@@ -92,11 +94,10 @@ export class ProductsController {
 
   @Get(':idOrSlug')
   async getById(@Param('idOrSlug') idOrSlug: string) {
-    // Try slug first (public-facing), then fall back to UUID (admin/internal)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
-    const product = isUuid
-      ? await this.catalogService.getProductById(idOrSlug)
-      : await this.catalogService.getProductBySlug(idOrSlug);
+    // Try by id column first (works for any id shape: UUID, numeric, slug-like).
+    // Fall back to slug lookup so public storefront URLs still work.
+    const byId = await this.catalogService.getProductById(idOrSlug);
+    const product = byId ?? (await this.catalogService.getProductBySlug(idOrSlug));
     if (!product) {
       throw new NotFoundException({
         success: false,
@@ -136,6 +137,12 @@ export class ProductsController {
       weightImperial: body.weightImperial,
       dimensionMetric: body.dimensionMetric,
       dimensionImperial: body.dimensionImperial,
+      sizeOptions: body.sizeOptions,
+      material: body.material,
+      fit: body.fit,
+      careInstructions: body.careInstructions,
+      orientation: body.orientation,
+      framingInfo: body.framingInfo,
       images: body.images,
     });
     return {

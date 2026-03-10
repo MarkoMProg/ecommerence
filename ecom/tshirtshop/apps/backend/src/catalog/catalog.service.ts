@@ -39,6 +39,12 @@ export interface CreateProductDto {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
   images?: ProductImageEntry[];
 }
 
@@ -53,6 +59,14 @@ export interface UpdateProductDto {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
+  /** Soft-delete: hide from public storefront without losing data. */
+  isArchived?: boolean;
   /** When provided, replaces all existing product images. */
   images?: ProductImageEntry[];
 }
@@ -77,6 +91,8 @@ export interface ListProductsQuery {
   maxPrice?: number;
   /** Sort: newest (default), price-asc, price-desc, name-asc, name-desc */
   sort?: ProductSortOption;
+  /** When true, include archived products (admin-only usage). Default: false */
+  includeArchived?: boolean;
 }
 
 /** Escape %, _, \ for safe use in ILIKE pattern */
@@ -169,6 +185,10 @@ export class CatalogService {
     const offset = (page - 1) * limit;
 
     const conditions: SQL[] = [];
+    // Hide archived products from the public storefront unless explicitly requested
+    if (!query.includeArchived) {
+      conditions.push(eq(product.isArchived, false));
+    }
     if (query.category) {
       const cat = await this.getCategoryBySlug(query.category);
       if (cat) {
@@ -330,6 +350,12 @@ export class CatalogService {
       weightImperial: dto.weightImperial ?? null,
       dimensionMetric: dto.dimensionMetric ?? null,
       dimensionImperial: dto.dimensionImperial ?? null,
+      sizeOptions: dto.sizeOptions ?? null,
+      material: dto.material ?? null,
+      fit: dto.fit ?? null,
+      careInstructions: dto.careInstructions ?? null,
+      orientation: dto.orientation ?? null,
+      framingInfo: dto.framingInfo ?? null,
     });
 
     const imageInputs = dto.images ?? [];
@@ -348,7 +374,7 @@ export class CatalogService {
     return { ...created, images };
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto): Promise<Product | null> {
+  async updateProduct(id: string, dto: UpdateProductDto): Promise<(Product & { images: ProductImage[] }) | null> {
     const [existing] = await this.db.select().from(product).where(eq(product.id, id));
     if (!existing) return null;
 
@@ -366,6 +392,13 @@ export class CatalogService {
     if (dto.weightImperial != null) updateData.weightImperial = dto.weightImperial;
     if (dto.dimensionMetric != null) updateData.dimensionMetric = dto.dimensionMetric;
     if (dto.dimensionImperial != null) updateData.dimensionImperial = dto.dimensionImperial;
+    if (dto.sizeOptions != null) updateData.sizeOptions = dto.sizeOptions;
+    if (dto.material != null) updateData.material = dto.material;
+    if (dto.fit != null) updateData.fit = dto.fit;
+    if (dto.careInstructions != null) updateData.careInstructions = dto.careInstructions;
+    if (dto.orientation != null) updateData.orientation = dto.orientation;
+    if (dto.framingInfo != null) updateData.framingInfo = dto.framingInfo;
+    if (dto.isArchived != null) updateData.isArchived = dto.isArchived;
 
     if (Object.keys(updateData).length > 0) {
       await this.db.update(product).set(updateData).where(eq(product.id, id));
@@ -385,7 +418,9 @@ export class CatalogService {
     }
 
     const [updated] = await this.db.select().from(product).where(eq(product.id, id));
-    return updated ?? null;
+    if (!updated) return null;
+    const updatedImages = await this.db.select().from(productImage).where(eq(productImage.productId, id));
+    return { ...updated, images: updatedImages };
   }
 
   async deleteProduct(id: string): Promise<boolean> {

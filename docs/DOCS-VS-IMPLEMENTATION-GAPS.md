@@ -1,6 +1,6 @@
 # Documentation vs Implementation — Gap Analysis
 
-**Generated:** 2026-02-18  
+**Generated:** 2026-03-07  
 **Purpose:** Identify requirements and standards from docs that are not yet implemented or addressed.
 
 ---
@@ -9,7 +9,7 @@
 
 This document cross-references the project documentation against the current implementation. Items listed are **required or specified in docs** but **not yet implemented** or only partially addressed.
 
-**Recent (2026-02-18):** Product catalog schema, CAT-001 (Product CRUD), CAT-002 (category browsing), seed script, and frontend API wiring are now implemented. Category, Product, and ProductImage domain models exist.
+**Recent (2026-03-07):** Product archive/unarchive, bulk upload, filtering/sorting confirmed implemented, ERD done, test status updated (289 pass, 2 fail). RBAC: AdminGuard + 2FA; ADMIN_EMAILS fallback.
 
 ---
 
@@ -23,31 +23,31 @@ This document cross-references the project documentation against the current imp
 | **Product catalog schema** | ✅ DONE | DB-003 to DB-006: category, product, product_image in `apps/backend/src/catalog/schema.ts`. |
 | **Product attributes** | ✅ DONE | description, stock_quantity, dimensions/weight in schema; API returns full product. |
 | **Category browsing API** | ✅ DONE | CAT-002: CategoriesController list + getById. |
-| **Faceted search** | ❌ NOT DONE | CAT-004: Filter by price, brand, ratings. |
-| **Dynamic search suggestions** | ❌ NOT DONE | CAT-006. |
-| **Sorting options** | ❌ NOT DONE | CAT-005: Relevance, price, ratings. |
-| **OAuth login** | ❌ NOT DONE | AUTH-007: Google/Facebook wired but no credentials. |
+| **Faceted search** | ✅ DONE | CAT-004: Filter by price, brand. |
+| **Dynamic search suggestions** | ✅ DONE | CAT-006: Autocomplete on shop search. |
+| **Sorting options** | ✅ DONE | CAT-005: newest, price-asc, price-desc, name-asc, name-desc. |
+| **OAuth login** | ⚠️ PARTIAL | AUTH-007: Google OAuth done; Facebook not configured. |
 | **CAPTCHA during registration** | ⚠️ PARTIAL | AUTH-008: Optional for dev; not enforced in production config. |
-| **Unit tests (JWT, validation, product model)** | ❌ NOT DONE | TEST-001 to TEST-003. |
-| **API integration tests** | ❌ NOT DONE | TEST-004. |
+| **Unit tests (JWT, validation, product model)** | ✅ DONE | TEST-001 to TEST-003. |
+| **API integration tests** | ⚠️ PARTIAL | catalog-api, admin, review, bulk-upload pass; catalog-api.spec.ts: 2 tests fail (getById NotFound — mock both getProductById and getProductBySlug). |
 | **Security tests** | ❌ NOT DONE | Injection, sanitization, malformed data. |
 
-### 2.2 Commerce — Not Started
+### 2.2 Commerce — Implemented
 
-All of Project 2 (Cart, Checkout, Payments, Orders) is NOT STARTED per docs.
+Cart, Checkout, Stripe payment (PAY-001–004), Orders (ORD-001–005) are implemented. Coupons supported. Complete payment for pending orders. Cancel order with confirmation.
 
 ### 2.3 Experience — Not Implemented
 
 | Doc Requirement | Status | Notes |
 |-----------------|--------|-------|
-| **Order confirmation page** | ❌ NOT DONE | Required per project-overview. |
-| **Search results page** | ❌ NOT DONE | Required. |
-| **Contact page** | ❌ NOT DONE | Required. |
-| **About page** | ❌ NOT DONE | Required. |
-| **Error page** | ❌ NOT DONE | Required. |
-| **Reviews system** | ❌ NOT DONE | Star rating, text reviews, helpful voting. |
-| **Admin dashboard** | ❌ NOT DONE | Manage products, categories, orders, users, reviews, refunds. |
-| **Admin 2FA requirement** | ❌ NOT DONE | "All admins require 2FA" — no RBAC yet. |
+| **Order confirmation page** | ✅ DONE | `/checkout/confirmation`; Complete payment, Cancel order. |
+| **Search results page** | ✅ DONE | Shop page with search, filters, sort. |
+| **Contact page** | ❌ NOT DONE | Required per project-overview. |
+| **About page** | ❌ NOT DONE | Required per project-overview. |
+| **Error page** | ❌ NOT DONE | Required per project-overview. |
+| **Reviews system** | ✅ DONE | Star rating, text reviews, helpful voting (REV-001–004). |
+| **Admin dashboard** | ✅ DONE | Products, orders, users, reviews, refunds. |
+| **Admin 2FA requirement** | ✅ DONE | AdminGuard enforces 2FA for admin access. |
 
 ---
 
@@ -61,13 +61,13 @@ The domain-modules doc defines models. Current status:
 | **Category** | ✅ | In `catalog/schema.ts`. |
 | **Product** | ✅ | In `catalog/schema.ts`. |
 | **ProductImage** | ✅ | In `catalog/schema.ts` as product_image. |
-| **Cart** | ❌ | Schema not defined. |
-| **CartItem** | ❌ | Schema not defined. |
-| **Order** | ❌ | Schema not defined. |
-| **OrderItem** | ❌ | Schema not defined. |
-| **Payment** | ❌ | Schema not defined. |
-| **Review** | ❌ | Schema not defined. |
-| **ReviewHelpfulVote** | ❌ | Schema not defined. |
+| **Cart** | ✅ | cart, cart_item in `cart/schema.ts`. |
+| **CartItem** | ✅ | cart_item. |
+| **Order** | ✅ | order, order_item in `order/schema.ts`; stripeSessionId, paidAt. |
+| **OrderItem** | ✅ | order_item. |
+| **Payment** | ⚠️ | No dedicated payment table; Stripe session ID stored on order. |
+| **Review** | ✅ | review, review_helpful_vote in `review/schema.ts`. |
+| **ReviewHelpfulVote** | ✅ | review_helpful_vote. |
 | **AdminAuditLog** | ❌ | Schema not defined. |
 
 **User model:** Partially exists via better-auth tables; `role` (USER | ADMIN | SUPPORT | SALES) and `Address` not in schema.
@@ -82,7 +82,7 @@ The domain-modules doc defines models. Current status:
 | **Standard response format** | ✅ | Catalog: `{ success, data, message }`; pagination on list. |
 | **Error response format** | ✅ | Catalog: `{ success: false, error: { code, message } }` on 404/validation. |
 | **Pagination** | ✅ | Products list returns `pagination: { page, limit, total }`. |
-| **Filtering/sorting query params** | ❌ | Not implemented for product catalog. |
+| **Filtering/sorting query params** | ✅ | Implemented: category, brand, minPrice, maxPrice, sort (price-asc, price-desc, name-asc, name-desc, rating-desc). |
 | **Rate limiting** | ❌ | Not implemented per security-standards. |
 | **Documentation** | ❌ | No OpenAPI/Swagger or endpoint docs. |
 
@@ -92,8 +92,8 @@ The domain-modules doc defines models. Current status:
 
 | Test Type | Doc Requirement | Status |
 |-----------|-----------------|--------|
-| **Unit tests** | JWT, validation, product model | 4 auth tests exist; no product/catalog tests |
-| **Integration tests** | API endpoints, DB ops | Not implemented |
+| **Unit tests** | JWT, validation, product model | DONE (auth, catalog DTOs, order DTOs, review). |
+| **Integration tests** | API endpoints, DB ops | Partial: catalog-api, admin, review pass; catalog.service.spec.ts fails (ReviewService mock). |
 | **E2E tests** | Registration, search, cart, checkout | Not implemented |
 | **Security tests** | Injection, sanitization, guards | Not implemented |
 | **Performance tests** | Load, concurrent users | Not implemented |
@@ -109,7 +109,7 @@ The domain-modules doc defines models. Current status:
 | **TLS/HTTPS** | ❌ | Not configured for local; deployment may differ. |
 | **Encryption at rest** | ❌ | PII encryption not verified. |
 | **Rate limiting** | ❌ | Login, password reset, payment endpoints. |
-| **RBAC** | ❌ | No role-based access control. |
+| **RBAC** | ⚠️ | AdminGuard enforces role + 2FA; ADMIN_EMAILS fallback for bootstrap. No fine-grained roles (USER/ADMIN/SUPPORT/SALES). |
 | **Input sanitization** | ⚠️ | DTOs exist for auth; catalog not implemented. |
 | **Protection vs XSS, CSRF** | ⚠️ | Not explicitly verified. |
 | **Secure logging** | ⚠️ | No sensitive data in logs — not verified. |
@@ -146,7 +146,7 @@ The domain-modules doc defines models. Current status:
 | Deliverable | Status |
 |-------------|--------|
 | Complete source code | In progress |
-| ERD documentation | ❌ NOT DONE |
+| ERD documentation | ✅ DONE (`docs/ERD.md`) |
 | Setup instructions | ✅ environment-setup.md exists |
 | Usage guide | ❌ Not found |
 | Performance analysis report | ❌ NOT DONE |
@@ -166,26 +166,26 @@ The domain-modules doc defines models. Current status:
 
 ## 11. Prioritized Action List
 
-### Critical (Blocks Phase 1 completion)
+### Critical (Blocks full test pass)
 
-1. Fix auth-provider type error (blocks build)
-2. DB-001: Create ERD
+1. **Fix catalog-api.spec.ts** — ProductsController.getById tries both getProductById and getProductBySlug; tests for NotFound must mock both to return null.
 
 ### High (Doc compliance)
 
-3. TEST-001 to TEST-004: Tests per testing-standards
-4. master-task-board.md: Update DB-003/004/006, CAT-001/002, AUTH-008/009/010, UI-001/002/003
+2. **ADMIN_EMAILS** — Add to `apps/backend/.env.example` (documented in CHANGELOG_CONFIG but not in example).
+3. **master-task-board.md** — Update PAY-001–004 to DONE.
 
-### Medium (Phase 2)
+### Medium (Phase 2/3)
 
-8. Cart, Checkout, Orders, Payments
+4. **FND-006:** Docker setup.
+5. **SEC-002:** Rate limiting on login, password reset, payment endpoints.
+6. **Missing UI pages:** Contact, About, Error (optional per project-overview).
 
 ### Lower (Phase 3)
 
-9. Missing UI pages (Contact, About, Error, Search results, Order confirmation)
-10. Reviews system
-11. Admin dashboard + RBAC
-12. Docker
+7. **OpenAPI/Swagger** — No API documentation.
+8. **data-privacy.md** — Empty; add GDPR/privacy policy content if required.
+9. **experience-requirements.md** — Empty.
 
 ---
 

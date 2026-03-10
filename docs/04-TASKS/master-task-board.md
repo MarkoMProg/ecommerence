@@ -55,7 +55,7 @@ Each task must have one of the following statuses:
 | AUTH-004 | Configure JWT token system            | DONE        |
 | AUTH-005 | Implement refresh token rotation      | DONE        |
 | AUTH-006 | Implement token revocation            | DONE        |
-| AUTH-007 | Add OAuth login support               | NOT STARTED |
+| AUTH-007 | Add OAuth login support               | IN PROGRESS | Google done; Facebook not configured |
 | AUTH-008 | Integrate CAPTCHA                     | NOT STARTED |
 | AUTH-009 | Implement password reset flow         | DONE        |
 | AUTH-010 | Implement 2FA support                | DONE        |
@@ -132,7 +132,7 @@ Each task must have one of the following statuses:
 
 | ID      | Task                              | Status      |
 | ------- | --------------------------------- | ----------- |
-| PAY-001 | Integrate Stripe/PayPal sandbox   | DONE        |
+| PAY-001 | Integrate Stripe Checkout sandbox | DONE        |
 | PAY-002 | Implement payment validation flow | DONE        |
 | PAY-003 | Handle payment failures           | DONE        |
 | PAY-004 | Implement payment status tracking | DONE        |

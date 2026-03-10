@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { fetchAdminOrders, type AdminOrder } from "@/lib/api/admin";
 
@@ -101,9 +102,10 @@ export default function AdminDashboardPage() {
               </h2>
               <Link
                 href="/admin/orders"
-                className="text-xs text-[#FF4D00] hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-[#FF4D00] hover:underline"
               >
-                View All →
+                View All
+                <ArrowRight className="size-3.5" />
               </Link>
             </div>
             {stats.recentOrders.length === 0 ? (

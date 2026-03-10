@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Star } from "lucide-react";
 import { createReview, type Review } from "@/lib/api/reviews";
 
 interface ReviewFormProps {
@@ -71,25 +72,23 @@ export function ReviewForm({ productId, onReviewCreated }: ReviewFormProps) {
           Rating
         </p>
         <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((star) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <button
-              key={star}
+              key={s}
               type="button"
-              onClick={() => setRating(star)}
-              onMouseEnter={() => setHoverRating(star)}
+              onClick={() => setRating(s)}
+              onMouseEnter={() => setHoverRating(s)}
               onMouseLeave={() => setHoverRating(0)}
-              className="min-h-[44px] min-w-[44px] text-2xl transition-colors"
-              aria-label={`${star} star${star > 1 ? "s" : ""}`}
+              className="min-h-[44px] min-w-[44px] transition-colors"
+              aria-label={`${s} star${s > 1 ? "s" : ""}`}
             >
-              <span
-                className={
-                  star <= (hoverRating || rating)
-                    ? "text-[#E6C068]"
-                    : "text-white/30"
-                }
-              >
-                ★
-              </span>
+              <Star
+                className={`size-6 ${
+                  s <= (hoverRating || rating)
+                    ? "fill-[#E6C068] text-[#E6C068]"
+                    : "fill-none text-white/30"
+                }`}
+              />
             </button>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 
 export default async function HomePage() {
@@ -86,7 +87,7 @@ export default async function HomePage() {
                     <p className="text-xs text-[#E6C068] sm:text-sm">${product.price}</p>
                     {product.reviewCount != null && product.reviewCount > 0 && (
                       <span className="flex items-center gap-1 text-xs text-white/60">
-                        <span className="text-[#E6C068]">★</span>
+                        <Star className="size-3.5 fill-[#E6C068] text-[#E6C068]" />
                         {product.averageRating?.toFixed(1)}
                       </span>
                     )}

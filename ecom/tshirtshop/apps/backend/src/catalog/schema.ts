@@ -30,6 +30,20 @@ export const product = pgTable('product', {
   weightImperial: text('weight_imperial'),
   dimensionMetric: text('dimension_metric'),
   dimensionImperial: text('dimension_imperial'),
+  /** Comma-separated available sizes, e.g. "XS,S,M,L,XL". NULL = no sizes for this product. */
+  sizeOptions: text('size_options'),
+  /** e.g. "100% combed cotton, 320gsm" */
+  material: text('material'),
+  /** Apparel fit descriptor, e.g. "Oversized" or "True to size" */
+  fit: text('fit'),
+  /** e.g. "Machine wash cold. Tumble dry low." */
+  careInstructions: text('care_instructions'),
+  /** Prints/posters only: "Portrait" or "Landscape" */
+  orientation: text('orientation'),
+  /** Prints/posters only: e.g. "Ships unframed" */
+  framingInfo: text('framing_info'),
+  /** Soft-delete: archived products are hidden from the public storefront. */
+  isArchived: boolean('is_archived').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

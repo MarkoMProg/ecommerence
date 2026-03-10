@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { Footer } from "./footer";
 import { useAuth } from "@/components/auth-provider";
+import { CartCountProvider } from "@/lib/cart-count-context";
 
 /** Pages that are part of the auth flow — guard must never redirect here to avoid loops */
 const AUTH_PATHS = [
@@ -38,7 +39,7 @@ function TwoFactorGuard() {
 
     const verified = sessionStorage.getItem("2fa_verified") === "true";
     if (!verified) {
-      window.location.replace("/auth/two-factor/verify");
+      window.location.replace(`/auth/two-factor/verify?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [session, isLoading, pathname]);
 
@@ -46,12 +47,26 @@ function TwoFactorGuard() {
 }
 
 export function SiteLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdmin = pathname.startsWith("/admin");
+
+  if (isAdmin) {
+    return (
+      <>
+        <TwoFactorGuard />
+        {children}
+      </>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <TwoFactorGuard />
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
-    </div>
+    <CartCountProvider>
+      <div className="flex min-h-screen flex-col">
+        <TwoFactorGuard />
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </div>
+    </CartCountProvider>
   );
 }

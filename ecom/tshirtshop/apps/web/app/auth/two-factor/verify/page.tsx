@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export default function TwoFactorVerifyPage() {
+function TwoFactorVerifyContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/";
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function TwoFactorVerifyPage() {
 
       // Mark 2FA as verified for this browser session so the global guard allows access.
       sessionStorage.setItem("2fa_verified", "true");
-      router.push("/");
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setFormError("Verification failed. Please try again.");
@@ -46,19 +48,25 @@ export default function TwoFactorVerifyPage() {
   };
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <Card className="w-full max-w-md border-white/10 bg-[#1A1A1A]">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0A0A]/90 px-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-md rounded-lg border border-white/10 bg-[#1A1A1A] shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+        <div className="p-8 sm:p-10">
+          <div className="mb-6 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#FF4D00]/30 bg-[#FF4D00]/10">
+              <Lock className="size-7 text-[#FF4D00]/70" />
+            </div>
+          </div>
+          <h2
+            className="mb-2 text-center text-xl font-bold uppercase tracking-tight text-white sm:text-2xl"
+            style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+          >
             Two-Factor Authentication
-          </CardTitle>
-          <CardDescription className="text-white/60">
+          </h2>
+          <p className="mb-6 text-center text-sm text-white/60">
             {useBackupCode
               ? "Enter one of your backup codes to sign in."
               : "Enter the 6-digit code from your authenticator app."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
           <form onSubmit={handleVerify} className="space-y-4">
             {formError && (
               <Alert variant="destructive" role="alert">
@@ -101,7 +109,7 @@ export default function TwoFactorVerifyPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-[#FF4D00] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90 hover:shadow-[0_0_20px_rgba(255,77,0,0.3)]"
               disabled={isLoading || (!useBackupCode && code.length !== 6) || (useBackupCode && code.length === 0)}
             >
               {isLoading ? "Verifying..." : "Verify"}
@@ -126,13 +134,21 @@ export default function TwoFactorVerifyPage() {
               type="button"
               variant="ghost"
               className="w-full text-sm text-white/60 hover:text-white"
-              onClick={() => router.push("/auth/login")}
+              onClick={() => router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`)}
             >
               Back to login
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
+  );
+}
+
+export default function TwoFactorVerifyPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><div className="animate-pulse text-white/60">Loading...</div></div>}>
+      <TwoFactorVerifyContent />
+    </Suspense>
   );
 }

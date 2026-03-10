@@ -21,7 +21,13 @@
     "db:push": "node scripts/db-push.mjs",
     "db:generate": "node -r dotenv/config ../../node_modules/drizzle-kit/bin.cjs generate",
     "db:seed": "node scripts/seed.mjs",
-    "db:bootstrap-admin": "node scripts/bootstrap-admin-role.mjs"
+    "db:add-slug": "node scripts/db-add-slug.mjs",
+    "db:add-free-product": "node scripts/db-add-free-product.mjs",
+    "db:bootstrap-admin": "node scripts/bootstrap-admin-role.mjs",
+    "db:add-user-addresses": "node scripts/db-add-user-addresses.mjs",
+    "db:add-stripe-customer-id": "node scripts/db-add-stripe-customer-id.mjs",
+    "db:add-review-tables": "node scripts/db-add-review-tables.mjs",
+    "db:add-product-archived": "node scripts/db-add-product-archived.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -8,10 +8,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
+import type { MulterFile } from '../common/multer-file.types';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
-import type { Request } from 'express';
 import * as fs from 'fs';
 import { BetterAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -68,7 +69,7 @@ export class UploadController {
     }),
   )
   async uploadImage(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
     @Req() req: Request,
   ) {
     if (!file) {

@@ -33,6 +33,17 @@ export interface ApiProduct {
   stockQuantity: number;
   categoryId: string;
   brand: string;
+  weightMetric: string | null;
+  weightImperial: string | null;
+  dimensionMetric: string | null;
+  dimensionImperial: string | null;
+  /** Comma-separated sizes, e.g. "XS,S,M,L,XL". Null = product has no size selection. */
+  sizeOptions: string | null;
+  material: string | null;
+  fit: string | null;
+  careInstructions: string | null;
+  orientation: string | null;
+  framingInfo: string | null;
   images: ApiProductImage[];
   category: ApiCategory | null;
   /** REV-003: aggregated from reviews */
@@ -64,7 +75,7 @@ export interface ApiProductResponse {
   error?: ApiErrorPayload;
 }
 
-/** Shape used by frontend components (price in dollars, primary image) */
+/** Shape used by frontend components (price in dollars, primary image, and all product attributes) */
 export interface ProductDisplay {
   id: string;
   slug: string;
@@ -73,9 +84,32 @@ export interface ProductDisplay {
   imageUrl: string;
   category: string;
   description?: string;
+  brand: string;
+  weightMetric: string | null;
+  weightImperial: string | null;
+  dimensionMetric: string | null;
+  dimensionImperial: string | null;
+  /**
+   * Parsed size options array. Null = product has no sizes (no selector shown).
+   * Derived from the comma-separated `sizeOptions` string returned by the API.
+   */
+  sizeOptions: string[] | null;
+  material: string | null;
+  fit: string | null;
+  careInstructions: string | null;
+  orientation: string | null;
+  framingInfo: string | null;
+  /** Current available stock. 0 = out of stock. */
+  stockQuantity: number;
   /** REV-003: average star rating 0–5, number of reviews */
   averageRating?: number;
   reviewCount?: number;
+}
+
+function parseSizeOptions(raw: string | null | undefined): string[] | null {
+  if (!raw?.trim()) return null;
+  const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  return parts.length > 0 ? parts : null;
 }
 
 function mapProduct(p: ApiProduct): ProductDisplay {
@@ -88,6 +122,18 @@ function mapProduct(p: ApiProduct): ProductDisplay {
     imageUrl: primaryImage?.imageUrl ?? '',
     category: p.category?.slug ?? '',
     description: p.description,
+    brand: p.brand,
+    weightMetric: p.weightMetric ?? null,
+    weightImperial: p.weightImperial ?? null,
+    dimensionMetric: p.dimensionMetric ?? null,
+    dimensionImperial: p.dimensionImperial ?? null,
+    sizeOptions: parseSizeOptions(p.sizeOptions),
+    material: p.material ?? null,
+    fit: p.fit ?? null,
+    careInstructions: p.careInstructions ?? null,
+    orientation: p.orientation ?? null,
+    framingInfo: p.framingInfo ?? null,
+    stockQuantity: p.stockQuantity ?? 0,
     averageRating: p.averageRating,
     reviewCount: p.reviewCount,
   };

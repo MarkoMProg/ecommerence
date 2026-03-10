@@ -14,6 +14,12 @@ export interface BulkProductEntry {
   weightImperial?: string;
   dimensionMetric?: string;
   dimensionImperial?: string;
+  sizeOptions?: string;
+  material?: string;
+  fit?: string;
+  careInstructions?: string;
+  orientation?: string;
+  framingInfo?: string;
   images?: { url: string }[];
 }
 
@@ -67,6 +73,12 @@ export class BulkUploadService {
         weightImperial: row['weightimperial'] || undefined,
         dimensionMetric: row['dimensionmetric'] || undefined,
         dimensionImperial: row['dimensionimperial'] || undefined,
+        sizeOptions: row['sizeoptions'] || undefined,
+        material: row['material'] || undefined,
+        fit: row['fit'] || undefined,
+        careInstructions: row['careinstructions'] || undefined,
+        orientation: row['orientation'] || undefined,
+        framingInfo: row['framinginfo'] || undefined,
         images: row['imageurls']
           ? row['imageurls']
               .split('|')
@@ -100,6 +112,12 @@ export class BulkUploadService {
       weightImperial: item.weightImperial ? String(item.weightImperial) : undefined,
       dimensionMetric: item.dimensionMetric ? String(item.dimensionMetric) : undefined,
       dimensionImperial: item.dimensionImperial ? String(item.dimensionImperial) : undefined,
+      sizeOptions: item.sizeOptions ? String(item.sizeOptions) : undefined,
+      material: item.material ? String(item.material) : undefined,
+      fit: item.fit ? String(item.fit) : undefined,
+      careInstructions: item.careInstructions ? String(item.careInstructions) : undefined,
+      orientation: item.orientation ? String(item.orientation) : undefined,
+      framingInfo: item.framingInfo ? String(item.framingInfo) : undefined,
       images: Array.isArray(item.images)
         ? (item.images as unknown[]).map((img) =>
             typeof img === 'string' ? { url: img } : { url: String((img as Record<string, unknown>).url ?? '') },

@@ -26,15 +26,17 @@ export class StripeService {
   /**
    * Create Stripe Checkout Session for an order.
    * Returns checkout URL or null if Stripe not configured.
+   * Pass customerId to show the customer's saved payment methods at checkout.
    */
   async createCheckoutSession(
     orderId: string,
     totalCents: number,
     currency: string = 'usd',
+    customerId?: string | null,
   ): Promise<string | null> {
     if (!this.stripe) return null;
 
-    const session = await this.stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       line_items: [
         {
@@ -52,8 +54,17 @@ export class StripeService {
       metadata: { orderId },
       success_url: `${this.uiUrl}/checkout/confirmation?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${this.uiUrl}/checkout?canceled=1`,
-    });
+    };
 
+    // Attach Stripe customer to show saved payment methods and save new ones
+    if (customerId) {
+      sessionParams.customer = customerId;
+      sessionParams.payment_intent_data = {
+        setup_future_usage: 'off_session',
+      };
+    }
+
+    const session = await this.stripe.checkout.sessions.create(sessionParams);
     return session.url;
   }
 

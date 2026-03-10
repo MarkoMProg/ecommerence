@@ -5,13 +5,21 @@ import {
   Body,
   Headers,
   Req,
+  Query,
+  Param,
   HttpCode,
   HttpStatus,
   BadRequestException,
+  NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import { eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { DATABASE_CONNECTION } from '../database/database-connection';
+import { user as authUserTable } from '../auth/schema';
 import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { CheckoutService } from './checkout.service';
 import { validateShippingAddress } from './dto/checkout.dto';
@@ -24,6 +32,8 @@ import { OrderService } from './order.service';
 @UseGuards(OptionalAuthGuard)
 export class CheckoutController {
   constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: NodePgDatabase,
     private readonly checkoutService: CheckoutService,
     private readonly cartService: CartService,
     private readonly stripeService: StripeService,
@@ -37,6 +47,7 @@ export class CheckoutController {
   async getSummary(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
+    @Query('coupon') couponCode: string | undefined,
   ) {
     const user = (req as any).user as { id: string } | null;
     let cartId = cartIdHeader?.trim();
@@ -51,7 +62,7 @@ export class CheckoutController {
         message: 'No cart ID provided. Use X-Cart-Id header or log in.',
       };
     }
-    const summary = await this.checkoutService.getOrderSummary(cartId);
+    const summary = await this.checkoutService.getOrderSummary(cartId, couponCode?.trim() || null);
     return {
       success: true,
       data: summary,
@@ -67,7 +78,7 @@ export class CheckoutController {
   async createOrder(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
-    @Body() body: { shippingAddress?: unknown },
+    @Body() body: { shippingAddress?: unknown; couponCode?: string },
   ) {
     const user = (req as any).user as { id: string } | null;
     let cartId = cartIdHeader?.trim();
@@ -95,6 +106,7 @@ export class CheckoutController {
     }
 
     const shippingAddress = body.shippingAddress as Record<string, string>;
+    const couponCode = body.couponCode?.trim() || null;
     const order = await this.checkoutService.createOrderFromCart(
       cartId.trim(),
       {
@@ -108,7 +120,18 @@ export class CheckoutController {
         phone: shippingAddress.phone?.trim(),
       },
       user?.id ?? null,
+      couponCode,
     );
+
+    // Look up Stripe customer ID so saved payment methods appear at checkout (BILL-001)
+    let stripeCustomerId: string | null = null;
+    if (user) {
+      const [u] = await this.db
+        .select({ stripeCustomerId: authUserTable.stripeCustomerId })
+        .from(authUserTable)
+        .where(eq(authUserTable.id, user.id));
+      stripeCustomerId = u?.stripeCustomerId ?? null;
+    }
 
     let checkoutUrl: string | null = null;
     if (this.stripeService.isConfigured() && order.status === 'pending') {
@@ -116,6 +139,7 @@ export class CheckoutController {
         order.id,
         order.totalCents,
         'usd',
+        stripeCustomerId,
       );
     }
 
@@ -125,6 +149,71 @@ export class CheckoutController {
       message: checkoutUrl
         ? 'Order created. Redirect to Stripe Checkout.'
         : 'Order created successfully.',
+    };
+  }
+
+  /**
+   * Create Stripe Checkout URL for an existing pending order.
+   * Used when user returns from Stripe without paying and wants to complete payment.
+   */
+  @Post(':orderId/payment-url')
+  @HttpCode(HttpStatus.OK)
+  async getPaymentUrlForOrder(@Param('orderId') orderId: string) {
+    const id = orderId?.trim();
+    if (!id) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'ORDER_ID_REQUIRED', message: 'orderId is required' },
+      });
+    }
+    const order = await this.orderService.getOrderById(id);
+    if (!order) {
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' },
+      });
+    }
+    if (order.status !== 'pending') {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'ORDER_NOT_PENDING',
+          message: 'Only pending orders can be paid. Order status: ' + order.status,
+        },
+      });
+    }
+    if (!this.stripeService.isConfigured()) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'STRIPE_NOT_CONFIGURED', message: 'Payment is not available' },
+      });
+    }
+    // Look up Stripe customer for this order's user if available
+    let orderCustomerId: string | null = null;
+    if (order.userId) {
+      const [u] = await this.db
+        .select({ stripeCustomerId: authUserTable.stripeCustomerId })
+        .from(authUserTable)
+        .where(eq(authUserTable.id, order.userId));
+      orderCustomerId = u?.stripeCustomerId ?? null;
+    }
+
+    const checkoutUrl = await this.stripeService.createCheckoutSession(
+      order.id,
+      order.totalCents,
+      'usd',
+      orderCustomerId,
+    );
+    if (!checkoutUrl) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'STRIPE_NOT_CONFIGURED', message: 'Payment is not available' },
+      });
+    }
+    return {
+      success: true,
+      data: { checkoutUrl },
+      message: 'Checkout URL created',
     };
   }
 

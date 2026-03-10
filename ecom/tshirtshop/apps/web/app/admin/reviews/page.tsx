@@ -1,61 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
-/**
- * Admin Reviews Moderation Page
- *
- * The review backend (schema, service, module) is not yet implemented.
- * reviews.controller.ts is fully commented out and no review schema exists.
- *
- * Once the review system backend is active (REV-001 to REV-004), this page
- * will connect to:
- *   GET  /api/v1/admin/reviews          — list all reviews (admin)
- *   PATCH /api/v1/admin/reviews/:id      — approve / reject / flag
- *   DELETE /api/v1/admin/reviews/:id     — remove review (admin override)
- *
- * For now this page serves as the UI skeleton for review moderation.
- */
-
-interface Review {
-  id: string;
-  productId: string;
-  productName: string;
-  userId: string;
-  userName: string;
-  rating: number;
-  title: string;
-  body: string;
-  status: "pending" | "approved" | "rejected" | "flagged";
-  createdAt: string;
-}
-
-const STATUS_COLORS: Record<Review["status"], string> = {
-  pending: "bg-yellow-500/20 text-yellow-300",
-  approved: "bg-green-500/20 text-green-300",
-  rejected: "bg-red-500/20 text-red-300",
-  flagged: "bg-orange-500/20 text-orange-300",
-};
+import { useEffect, useState } from "react";
+import { Star, Trash2 } from "lucide-react";
+import { fetchAdminReviews, adminDeleteReview, type AdminReview } from "@/lib/api/admin";
+import { Button } from "@/components/ui/button";
 
 function StarRating({ rating }: { rating: number }) {
+  const filled = Math.max(0, Math.min(5, rating));
   return (
-    <span className="text-[#E6C068]">
-      {"★".repeat(Math.max(0, Math.min(5, rating)))}
-      {"☆".repeat(5 - Math.max(0, Math.min(5, rating)))}
+    <span className="flex">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star
+          key={s}
+          className={`size-4 ${
+            s <= filled
+              ? "fill-[#E6C068] text-[#E6C068]"
+              : "fill-none text-white/30"
+          }`}
+        />
+      ))}
     </span>
   );
 }
 
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+const PAGE_SIZE = 20;
+
 export default function AdminReviewsPage() {
-  const [filter, setFilter] = useState<Review["status"] | "all">("all");
+  const [reviews, setReviews] = useState<AdminReview[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Placeholder: no reviews available until the review backend is built.
-  const reviews: Review[] = [];
-  const loading = false;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchAdminReviews({ page, limit: PAGE_SIZE }).then((result) => {
+      if (cancelled) return;
+      if (result) {
+        setReviews(result.data);
+        setTotal(result.pagination.total);
+      } else {
+        setError("Failed to load reviews. Check backend connectivity.");
+        setReviews([]);
+      }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [page]);
 
-  const filtered =
-    filter === "all" ? reviews : reviews.filter((r) => r.status === filter);
+  const handleDelete = async (id: string) => {
+    if (!confirm("Permanently delete this review? This cannot be undone.")) return;
+    setDeleting(id);
+    const ok = await adminDeleteReview(id);
+    if (ok) {
+      setReviews((prev) => prev ? prev.filter((r) => r.id !== id) : prev);
+      setTotal((t) => Math.max(0, t - 1));
+    }
+    setDeleting(null);
+  };
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <>
@@ -66,89 +85,105 @@ export default function AdminReviewsPage() {
         >
           Review Moderation
         </h1>
-        <div className="flex gap-2">
-          {(["all", "pending", "approved", "rejected", "flagged"] as const).map(
-            (s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
-                  filter === s
-                    ? "bg-[#FF4D00] text-white"
-                    : "bg-white/10 text-white/60 hover:bg-white/20"
-                }`}
-              >
-                {s}
-              </button>
-            )
-          )}
-        </div>
+        {total > 0 && (
+          <p className="text-sm text-white/50">
+            {total} review{total !== 1 ? "s" : ""} total
+          </p>
+        )}
       </div>
 
-      {/* Backend status notice */}
-      <Card className="mb-8 border-yellow-500/30 bg-yellow-500/5">
-        <CardContent className="py-4">
-          <p className="text-sm text-yellow-200">
-            <strong>Review system not yet active.</strong> The review backend
-            (schema, service, module) needs to be implemented before reviews
-            appear here. Refer to tasks REV-001 through REV-004 in the
-            development roadmap.
-          </p>
-        </CardContent>
-      </Card>
+      {error && (
+        <p className="mb-6 rounded border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm text-red-200">
+          {error}
+        </p>
+      )}
 
       {loading ? (
         <p className="py-8 text-white/60">Loading reviews…</p>
-      ) : filtered.length === 0 ? (
-        <p className="py-8 text-white/60">
-          {filter === "all"
-            ? "No reviews to moderate."
-            : `No ${filter} reviews.`}
-        </p>
+      ) : !reviews || reviews.length === 0 ? (
+        <p className="py-8 text-white/60">No reviews yet.</p>
       ) : (
-        <div className="space-y-4">
-          {filtered.map((review) => (
-            <Card
-              key={review.id}
-              className="border-white/10 bg-[#1A1A1A]"
-            >
-              <CardHeader className="pb-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <StarRating rating={review.rating} />
-                  <span className="font-semibold text-white">
-                    {review.title}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[review.status]}`}
-                  >
-                    {review.status}
-                  </span>
-                </div>
-                <p className="text-xs text-white/40">
-                  by {review.userName} • on {review.productName} •{" "}
-                  {new Date(review.createdAt).toLocaleDateString()}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4 text-sm text-white/70">{review.body}</p>
-                <div className="flex gap-2">
-                  <button className="rounded bg-green-600/20 px-3 py-1 text-xs font-medium text-green-300 hover:bg-green-600/30">
-                    Approve
-                  </button>
-                  <button className="rounded bg-red-600/20 px-3 py-1 text-xs font-medium text-red-300 hover:bg-red-600/30">
-                    Reject
-                  </button>
-                  <button className="rounded bg-orange-600/20 px-3 py-1 text-xs font-medium text-orange-300 hover:bg-orange-600/30">
-                    Flag
-                  </button>
-                  <button className="rounded bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20">
-                    Delete
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <div className="overflow-x-auto rounded-lg border border-white/10">
+            <table className="w-full min-w-[700px] text-left text-sm">
+              <thead className="border-b border-white/10 bg-white/5">
+                <tr>
+                  <th className="px-4 py-3 font-medium text-white">Rating</th>
+                  <th className="px-4 py-3 font-medium text-white">Reviewer</th>
+                  <th className="px-4 py-3 font-medium text-white">Product</th>
+                  <th className="px-4 py-3 font-medium text-white">Review</th>
+                  <th className="px-4 py-3 font-medium text-white">Helpful</th>
+                  <th className="px-4 py-3 font-medium text-white">Date</th>
+                  <th className="px-4 py-3 font-medium text-white">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {reviews.map((r) => (
+                  <tr key={r.id} className="bg-[#1A1A1A]/50 align-top">
+                    <td className="px-4 py-3">
+                      <StarRating rating={r.rating} />
+                    </td>
+                    <td className="px-4 py-3 text-white/80">{r.userName}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-white/50">
+                      {r.productId.slice(0, 8)}…
+                    </td>
+                    <td className="max-w-xs px-4 py-3">
+                      {r.title && (
+                        <p className="mb-1 font-medium text-white">{r.title}</p>
+                      )}
+                      <p className="line-clamp-3 text-white/70">{r.body}</p>
+                    </td>
+                    <td className="px-4 py-3 text-white/60">{r.helpfulCount}</td>
+                    <td className="px-4 py-3 text-white/60">{formatDate(r.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(r.id)}
+                        disabled={deleting === r.id}
+                        className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                      >
+                        {deleting === r.id ? (
+                          "…"
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center gap-4 text-sm text-white/60">
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="border-white/20 disabled:opacity-50"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="border-white/20 disabled:opacity-50"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </>
   );

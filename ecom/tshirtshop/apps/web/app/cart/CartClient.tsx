@@ -8,6 +8,7 @@ import {
   removeFromCart,
 } from "@/lib/api/cart";
 import { clearCartIdClient, getCartIdClient } from "@/lib/cart-cookie";
+import { useCartCount } from "@/lib/cart-count-context";
 
 interface CartClientProps {
   initialCart: Cart | null;
@@ -15,6 +16,7 @@ interface CartClientProps {
 
 export function CartClient({ initialCart }: CartClientProps) {
   const [cart, setCart] = useState<Cart | null>(initialCart);
+  const { setCount } = useCartCount();
 
   useEffect(() => {
     if (initialCart?.userId && getCartIdClient()) {
@@ -32,9 +34,11 @@ export function CartClient({ initialCart }: CartClientProps) {
       if (quantity < 1) {
         const updated = await removeFromCart(productId);
         setCart(updated);
+        setCount(updated.itemCount);
       } else {
         const updated = await updateCartItemQuantity(productId, quantity);
         setCart(updated);
+        setCount(updated.itemCount);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update");
@@ -50,6 +54,7 @@ export function CartClient({ initialCart }: CartClientProps) {
     try {
       const updated = await removeFromCart(productId);
       setCart(updated);
+      setCount(updated.itemCount);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove");
     } finally {
@@ -85,6 +90,10 @@ export function CartClient({ initialCart }: CartClientProps) {
           {cart.items.map((item) => {
             const itemTotal = ((item.priceCents * item.quantity) / 100).toFixed(2);
             const isDisabled = loading === item.productId;
+            const isItemOos = item.stockQuantity <= 0;
+            const isItemLowStock = !isItemOos && item.stockQuantity < 10;
+            const exceedsStock = !isItemOos && item.quantity > item.stockQuantity;
+            const canIncrement = !isItemOos && item.quantity < item.stockQuantity;
             return (
               <li
                 key={item.id}
@@ -94,7 +103,7 @@ export function CartClient({ initialCart }: CartClientProps) {
                   href={`/shop/${item.slug}`}
                   className="flex shrink-0 gap-4 sm:min-w-[200px]"
                 >
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-24 sm:w-24">
+                  <div className={`h-20 w-20 shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-24 sm:w-24 ${isItemOos ? "opacity-50" : ""}`}>
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
@@ -108,10 +117,28 @@ export function CartClient({ initialCart }: CartClientProps) {
                     )}
                   </div>
                   <div className="min-w-0 flex-1 sm:flex-initial">
-                    <p className="truncate font-medium text-white sm:line-clamp-2">
+                    <p className={`truncate font-medium sm:line-clamp-2 ${isItemOos ? "text-white/50" : "text-white"}`}>
                       {item.productName}
                     </p>
-                    <p className="text-sm text-[#E6C068]">${itemTotal}</p>
+                    {item.selectedOption && (
+                      <p className="mt-0.5 text-xs text-white/50">
+                        Size: {item.selectedOption}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-sm text-[#E6C068]">${itemTotal}</p>
+                    {isItemOos && (
+                      <p className="mt-1 text-xs text-red-400">This item is no longer available</p>
+                    )}
+                    {exceedsStock && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        Only {item.stockQuantity} unit{item.stockQuantity === 1 ? "" : "s"} available
+                      </p>
+                    )}
+                    {isItemLowStock && !exceedsStock && (
+                      <p className="mt-1 text-xs text-amber-400">
+                        Only {item.stockQuantity} left
+                      </p>
+                    )}
                   </div>
                 </Link>
                 <div className="flex flex-1 items-center justify-between gap-4 sm:justify-end">
@@ -135,7 +162,7 @@ export function CartClient({ initialCart }: CartClientProps) {
                       onClick={() =>
                         handleUpdateQuantity(item.productId, item.quantity + 1)
                       }
-                      disabled={isDisabled}
+                      disabled={isDisabled || !canIncrement}
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-white/20 text-white/80 transition-colors hover:border-white/40 hover:text-white disabled:opacity-50"
                       aria-label="Increase quantity"
                     >
