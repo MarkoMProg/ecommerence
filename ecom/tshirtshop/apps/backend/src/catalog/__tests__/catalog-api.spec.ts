@@ -140,12 +140,16 @@ describe('Catalog API (Controller Integration)', () => {
     });
 
     it('should throw NotFoundException when slug not found', async () => {
+      // Controller tries getProductById first, then getProductBySlug - both must return null
+      (catalogService.getProductById as jest.Mock).mockResolvedValueOnce(null);
       (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(null);
       await expect(productsController.getById('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException when UUID not found', async () => {
+      // Controller tries getProductById first, then getProductBySlug - both must return null
       (catalogService.getProductById as jest.Mock).mockResolvedValueOnce(null);
+      (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(null);
       await expect(productsController.getById('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).rejects.toThrow(NotFoundException);
     });
   });
