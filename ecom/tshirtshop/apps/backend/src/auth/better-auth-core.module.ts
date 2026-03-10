@@ -156,7 +156,7 @@ import * as authSchema from './schema';
 
           plugins: [
             twoFactor({
-              issuer: 'Darkloom',
+              issuer: 'Darkloom'
             }),
             bearer(),
             admin({
