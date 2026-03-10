@@ -120,6 +120,17 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Quick Cart badge pop animation */
+@keyframes badge-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.badge-pop {
+  animation: badge-pop 0.3s ease-out;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

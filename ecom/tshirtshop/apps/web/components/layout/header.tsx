@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { useCartCount } from "@/lib/cart-count-context";
+import { useCart } from "@/lib/cart-count-context";
 import { SearchModal } from "@/components/search-modal";
 
 const DESKTOP_NAV = [
@@ -24,10 +24,11 @@ const DRAWER_NAV = [
 ];
 
 function CartButton() {
-  const { count } = useCartCount();
+  const { count, badgePop, openDrawer } = useCart();
   return (
-    <Link
-      href="/cart"
+    <button
+      type="button"
+      onClick={openDrawer}
       className="relative flex h-10 w-10 items-center justify-center text-white/55 transition-colors duration-200 hover:text-white"
       aria-label={
         count > 0 ? `Cart, ${count} item${count !== 1 ? "s" : ""}` : "Cart, empty"
@@ -36,13 +37,14 @@ function CartButton() {
       <ShoppingBag className="size-[18px]" strokeWidth={1.5} />
       {count > 0 && (
         <span
-          className="absolute right-0.5 top-0.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#FF4D00] px-[3px] text-[9px] font-bold leading-none text-white"
+          key={badgePop}
+          className={`absolute right-0.5 top-0.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#FF4D00] px-[3px] text-[9px] font-bold leading-none text-white${badgePop > 0 ? " badge-pop" : ""}`}
           aria-hidden="true"
         >
           {count > 99 ? "99+" : count}
         </span>
       )}
-    </Link>
+    </button>
   );
 }
 
@@ -51,7 +53,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { session } = useAuth();
-  const { count } = useCartCount();
+  const { count, openDrawer } = useCart();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -276,10 +278,13 @@ export function Header() {
               </Link>
             </li>
             <li>
-              <Link
-                href="/cart"
-                onClick={() => setMenuOpen(false)}
-                className="flex min-h-[44px] items-center justify-between text-[13px] uppercase text-white/60 transition-colors hover:text-white"
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  openDrawer();
+                }}
+                className="flex min-h-[44px] w-full items-center justify-between text-[13px] uppercase text-white/60 transition-colors hover:text-white"
                 style={{ letterSpacing: "0.1em" }}
               >
                 <span className="flex items-center gap-3">
@@ -291,7 +296,7 @@ export function Header() {
                     {count > 99 ? "99+" : count}
                   </span>
                 )}
-              </Link>
+              </button>
             </li>
           </ul>
         </div>

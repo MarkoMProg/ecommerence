@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq, and, inArray, desc } from 'drizzle-orm';
+import { eq, and, inArray, desc, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -156,15 +156,25 @@ export class CartService {
       throw new NotFoundException({ code: 'PRODUCT_NOT_FOUND', message: 'Product not found' });
     }
 
+    const optionValue = selectedOption ?? null;
     const [existingItem] = await this.db
       .select()
       .from(cartItem)
-      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)));
+      .where(and(
+        eq(cartItem.cartId, cartId),
+        eq(cartItem.productId, productId),
+        optionValue !== null
+          ? eq(cartItem.selectedOption, optionValue)
+          : isNull(cartItem.selectedOption),
+      ));
 
-    // Stock check: total cart quantity after this add must not exceed available stock
-    const currentCartQty = existingItem?.quantity ?? 0;
-    const newTotalQty = currentCartQty + quantity;
-    await this.inventoryService.assertSufficientStock(productId, newTotalQty, existingProduct.name);
+    // Stock check: total qty across ALL options of this product must not exceed stock
+    const allProductItems = await this.db
+      .select({ quantity: cartItem.quantity })
+      .from(cartItem)
+      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)));
+    const currentTotalQty = allProductItems.reduce((sum, i) => sum + i.quantity, 0);
+    await this.inventoryService.assertSufficientStock(productId, currentTotalQty + quantity, existingProduct.name);
 
     if (existingItem) {
       const newQty = existingItem.quantity + quantity;
@@ -173,8 +183,6 @@ export class CartService {
         .set({
           quantity: newQty,
           updatedAt: new Date(),
-          // Update the selected option if a new one is provided (last-selection-wins)
-          ...(selectedOption !== undefined ? { selectedOption: selectedOption ?? null } : {}),
         })
         .where(eq(cartItem.id, existingItem.id));
     } else {
@@ -200,7 +208,7 @@ export class CartService {
     await this.db.delete(cartItem).where(eq(cartItem.cartId, cartId));
   }
 
-  async removeItem(cartId: string, productId: string): Promise<CartWithItems> {
+  async removeItem(cartId: string, itemId: string): Promise<CartWithItems> {
     const [existingCart] = await this.db.select().from(cart).where(eq(cart.id, cartId));
     if (!existingCart) {
       throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
@@ -209,7 +217,7 @@ export class CartService {
     const [existingItem] = await this.db
       .select()
       .from(cartItem)
-      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)));
+      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.id, itemId)));
 
     if (!existingItem) {
       throw new NotFoundException({ code: 'ITEM_NOT_FOUND', message: 'Item not found in cart' });
@@ -226,7 +234,7 @@ export class CartService {
 
   async updateItemQuantity(
     cartId: string,
-    productId: string,
+    itemId: string,
     quantity: number,
   ): Promise<CartWithItems> {
     const [existingCart] = await this.db.select().from(cart).where(eq(cart.id, cartId));
@@ -235,20 +243,30 @@ export class CartService {
     }
 
     if (quantity < 1) {
-      return this.removeItem(cartId, productId);
+      return this.removeItem(cartId, itemId);
     }
 
     const [existingItem] = await this.db
       .select()
       .from(cartItem)
-      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)));
+      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.id, itemId)));
 
     if (!existingItem) {
       throw new NotFoundException({ code: 'ITEM_NOT_FOUND', message: 'Item not found in cart' });
     }
 
-    // Stock check: new quantity must not exceed available stock
-    await this.inventoryService.assertSufficientStock(productId, quantity);
+    // Stock check: new quantity for this item + all OTHER items of the same product
+    const allProductItems = await this.db
+      .select({ id: cartItem.id, quantity: cartItem.quantity })
+      .from(cartItem)
+      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, existingItem.productId)));
+    const otherItemsQty = allProductItems
+      .filter((i) => i.id !== itemId)
+      .reduce((sum, i) => sum + i.quantity, 0);
+    await this.inventoryService.assertSufficientStock(
+      existingItem.productId,
+      quantity + otherItemsQty,
+    );
 
     await this.db
       .update(cartItem)

@@ -19,7 +19,9 @@ export const cart = pgTable('cart', {
 });
 
 /**
- * Line item in a cart. One row per product per cart; quantity can be updated.
+ * Line item in a cart. One row per product+option per cart; quantity can be updated.
+ * The same product in different sizes creates separate line items.
+ * DB unique index uses COALESCE so NULL options are treated as '' for uniqueness.
  */
 export const cartItem = pgTable(
   'cart_item',
@@ -41,7 +43,8 @@ export const cartItem = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('cart_item_cart_product_idx').on(table.cartId, table.productId),
+    // NOTE: Actual DB index uses COALESCE for NULL handling — see migration 0008.
+    uniqueIndex('cart_item_cart_product_option_idx').on(table.cartId, table.productId, table.selectedOption),
   ],
 );
 

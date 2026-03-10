@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ThumbsUp, Star, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart, StockError } from "@/lib/api/cart";
-import { useCartCount } from "@/lib/cart-count-context";
+import { useCart } from "@/lib/cart-count-context";
 import {
   fetchProductReviews,
   voteReviewHelpful,
@@ -76,7 +76,12 @@ export default function ProductDetailClient({
   const [helpfulVotes, setHelpfulVotes] = useState<Set<string>>(new Set());
   const { session } = useAuth();
   const isLoggedIn = !!session?.user;
-  const { setCount } = useCartCount();
+  const {
+    setCart: setCartContext,
+    openDrawer,
+    triggerBadgePop,
+    setLastAddedProductId,
+  } = useCart();
 
   useEffect(() => {
     const storageKey = `helpful_votes_${session?.user?.id ?? "guest"}`;
@@ -332,7 +337,11 @@ export default function ProductDetailClient({
             </button>
           ) : (
             <button
-              className="mb-6 min-h-[48px] w-full rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-all hover:bg-[#FF4D00]/90 hover:shadow-[0_0_24px_rgba(255,77,0,0.3)] disabled:opacity-70 sm:mb-8"
+              className={`mb-6 min-h-[48px] w-full rounded-md py-4 text-sm font-medium uppercase tracking-wider text-white transition-all disabled:opacity-70 sm:mb-8 ${
+                addStatus === "success"
+                  ? "bg-[#4ADE80] hover:bg-[#4ADE80]/90"
+                  : "bg-[#FF4D00] hover:bg-[#FF4D00]/90 hover:shadow-[0_0_24px_rgba(255,77,0,0.3)]"
+              }`}
               onClick={async () => {
                 if (requiresOption && !selectedSize) {
                   setSizeError(true);
@@ -343,8 +352,12 @@ export default function ProductDetailClient({
                 setAddError(null);
                 try {
                   const result = await addToCart(product.id, 1, selectedSize ?? undefined);
-                  setCount(result.cart.itemCount);
+                  setCartContext(result.cart);
+                  triggerBadgePop();
+                  setLastAddedProductId(product.id);
+                  openDrawer();
                   setAddStatus("success");
+                  setTimeout(() => setAddStatus("idle"), 1500);
                 } catch (err) {
                   if (err instanceof StockError) {
                     setAddError(err.message);
@@ -354,15 +367,14 @@ export default function ProductDetailClient({
               }}
               disabled={addStatus === "loading"}
             >
-              {addStatus === "loading" ? "Adding…" : "Add to Cart"}
+              {addStatus === "loading"
+                ? "Adding…"
+                : addStatus === "success"
+                  ? "Added!"
+                  : "Add to Cart"}
             </button>
           )}
-          {addStatus === "success" && (
-            <p className="mb-6 text-sm text-[#4ADE80] sm:mb-8">
-              {selectedSize ? `Size ${selectedSize} added to cart. ` : "Added to cart. "}
-              <Link href="/cart" className="underline">View cart</Link>
-            </p>
-          )}
+          {/* Success feedback is now provided by the Quick Cart drawer */}
           {addStatus === "error" && (
             <p className="mb-6 text-sm text-red-400 sm:mb-8">
               {addError ?? "Could not add to cart. Please try again."}

@@ -8,7 +8,7 @@ import {
   removeFromCart,
 } from "@/lib/api/cart";
 import { clearCartIdClient, getCartIdClient } from "@/lib/cart-cookie";
-import { useCartCount } from "@/lib/cart-count-context";
+import { useCart } from "@/lib/cart-count-context";
 
 interface CartClientProps {
   initialCart: Cart | null;
@@ -16,7 +16,7 @@ interface CartClientProps {
 
 export function CartClient({ initialCart }: CartClientProps) {
   const [cart, setCart] = useState<Cart | null>(initialCart);
-  const { setCount } = useCartCount();
+  const { setCart: syncCart } = useCart();
 
   useEffect(() => {
     if (initialCart?.userId && getCartIdClient()) {
@@ -26,19 +26,19 @@ export function CartClient({ initialCart }: CartClientProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleUpdateQuantity(productId: string, quantity: number) {
+  async function handleUpdateQuantity(itemId: string, quantity: number) {
     if (!cart) return;
-    setLoading(productId);
+    setLoading(itemId);
     setError(null);
     try {
       if (quantity < 1) {
-        const updated = await removeFromCart(productId);
+        const updated = await removeFromCart(itemId);
         setCart(updated);
-        setCount(updated.itemCount);
+        syncCart(updated);
       } else {
-        const updated = await updateCartItemQuantity(productId, quantity);
+        const updated = await updateCartItemQuantity(itemId, quantity);
         setCart(updated);
-        setCount(updated.itemCount);
+        syncCart(updated);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update");
@@ -47,14 +47,14 @@ export function CartClient({ initialCart }: CartClientProps) {
     }
   }
 
-  async function handleRemove(productId: string) {
+  async function handleRemove(itemId: string) {
     if (!cart) return;
-    setLoading(productId);
+    setLoading(itemId);
     setError(null);
     try {
-      const updated = await removeFromCart(productId);
+      const updated = await removeFromCart(itemId);
       setCart(updated);
-      setCount(updated.itemCount);
+      syncCart(updated);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove");
     } finally {
@@ -89,7 +89,7 @@ export function CartClient({ initialCart }: CartClientProps) {
         <ul className="divide-y divide-white/10">
           {cart.items.map((item) => {
             const itemTotal = ((item.priceCents * item.quantity) / 100).toFixed(2);
-            const isDisabled = loading === item.productId;
+            const isDisabled = loading === item.id;
             const isItemOos = item.stockQuantity <= 0;
             const isItemLowStock = !isItemOos && item.stockQuantity < 10;
             const exceedsStock = !isItemOos && item.quantity > item.stockQuantity;
@@ -146,7 +146,7 @@ export function CartClient({ initialCart }: CartClientProps) {
                     <button
                       type="button"
                       onClick={() =>
-                        handleUpdateQuantity(item.productId, item.quantity - 1)
+                        handleUpdateQuantity(item.id, item.quantity - 1)
                       }
                       disabled={isDisabled || item.quantity <= 1}
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-white/20 text-white/80 transition-colors hover:border-white/40 hover:text-white disabled:opacity-50"
@@ -160,7 +160,7 @@ export function CartClient({ initialCart }: CartClientProps) {
                     <button
                       type="button"
                       onClick={() =>
-                        handleUpdateQuantity(item.productId, item.quantity + 1)
+                        handleUpdateQuantity(item.id, item.quantity + 1)
                       }
                       disabled={isDisabled || !canIncrement}
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-white/20 text-white/80 transition-colors hover:border-white/40 hover:text-white disabled:opacity-50"
@@ -171,7 +171,7 @@ export function CartClient({ initialCart }: CartClientProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleRemove(item.productId)}
+                    onClick={() => handleRemove(item.id)}
                     disabled={isDisabled}
                     className="text-sm text-white/60 transition-colors hover:text-red-400 disabled:opacity-50"
                   >

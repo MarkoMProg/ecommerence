@@ -150,11 +150,11 @@ export async function addToCart(
   };
 }
 
-/** Remove item from cart. Uses session when logged in; X-Cart-Id for guests. Call from client only. */
-export async function removeFromCart(productId: string): Promise<Cart> {
+/** Remove item from cart by cart item ID. Uses session when logged in; X-Cart-Id for guests. Call from client only. */
+export async function removeFromCart(itemId: string): Promise<Cart> {
   const cartId = getCartIdClient();
   const res = await fetch(
-    `${apiBase()}/api/v1/cart/items/${encodeURIComponent(productId)}`,
+    `${apiBase()}/api/v1/cart/items/${encodeURIComponent(itemId)}`,
     {
       method: "DELETE",
       headers: cartHeaders(cartId),
@@ -169,14 +169,14 @@ export async function removeFromCart(productId: string): Promise<Cart> {
   return json.data;
 }
 
-/** Update item quantity. Quantity 0 removes. Uses session when logged in. Call from client only. */
+/** Update item quantity by cart item ID. Quantity 0 removes. Uses session when logged in. Call from client only. */
 export async function updateCartItemQuantity(
-  productId: string,
+  itemId: string,
   quantity: number,
 ): Promise<Cart> {
   const cartId = getCartIdClient();
   const res = await fetch(
-    `${apiBase()}/api/v1/cart/items/${encodeURIComponent(productId)}`,
+    `${apiBase()}/api/v1/cart/items/${encodeURIComponent(itemId)}`,
     {
       method: "PATCH",
       headers: cartHeaders(cartId),

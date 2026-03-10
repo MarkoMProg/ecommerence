@@ -140,13 +140,13 @@ export class CartController {
     return response;
   }
 
-  /** Remove item from cart by productId. X-Cart-Id required for guests; session for auth. */
-  @Delete('items/:productId')
+  /** Remove item from cart by cart item ID. X-Cart-Id required for guests; session for auth. */
+  @Delete('items/:itemId')
   @HttpCode(HttpStatus.OK)
   async removeItem(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
-    @Param('productId') productId: string,
+    @Param('itemId') itemId: string,
   ) {
     const user = (req as any).user as { id: string } | null;
     let cartId = cartIdHeader?.trim();
@@ -160,7 +160,7 @@ export class CartController {
         error: { code: 'CART_ID_REQUIRED', message: 'X-Cart-Id header is required for guests' },
       });
     }
-    const cart = await this.cartService.removeItem(cartId, productId.trim());
+    const cart = await this.cartService.removeItem(cartId, itemId.trim());
     return {
       success: true,
       data: cart,
@@ -168,13 +168,13 @@ export class CartController {
     };
   }
 
-  /** Update item quantity. X-Cart-Id required for guests; session for auth. Quantity 0 removes. */
-  @Patch('items/:productId')
+  /** Update item quantity by cart item ID. X-Cart-Id required for guests; session for auth. Quantity 0 removes. */
+  @Patch('items/:itemId')
   @HttpCode(HttpStatus.OK)
   async updateQuantity(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
-    @Param('productId') productId: string,
+    @Param('itemId') itemId: string,
     @Body() body: { quantity?: number },
   ) {
     const user = (req as any).user as { id: string } | null;
@@ -203,7 +203,7 @@ export class CartController {
     const quantity = body.quantity != null ? Math.max(0, Math.floor(body.quantity)) : 0;
     const cart = await this.cartService.updateItemQuantity(
       cartId,
-      productId.trim(),
+      itemId.trim(),
       quantity,
     );
     return {
