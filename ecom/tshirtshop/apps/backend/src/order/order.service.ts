@@ -311,6 +311,23 @@ export class OrderService {
     }
 
     const sessionId = o.stripeSessionId?.trim();
+    const isFreeOrder = o.totalCents <= 0;
+
+    // $0 orders: no Stripe refund needed — just cancel and restock
+    if (isFreeOrder) {
+      await this.db
+        .update(order)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(order.id, id));
+      const items = await this.db
+        .select({ productId: orderItem.productId, quantity: orderItem.quantity })
+        .from(orderItem)
+        .where(eq(orderItem.orderId, id));
+      await this.inventoryService.incrementStockForOrder(items);
+      const updated = await this.getOrderById(id);
+      return updated ? { order: updated, refundId: 'free_order' } : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
+    }
+
     if (!sessionId) {
       return {
         error: 'This order was not paid via Stripe and cannot be refunded automatically.',

@@ -27,6 +27,7 @@
     "db:add-user-addresses": "node scripts/db-add-user-addresses.mjs",
     "db:add-stripe-customer-id": "node scripts/db-add-stripe-customer-id.mjs",
     "db:add-review-tables": "node scripts/db-add-review-tables.mjs",
+    "db:migrate-0008": "node scripts/run-migration-0008.mjs",
     "db:add-product-archived": "node scripts/db-add-product-archived.mjs"
   },
   "dependencies": {
