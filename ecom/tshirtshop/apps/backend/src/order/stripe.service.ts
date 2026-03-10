@@ -99,6 +99,48 @@ export class StripeService {
   }
 
   /**
+   * Create a full refund for an order paid via Stripe Checkout.
+   * Retrieves the session, gets the PaymentIntent, and creates a refund.
+   * Returns { refundId } on success.
+   * Throws on: Stripe not configured, session not found, payment not captured,
+   * refund already exists, or Stripe API failure.
+   */
+  async createRefundForSession(
+    sessionId: string,
+    amountCents: number,
+  ): Promise<{ refundId: string }> {
+    if (!this.stripe) {
+      throw new Error('Stripe is not configured');
+    }
+
+    const session = await this.stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent'],
+    });
+
+    if (session.payment_status !== 'paid') {
+      throw new Error(`Payment not complete: ${session.payment_status}`);
+    }
+
+    const paymentIntent = session.payment_intent;
+    if (!paymentIntent || typeof paymentIntent === 'string') {
+      throw new Error('Session has no PaymentIntent');
+    }
+
+    const pi = paymentIntent as Stripe.PaymentIntent;
+    if (pi.status !== 'succeeded') {
+      throw new Error(`Payment not captured: ${pi.status}`);
+    }
+
+    const refund = await this.stripe.refunds.create({
+      payment_intent: pi.id,
+      amount: amountCents,
+      reason: 'requested_by_customer',
+    });
+
+    return { refundId: refund.id };
+  }
+
+  /**
    * Verify Stripe session and return orderId if payment is complete (PAY-002: amount validation).
    * Throws if session not found, not paid, metadata.orderId mismatch, or amount mismatch.
    */

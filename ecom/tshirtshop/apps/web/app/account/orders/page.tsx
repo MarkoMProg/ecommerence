@@ -9,9 +9,10 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  XCircle,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { fetchMyOrders, reorderItems } from "@/lib/api/orders";
+import { fetchMyOrders, reorderItems, cancelOrder, CancelOrderError } from "@/lib/api/orders";
 import type { Order, ReorderResult } from "@/lib/api/orders";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -47,6 +48,11 @@ interface ReorderState {
   result?: ReorderResult;
   error?: string;
   detailOpen?: boolean;
+}
+
+interface CancelState {
+  status: "idle" | "confirming" | "loading" | "done" | "error";
+  error?: string;
 }
 
 function ReorderFeedback({
@@ -153,6 +159,71 @@ function ReorderFeedback({
   );
 }
 
+// ── Cancel order inline (account list) ────────────────────────────────────────
+
+function CancelOrderInline({
+  orderId,
+  state,
+  onConfirm,
+  onStartConfirm,
+  onCancelConfirm,
+}: {
+  orderId: string;
+  state: CancelState;
+  onConfirm: () => void;
+  onStartConfirm: () => void;
+  onCancelConfirm: () => void;
+}) {
+  const isConfirming = state.status === "confirming" || state.status === "loading";
+  if (isConfirming) {
+    const isLoading = state.status === "loading";
+    return (
+      <div className="flex flex-col gap-2 rounded border border-white/20 bg-white/5 px-3 py-2">
+        <p className="text-[11px] text-white/80">
+          This will cancel your order and issue a full refund to your original payment method.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="rounded border border-red-500/50 bg-red-500/20 px-2 py-1 text-[10px] font-medium uppercase text-red-300 hover:bg-red-500/30 disabled:opacity-50"
+          >
+            {isLoading ? "Cancelling…" : "Yes, cancel"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancelConfirm}
+            disabled={isLoading}
+            className="rounded border border-white/20 px-2 py-1 text-[10px] uppercase text-white/60 hover:bg-white/5 disabled:opacity-50"
+          >
+            No
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (state.status === "error") {
+    return (
+      <div className="flex items-center gap-1.5 rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] text-red-300">
+        <AlertCircle className="size-3 shrink-0" />
+        {state.error}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onStartConfirm}
+      className="flex items-center gap-1.5 rounded border border-white/20 px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/60 hover:border-red-500/40 hover:text-red-400 transition-colors"
+      title="Cancel order and get a full refund"
+    >
+      <XCircle className="size-3" />
+      <span className="hidden sm:inline">Cancel order</span>
+    </button>
+  );
+}
+
 // ── Orders page ───────────────────────────────────────────────────────────────
 
 export default function OrdersPage() {
@@ -161,6 +232,9 @@ export default function OrdersPage() {
   const [loaded, setLoaded] = useState(false);
   const [reorderStates, setReorderStates] = useState<
     Record<string, ReorderState>
+  >({});
+  const [cancelStates, setCancelStates] = useState<
+    Record<string, CancelState>
   >({});
 
   useEffect(() => {
@@ -205,6 +279,33 @@ export default function OrdersPage() {
       ...p,
       [orderId]: { ...p[orderId]!, detailOpen: !p[orderId]?.detailOpen },
     }));
+  }
+
+  const canCancelOrder = (order: Order) =>
+    order.status === "paid";
+
+  async function handleCancelOrder(orderId: string) {
+    setCancelStates((p) => ({ ...p, [orderId]: { status: "loading" } }));
+    try {
+      const updated = await cancelOrder(orderId);
+      setCancelStates((p) => ({ ...p, [orderId]: { status: "done" } }));
+      setOrders((prev) =>
+        prev
+          ? prev.map((o) => (o.id === orderId ? updated : o))
+          : null
+      );
+    } catch (err) {
+      const msg =
+        err instanceof CancelOrderError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to cancel order";
+      setCancelStates((p) => ({
+        ...p,
+        [orderId]: { status: "error", error: msg },
+      }));
+    }
   }
 
   return (
@@ -285,16 +386,37 @@ export default function OrdersPage() {
                       </p>
                     </div>
 
-                    {/* Status + total + reorder */}
-                    <div className="flex items-center gap-2">
+                    {/* Status + total + actions */}
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded px-2 py-0.5 text-[10px] uppercase tracking-wider ${statusBadge(order.status)}`}
                       >
-                        {order.status}
+                        {order.status === "cancelled" && order.stripeRefundId
+                          ? "Cancelled · Refunded"
+                          : order.status}
                       </span>
                       <span className="font-medium text-[#E6C068]">
                         ${(order.totalCents / 100).toFixed(2)}
                       </span>
+                      {canCancelOrder(order) && (
+                        <CancelOrderInline
+                          orderId={order.id}
+                          state={cancelStates[order.id] ?? { status: "idle" }}
+                          onConfirm={() => handleCancelOrder(order.id)}
+                          onStartConfirm={() =>
+                            setCancelStates((p) => ({
+                              ...p,
+                              [order.id]: { status: "confirming" },
+                            }))
+                          }
+                          onCancelConfirm={() =>
+                            setCancelStates((p) => ({
+                              ...p,
+                              [order.id]: { status: "idle" },
+                            }))
+                          }
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => handleReorder(order.id)}

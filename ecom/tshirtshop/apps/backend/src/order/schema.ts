@@ -40,6 +40,12 @@ export const order = pgTable('order', {
   stripeSessionId: text('stripe_session_id'),
   /** When order transitioned to paid (PAY-004). */
   paidAt: timestamp('paid_at'),
+  /** Stripe Refund ID when order was refunded. Prevents double refund. */
+  stripeRefundId: text('stripe_refund_id'),
+  /** When refund was issued (customer cancel or admin refund). */
+  refundedAt: timestamp('refunded_at'),
+  /** Amount refunded in cents (audit; order.totalCents is source of truth). */
+  refundAmountCents: integer('refund_amount_cents'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

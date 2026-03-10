@@ -1,10 +1,11 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { eq, desc } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import type { OrderStatus } from './schema';
 import { InventoryService } from '../inventory/inventory.service';
+import { StripeService } from './stripe.service';
 
 /** Valid status transitions. ORD-003 */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -45,6 +46,10 @@ export interface OrderDto {
   stripeSessionId: string | null;
   /** When order was marked paid (PAY-004). */
   paidAt: Date | null;
+  /** Stripe Refund ID when refund was issued. */
+  stripeRefundId: string | null;
+  /** When refund was issued. */
+  refundedAt: Date | null;
   items: OrderItemDto[];
   createdAt: Date;
 }
@@ -52,12 +57,16 @@ export interface OrderDto {
 /** Statuses that indicate stock has already been decremented for the order */
 const PAID_STATUSES: OrderStatus[] = ['paid', 'shipped', 'completed'];
 
+/** Statuses that allow customer-initiated cancel-with-refund (paid, not yet shipped). */
+const CUSTOMER_CANCEL_ELIGIBLE_STATUSES: OrderStatus[] = ['paid'];
+
 @Injectable()
 export class OrderService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
     private readonly inventoryService: InventoryService,
+    private readonly stripeService: StripeService,
   ) {}
 
   /**
@@ -126,6 +135,8 @@ export class OrderService {
       totalCents: o.totalCents,
       stripeSessionId: o.stripeSessionId ?? null,
       paidAt: o.paidAt ?? null,
+      stripeRefundId: o.stripeRefundId ?? null,
+      refundedAt: o.refundedAt ?? null,
       items: items.map((i) => ({
         id: i.id,
         productId: i.productId,
@@ -245,9 +256,118 @@ export class OrderService {
   /**
    * Cancel order (ORD-004). Only pending or paid orders can be cancelled.
    * Shipped/completed orders cannot be cancelled; use refundOrder (ORD-005) instead.
+   * @deprecated Use cancelOrderWithRefund for paid orders (issues Stripe refund).
    */
   async cancelOrder(orderId: string): Promise<OrderDto | null> {
     return this.updateOrderStatus(orderId.trim(), 'cancelled');
+  }
+
+  /**
+   * Customer-initiated cancel with full refund.
+   * Only eligible when: order is paid, not shipped, belongs to user, has Stripe payment.
+   * Issues full refund via Stripe, marks order cancelled, restocks inventory.
+   */
+  async cancelOrderWithRefund(
+    orderId: string,
+    userId: string,
+  ): Promise<{ order: OrderDto; refundId: string } | { error: string; code: string }> {
+    const id = orderId.trim();
+    const [o] = await this.db.select().from(order).where(eq(order.id, id));
+    if (!o) {
+      return { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
+    }
+
+    if (o.userId !== userId) {
+      throw new ForbiddenException({
+        success: false,
+        error: { code: 'ORDER_NOT_YOURS', message: 'You can only cancel your own orders' },
+      });
+    }
+
+    if (!CUSTOMER_CANCEL_ELIGIBLE_STATUSES.includes(o.status as OrderStatus)) {
+      if (['shipped', 'completed'].includes(o.status)) {
+        return {
+          error: 'This order can no longer be cancelled because it has already shipped.',
+          code: 'ORDER_ALREADY_SHIPPED',
+        };
+      }
+      if (['cancelled', 'refunded'].includes(o.status)) {
+        return {
+          error: 'This order has already been cancelled or refunded.',
+          code: 'ORDER_ALREADY_CANCELLED',
+        };
+      }
+      return {
+        error: 'This order cannot be cancelled.',
+        code: 'ORDER_NOT_CANCELLABLE',
+      };
+    }
+
+    if (o.stripeRefundId) {
+      return {
+        error: 'Refund has already been issued for this order.',
+        code: 'REFUND_ALREADY_ISSUED',
+      };
+    }
+
+    const sessionId = o.stripeSessionId?.trim();
+    if (!sessionId) {
+      return {
+        error: 'This order was not paid via Stripe and cannot be refunded automatically.',
+        code: 'NO_STRIPE_PAYMENT',
+      };
+    }
+
+    if (!this.stripeService.isConfigured()) {
+      return {
+        error: 'Refunds are not available at this time. Please contact support.',
+        code: 'STRIPE_NOT_CONFIGURED',
+      };
+    }
+
+    try {
+      const { refundId } = await this.stripeService.createRefundForSession(
+        sessionId,
+        o.totalCents,
+      );
+
+      const now = new Date();
+      await this.db
+        .update(order)
+        .set({
+          status: 'cancelled',
+          stripeRefundId: refundId,
+          refundedAt: now,
+          refundAmountCents: o.totalCents,
+          updatedAt: now,
+        })
+        .where(eq(order.id, id));
+
+      const items = await this.db
+        .select({ productId: orderItem.productId, quantity: orderItem.quantity })
+        .from(orderItem)
+        .where(eq(orderItem.orderId, id));
+      await this.inventoryService.incrementStockForOrder(items);
+
+      const updated = await this.getOrderById(id);
+      return updated ? { order: updated, refundId } : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Refund failed';
+      if (msg.includes('already been refunded') || msg.includes('Refund already exists')) {
+        await this.db
+          .update(order)
+          .set({ status: 'cancelled', updatedAt: new Date() })
+          .where(eq(order.id, id));
+        const updated = await this.getOrderById(id);
+        return updated
+          ? { order: updated, refundId: 'already_refunded' }
+          : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
+      }
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'REFUND_FAILED', message: msg },
+      });
+    }
   }
 
   /**

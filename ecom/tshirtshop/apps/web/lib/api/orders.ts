@@ -36,24 +36,44 @@ export interface Order {
   stripeSessionId?: string | null;
   /** When order was marked paid (PAY-004). */
   paidAt?: string | null;
+  /** Stripe Refund ID when refund was issued. */
+  stripeRefundId?: string | null;
+  /** When refund was issued. */
+  refundedAt?: string | null;
   items: OrderItem[];
   createdAt: string;
 }
 
-/** Cancel order (ORD-004). Only pending or paid orders can be cancelled. */
-export async function cancelOrder(orderId: string): Promise<Order | null> {
-  if (!orderId?.trim()) return null;
-  try {
-    const res = await fetch(
-      `${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}/cancel`,
-      { method: "POST", credentials: "include" },
-    );
-    if (!res.ok) return null;
-    const json = (await res.json()) as { success: boolean; data: Order | null };
-    return json.success ? json.data : null;
-  } catch {
-    return null;
+export class CancelOrderError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly status: number
+  ) {
+    super(message);
+    this.name = "CancelOrderError";
   }
+}
+
+/** Cancel order (ORD-004). Requires auth. Paid orders get full Stripe refund. */
+export async function cancelOrder(orderId: string): Promise<Order> {
+  if (!orderId?.trim()) throw new CancelOrderError("Invalid order", "INVALID", 400);
+  const res = await fetch(
+    `${apiBase()}/api/v1/orders/${encodeURIComponent(orderId.trim())}/cancel`,
+    { method: "POST", credentials: "include" },
+  );
+  const json = (await res.json()) as {
+    success: boolean;
+    data?: Order;
+    error?: { code?: string; message?: string };
+  };
+  if (!res.ok) {
+    const msg = json?.error?.message ?? "Failed to cancel order";
+    const code = json?.error?.code ?? "UNKNOWN";
+    throw new CancelOrderError(msg, code, res.status);
+  }
+  if (!json.success || !json.data) throw new CancelOrderError("Invalid response", "INVALID", 500);
+  return json.data;
 }
 
 /** List my orders (UI-006). Requires authentication. Returns null if API unreachable. */

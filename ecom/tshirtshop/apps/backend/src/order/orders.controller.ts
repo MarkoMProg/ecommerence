@@ -66,24 +66,63 @@ export class OrdersController {
   }
 
   /**
-   * Cancel order (ORD-004). Only pending or paid orders can be cancelled.
+   * Cancel order (ORD-004). Requires authentication and ownership.
+   * - Pending: cancels without refund.
+   * - Paid (not shipped): issues full Stripe refund, then cancels.
    */
   @Post(':orderId/cancel')
-  @AllowAnonymous()
+  @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async cancelOrder(@Param('orderId') orderId: string) {
-    const order = await this.orderService.cancelOrder(orderId.trim());
-    if (!order) {
+  async cancelOrder(@Req() req: Request, @Param('orderId') orderId: string) {
+    const user = (req as any).user as { id: string };
+    const id = orderId.trim();
+
+    const existing = await this.orderService.getOrderById(id);
+    if (!existing) {
       throw new NotFoundException({
         success: false,
         error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' },
       });
     }
-    return {
-      success: true,
-      data: order,
-      message: 'Order cancelled',
-    };
+
+    if (existing.userId !== user.id) {
+      throw new ForbiddenException({
+        success: false,
+        error: { code: 'ORDER_NOT_YOURS', message: 'You can only cancel your own orders' },
+      });
+    }
+
+    if (existing.status === 'paid') {
+      const result = await this.orderService.cancelOrderWithRefund(id, user.id);
+      if ('error' in result) {
+        throw new BadRequestException({
+          success: false,
+          error: { code: result.code, message: result.error },
+        });
+      }
+      return {
+        success: true,
+        data: result.order,
+        message: 'Order cancelled and refund initiated',
+      };
+    }
+
+    if (existing.status === 'pending') {
+      const order = await this.orderService.cancelOrder(id);
+      return {
+        success: true,
+        data: order,
+        message: 'Order cancelled',
+      };
+    }
+
+    throw new BadRequestException({
+      success: false,
+      error: {
+        code: 'ORDER_NOT_CANCELLABLE',
+        message: 'This order can no longer be cancelled because it has already shipped.',
+      },
+    });
   }
 
   /**

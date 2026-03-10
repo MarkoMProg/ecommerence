@@ -168,7 +168,9 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
         <div className="rounded-lg border border-white/10 bg-white/5 p-6">
           {order.status === "cancelled" && (
             <p className="mb-6 rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              This order has been cancelled.
+              {order.stripeRefundId
+                ? "This order has been cancelled and a full refund has been initiated to your original payment method."
+                : "This order has been cancelled."}
             </p>
           )}
           {order.status === "refunded" && (
