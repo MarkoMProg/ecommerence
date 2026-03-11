@@ -49,7 +49,7 @@ function getCurrentLabel(pathname: string): string {
   const match = [...accountNavLinks]
     .reverse()
     .find((n) =>
-      n.exact ? pathname === n.href : pathname.startsWith(n.href),
+      "exact" in n && n.exact ? pathname === n.href : pathname.startsWith(n.href),
     );
   return match?.label ?? "Account";
 }
@@ -158,9 +158,10 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
             <nav className="flex-1 overflow-y-auto px-3 py-4">
               <ul className="space-y-0.5">
                 {accountNavLinks.map((nav) => {
-                  const isActive = nav.exact
-                    ? pathname === nav.href
-                    : pathname.startsWith(nav.href);
+                  const isActive =
+                    "exact" in nav && nav.exact
+                      ? pathname === nav.href
+                      : pathname.startsWith(nav.href);
                   const Icon = nav.Icon;
                   return (
                     <li key={nav.href}>

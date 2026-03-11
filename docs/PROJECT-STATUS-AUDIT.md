@@ -1,7 +1,7 @@
 # Project Status Audit — tshirtshop
 
-**Generated:** 2026-03-07 (full audit)  
-**Previous:** 2026-03-04  
+**Generated:** 2026-03-11 (full audit)  
+**Previous:** 2026-03-07  
 **Purpose:** Correlate implementation with documentation and provide recommended next steps.
 
 ---
@@ -117,7 +117,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | Admin dashboard | **DONE** | `/admin` | Dashboard, products (CRUD, bulk CSV/JSON upload, archive/unarchive, delete blocked if in orders), orders, users, reviews; AdminGuard (role + 2FA). No standalone categories admin — categories from public API. |
 | Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
 
-**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Branding:** Darkloom. **API clients:** `lib/api/catalog.ts`, `cart.ts`, `checkout.ts`, `orders.ts` — use `API_URL` (default `http://127.0.0.1:3000`); Next.js rewrites `/api/v1/*` for client. **API unreachable:** Home and Shop pages gracefully degrade with user message when backend is down.
+**Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Cart Drawer:** Slide-out cart drawer (`CartDrawer`, `CartDrawerProvider`) — open from header or product detail; syncs with cart page via `CART_UPDATED_EVENT`. **Branding:** Darkloom. **API clients:** `lib/api/catalog.ts`, `cart.ts`, `checkout.ts`, `orders.ts` — use `API_URL` (default `http://127.0.0.1:3000`); Next.js rewrites `/api/v1/*` for client. **API unreachable:** Home and Shop pages gracefully degrade with user message when backend is down.
 
 ### 3.6 Design & UX (New)
 
@@ -132,7 +132,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 - **Cart (CART-001–CART-006):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. **UI-004 DONE**: cart page, Add to Cart, cart ID cookie (`darkloom_cart_id`). CART-005 (guest cart cookie) done via cookie; CART-006 (user cart persistence) done — merge on login, OptionalAuthGuard on cart/checkout.
 - **Checkout:** **UI-005, CHK-001 to CHK-004, ORD-001, ORD-002 DONE** — Checkout page with order summary, shipping address form, coupon code (FRESHP100 free shipping), Place Order wired to `POST /api/v1/checkout`. Order schema (order, order_item), CheckoutService creates order from cart (status: pending); **cart cleared on order creation**. **CHK-002**: address validation (European countries supported). **CHK-003**: `GET /api/v1/checkout/summary` (subtotal, shipping, total from cart; coupon support). **CHK-004**: `GET /api/v1/orders/:id`, confirmation page fetches and displays full order details. **ORD-003 DONE**: `PATCH /api/v1/orders/:id/status`. **ORD-004 DONE**: `POST /api/v1/orders/:id/cancel`; Cancel button with Yes/No confirmation dialog. **ORD-005 DONE**: `POST /api/v1/admin/orders/:id/refund`. **PAY-001 to PAY-004 DONE**: Stripe Checkout Session, verify-payment, webhook, payment status (stripeSessionId, paidAt). **Complete payment** for pending orders: `POST /api/v1/checkout/:orderId/payment-url` returns Stripe checkout URL.
-- **Tests:** Auth + catalog API + order DTO + review + admin + bulk-upload tests. **289 pass**, **2 fail** (catalog-api.spec.ts — ProductsController.getById mock setup: controller tries both getProductById and getProductBySlug; tests must mock both to return null for NotFound cases). No cart or checkout integration tests yet.
+- **Tests:** Auth + catalog API + order DTO + review + admin + bulk-upload tests. **339 pass**, **0 fail**. No cart or checkout integration tests yet.
 - **Build:** Production build passes.
 
 ---
@@ -209,9 +209,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 |------|--------|--------|
 | Security | Auth follows best practices | Add rate limiting (SEC-002) when needed |
 | Data | No card storage | Maintain as-is |
-| Tests | 289 pass, 2 fail (catalog-api.spec.ts) | Fix CatalogController.getById mock (both getProductById and getProductBySlug); add cart/checkout integration tests; no E2E yet |
+| Tests | 339 pass, 0 fail | Add cart/checkout integration tests; no E2E yet |
 | Docker | Not implemented | Required for final deliverable |
-| Build | Fixed | Auth-provider type, Suspense, API types — production build passes |
+| Build | Fixed | Auth-provider type, Suspense, API types, AccountShell exact, cart-cookie match — production build passes |
 | OAuth | Conditional registration | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev |
 
 ---
@@ -234,7 +234,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 **Current state:** Phase 1 complete. Phase 2: Catalog, Cart, Checkout (with coupons), Orders, **Stripe payment** (PAY-001–004) implemented. Full flow: add to cart → checkout (address, coupon) → place order → Stripe → confirmation (or return without paying → Complete payment / Cancel order from order history). Phase 3: Home, Shop, Product detail (slug URLs), Cart, Checkout, User account, Admin done.
 
-**Recommended next steps:** Fix **catalog-api.spec.ts** (getById NotFound mock: both getProductById and getProductBySlug must return null), add **ADMIN_EMAILS** to `.env.example`, **FND-006** (Docker), **SEC-002** (rate limiting).
+**Recommended next steps:** Add **ADMIN_EMAILS** to `.env.example`, **FND-006** (Docker), **SEC-002** (rate limiting). ESLint: 37 warnings (no errors) — mostly `@next/next/no-img-element`, `no-explicit-any`, `turbo/no-undeclared-env-vars`.
 
 ---
 
@@ -257,6 +257,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
 | 2026-03-04 (audit) | Full audit refresh. PAY-001–004 DONE (Stripe). Complete payment for pending orders (POST /checkout/:orderId/payment-url). Cancel order with Yes/No confirmation. Coupons (FRESHP100). Product slug URLs. Cart cleared on order. European countries in checkout. Phase 2 ~90%, Phase 3 ~70%. 279 tests pass, 12 fail (catalog.service.spec.ts). |
 | 2026-03-07 (audit) | Full project audit. Product archive/unarchive (isArchived), bulk upload (CSV/JSON), delete protection (archive if in orders). AdminGuard: role + 2FA required; admin pages: products, orders, users, reviews. CART-006 DONE. Sort: rating-desc added. 289 tests pass, 2 fail (catalog-api.spec.ts getById NotFound mock). No admin categories CRUD page. FND-006 (Docker) still NOT STARTED. |
+| 2026-03-11 (audit) | Full project audit. **339 tests pass, 0 fail** (catalog-api.spec.ts fixed). Build fixes: AccountShell `exact` optional property type, cart-cookie `match[2]` undefined guard. Cart Drawer: slide-out drawer (CartDrawer, CartDrawerProvider) from header/product detail. ESLint fixes: unused orderId (CancelOrderInline), `<a>`→`<Link>` (verify-email), no-useless-catch (adminBulkUploadProducts). 37 ESLint warnings remain (no-img-element, no-explicit-any, turbo env vars). FND-006 (Docker) still NOT STARTED. |
 | 2026-02-14 | Initial audit |
 
 ---

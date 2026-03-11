@@ -17,7 +17,7 @@ export function getCartIdFromCookies(
 export function getCartIdClient(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(^| )${CART_COOKIE}=([^;]+)`));
-  return match ? decodeURIComponent(match[2]) : null;
+  return match?.[2] ? decodeURIComponent(match[2]) : null;
 }
 
 /** Set cart ID in cookie (client-side only). Call after add-to-cart returns new cartId. */
