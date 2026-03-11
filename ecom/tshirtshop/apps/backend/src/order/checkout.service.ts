@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
+import { encrypt, encryptNullable, decrypt, decryptNullable } from '../common/crypto.util';
 import { order, orderItem } from './schema';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -137,14 +138,14 @@ export class CheckoutService {
       id: orderId,
       userId: userId ?? null,
       status: 'pending',
-      shippingFullName: String(shippingAddress.fullName ?? '').trim(),
-      shippingLine1: String(shippingAddress.line1 ?? '').trim(),
-      shippingLine2: shippingAddress.line2 != null ? String(shippingAddress.line2).trim() : null,
-      shippingCity: String(shippingAddress.city ?? '').trim(),
-      shippingStateOrProvince: String(shippingAddress.stateOrProvince ?? '').trim(),
-      shippingPostalCode: String(shippingAddress.postalCode ?? '').trim(),
-      shippingCountry: String(shippingAddress.country ?? '').trim(),
-      shippingPhone: shippingAddress.phone != null ? String(shippingAddress.phone).trim() : null,
+      shippingFullName: encrypt(String(shippingAddress.fullName ?? '').trim()),
+      shippingLine1: encrypt(String(shippingAddress.line1 ?? '').trim()),
+      shippingLine2: encryptNullable(shippingAddress.line2 != null ? String(shippingAddress.line2).trim() : null),
+      shippingCity: encrypt(String(shippingAddress.city ?? '').trim()),
+      shippingStateOrProvince: encrypt(String(shippingAddress.stateOrProvince ?? '').trim()),
+      shippingPostalCode: encrypt(String(shippingAddress.postalCode ?? '').trim()),
+      shippingCountry: encrypt(String(shippingAddress.country ?? '').trim()),
+      shippingPhone: encryptNullable(shippingAddress.phone != null ? String(shippingAddress.phone).trim() : null),
       subtotalCents: cartData.totalCents,
       shippingCents,
       totalCents,
@@ -179,14 +180,14 @@ export class CheckoutService {
       id: o.id,
       userId: o.userId,
       status: o.status,
-      shippingFullName: o.shippingFullName,
-      shippingLine1: o.shippingLine1,
-      shippingLine2: o.shippingLine2,
-      shippingCity: o.shippingCity,
-      shippingStateOrProvince: o.shippingStateOrProvince,
-      shippingPostalCode: o.shippingPostalCode,
-      shippingCountry: o.shippingCountry,
-      shippingPhone: o.shippingPhone,
+      shippingFullName: decrypt(o.shippingFullName),
+      shippingLine1: decrypt(o.shippingLine1),
+      shippingLine2: decryptNullable(o.shippingLine2),
+      shippingCity: decrypt(o.shippingCity),
+      shippingStateOrProvince: decrypt(o.shippingStateOrProvince),
+      shippingPostalCode: decrypt(o.shippingPostalCode),
+      shippingCountry: decrypt(o.shippingCountry),
+      shippingPhone: decryptNullable(o.shippingPhone),
       subtotalCents: o.subtotalCents,
       shippingCents: o.shippingCents,
       totalCents: o.totalCents,

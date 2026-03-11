@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { userAddress } from './schema';
 import type { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
+import { encrypt, encryptNullable, decrypt, decryptNullable } from '../common/crypto.util';
 
 export type UserAddressRow = typeof userAddress.$inferSelect;
 
@@ -15,12 +16,28 @@ export class AddressService {
     private readonly db: NodePgDatabase,
   ) {}
 
+  /** Decrypts all PII text fields on a row fetched from the database. */
+  private decryptRow(row: UserAddressRow): UserAddressRow {
+    return {
+      ...row,
+      fullName: decrypt(row.fullName),
+      phone: decryptNullable(row.phone),
+      line1: decrypt(row.line1),
+      line2: decryptNullable(row.line2),
+      city: decrypt(row.city),
+      stateOrRegion: decrypt(row.stateOrRegion),
+      postalCode: decrypt(row.postalCode),
+      country: decrypt(row.country),
+    };
+  }
+
   async listAddresses(userId: string): Promise<UserAddressRow[]> {
-    return this.db
+    const rows = await this.db
       .select()
       .from(userAddress)
       .where(eq(userAddress.userId, userId))
       .orderBy(desc(userAddress.createdAt));
+    return rows.map((r) => this.decryptRow(r));
   }
 
   async createAddress(userId: string, dto: CreateAddressDto): Promise<UserAddressRow> {
@@ -47,14 +64,14 @@ export class AddressService {
       id,
       userId,
       label: (dto.label ?? '').trim() || 'Home',
-      fullName: dto.fullName.trim(),
-      phone: dto.phone?.trim() || null,
-      line1: dto.line1.trim(),
-      line2: dto.line2?.trim() || null,
-      city: dto.city.trim(),
-      stateOrRegion: dto.stateOrRegion.trim(),
-      postalCode: dto.postalCode.trim(),
-      country: dto.country.trim().toUpperCase(),
+      fullName: encrypt(dto.fullName.trim()),
+      phone: encryptNullable(dto.phone?.trim() || null),
+      line1: encrypt(dto.line1.trim()),
+      line2: encryptNullable(dto.line2?.trim() || null),
+      city: encrypt(dto.city.trim()),
+      stateOrRegion: encrypt(dto.stateOrRegion.trim()),
+      postalCode: encrypt(dto.postalCode.trim()),
+      country: encrypt(dto.country.trim().toUpperCase()),
       // First address auto-becomes default; explicit flag overrides
       isDefaultShipping: dto.isDefaultShipping ?? isFirst,
       isDefaultBilling: dto.isDefaultBilling ?? isFirst,
@@ -66,7 +83,7 @@ export class AddressService {
       .select()
       .from(userAddress)
       .where(eq(userAddress.id, id));
-    return created!;
+    return this.decryptRow(created!);
   }
 
   async updateAddress(
@@ -96,14 +113,14 @@ export class AddressService {
 
     const patch: Partial<typeof userAddress.$inferInsert> = {};
     if (dto.label !== undefined) patch.label = dto.label.trim() || 'Home';
-    if (dto.fullName !== undefined) patch.fullName = dto.fullName.trim();
-    if (dto.phone !== undefined) patch.phone = dto.phone.trim() || null;
-    if (dto.line1 !== undefined) patch.line1 = dto.line1.trim();
-    if (dto.line2 !== undefined) patch.line2 = dto.line2.trim() || null;
-    if (dto.city !== undefined) patch.city = dto.city.trim();
-    if (dto.stateOrRegion !== undefined) patch.stateOrRegion = dto.stateOrRegion.trim();
-    if (dto.postalCode !== undefined) patch.postalCode = dto.postalCode.trim();
-    if (dto.country !== undefined) patch.country = dto.country.trim().toUpperCase();
+    if (dto.fullName !== undefined) patch.fullName = encrypt(dto.fullName.trim());
+    if (dto.phone !== undefined) patch.phone = encryptNullable(dto.phone.trim() || null);
+    if (dto.line1 !== undefined) patch.line1 = encrypt(dto.line1.trim());
+    if (dto.line2 !== undefined) patch.line2 = encryptNullable(dto.line2.trim() || null);
+    if (dto.city !== undefined) patch.city = encrypt(dto.city.trim());
+    if (dto.stateOrRegion !== undefined) patch.stateOrRegion = encrypt(dto.stateOrRegion.trim());
+    if (dto.postalCode !== undefined) patch.postalCode = encrypt(dto.postalCode.trim());
+    if (dto.country !== undefined) patch.country = encrypt(dto.country.trim().toUpperCase());
     if (dto.isDefaultShipping !== undefined) patch.isDefaultShipping = dto.isDefaultShipping;
     if (dto.isDefaultBilling !== undefined) patch.isDefaultBilling = dto.isDefaultBilling;
 
@@ -118,7 +135,7 @@ export class AddressService {
       .select()
       .from(userAddress)
       .where(eq(userAddress.id, id));
-    return updated ?? null;
+    return updated ? this.decryptRow(updated) : null;
   }
 
   async deleteAddress(userId: string, id: string): Promise<boolean> {
@@ -177,7 +194,7 @@ export class AddressService {
       .select()
       .from(userAddress)
       .where(eq(userAddress.id, id));
-    return updated ?? null;
+    return updated ? this.decryptRow(updated) : null;
   }
 
   async setDefaultBilling(userId: string, id: string): Promise<UserAddressRow | null> {
@@ -201,6 +218,6 @@ export class AddressService {
       .select()
       .from(userAddress)
       .where(eq(userAddress.id, id));
-    return updated ?? null;
+    return updated ? this.decryptRow(updated) : null;
   }
 }

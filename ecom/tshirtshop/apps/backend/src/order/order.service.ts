@@ -6,6 +6,7 @@ import { order, orderItem } from './schema';
 import type { OrderStatus } from './schema';
 import { InventoryService } from '../inventory/inventory.service';
 import { StripeService } from './stripe.service';
+import { decrypt, decryptNullable } from '../common/crypto.util';
 
 /** Valid status transitions. ORD-003 */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -122,14 +123,14 @@ export class OrderService {
       id: o.id,
       userId: o.userId,
       status: o.status,
-      shippingFullName: o.shippingFullName,
-      shippingLine1: o.shippingLine1,
-      shippingLine2: o.shippingLine2,
-      shippingCity: o.shippingCity,
-      shippingStateOrProvince: o.shippingStateOrProvince,
-      shippingPostalCode: o.shippingPostalCode,
-      shippingCountry: o.shippingCountry,
-      shippingPhone: o.shippingPhone,
+      shippingFullName: decrypt(o.shippingFullName),
+      shippingLine1: decrypt(o.shippingLine1),
+      shippingLine2: decryptNullable(o.shippingLine2),
+      shippingCity: decrypt(o.shippingCity),
+      shippingStateOrProvince: decrypt(o.shippingStateOrProvince),
+      shippingPostalCode: decrypt(o.shippingPostalCode),
+      shippingCountry: decrypt(o.shippingCountry),
+      shippingPhone: decryptNullable(o.shippingPhone),
       subtotalCents: o.subtotalCents,
       shippingCents: o.shippingCents,
       totalCents: o.totalCents,
