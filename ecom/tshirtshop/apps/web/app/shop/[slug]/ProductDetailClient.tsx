@@ -80,7 +80,7 @@ export default function ProductDetailClient({
   const {
     setCart: setCartContext,
     triggerBadgePop,
-    setLastAddedProductId,
+    setLastAddedItem,
   } = useCart();
   const { openDrawer } = useCartDrawer();
 
@@ -355,7 +355,7 @@ export default function ProductDetailClient({
                   const result = await addToCart(product.id, 1, selectedSize ?? undefined);
                   setCartContext(result.cart);
                   triggerBadgePop();
-                  setLastAddedProductId(product.id);
+                  setLastAddedItem(product.id, selectedSize ?? null);
                   openDrawer(result.cart);
                   setAddStatus("success");
                   setTimeout(() => setAddStatus("idle"), 1500);

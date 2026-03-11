@@ -34,10 +34,11 @@ interface CartContextType extends CartCountContextType {
   badgePop: number;
   /** Trigger the badge pop animation. */
   triggerBadgePop: () => void;
-  /** Product ID of the last item added, used to highlight it in the drawer. */
+  /** Product ID + option of the last item added. Used to show "Added" badge on that exact line only. */
   lastAddedProductId: string | null;
-  /** Set the last added product ID (set null to clear highlight). */
-  setLastAddedProductId: (id: string | null) => void;
+  lastAddedSelectedOption: string | null;
+  /** Set the last added item (productId, selectedOption). Pass (null, null) to clear. */
+  setLastAddedItem: (productId: string | null, selectedOption: string | null) => void;
 }
 
 const CartContext = createContext<CartContextType>({
@@ -52,7 +53,8 @@ const CartContext = createContext<CartContextType>({
   badgePop: 0,
   triggerBadgePop: () => {},
   lastAddedProductId: null,
-  setLastAddedProductId: () => {},
+  lastAddedSelectedOption: null,
+  setLastAddedItem: () => {},
 });
 
 export function CartCountProvider({
@@ -64,9 +66,13 @@ export function CartCountProvider({
   const [count, setCountRaw] = useState(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [badgePop, setBadgePop] = useState(0);
-  const [lastAddedProductId, setLastAddedProductId] = useState<string | null>(
-    null,
-  );
+  const [lastAddedProductId, setLastAddedProductId] = useState<string | null>(null);
+  const [lastAddedSelectedOption, setLastAddedSelectedOption] = useState<string | null>(null);
+
+  const setLastAddedItem = useCallback((productId: string | null, selectedOption: string | null) => {
+    setLastAddedProductId(productId);
+    setLastAddedSelectedOption(selectedOption);
+  }, []);
 
   const setCart = useCallback((c: Cart | null) => {
     setCartRaw(c);
@@ -95,6 +101,7 @@ export function CartCountProvider({
   const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false);
     setLastAddedProductId(null);
+    setLastAddedSelectedOption(null);
   }, []);
 
   const triggerBadgePop = useCallback(() => {
@@ -114,7 +121,8 @@ export function CartCountProvider({
       badgePop,
       triggerBadgePop,
       lastAddedProductId,
-      setLastAddedProductId,
+      lastAddedSelectedOption,
+      setLastAddedItem,
     }),
     [
       count,
@@ -128,6 +136,8 @@ export function CartCountProvider({
       badgePop,
       triggerBadgePop,
       lastAddedProductId,
+      lastAddedSelectedOption,
+      setLastAddedItem,
     ],
   );
 

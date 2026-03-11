@@ -6,7 +6,8 @@ import { Header } from "./header";
 import { Footer } from "./footer";
 import { useAuth } from "@/components/auth-provider";
 import { CartCountProvider } from "@/lib/cart-count-context";
-import { CartDrawer } from "@/components/cart/cart-drawer";
+import { CartDrawerProvider } from "@/lib/cart-drawer-context";
+import { CartDrawer } from "@/components/cart-drawer";
 
 /** Pages that are part of the auth flow — guard must never redirect here to avoid loops */
 const AUTH_PATHS = [
@@ -62,13 +63,15 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <CartCountProvider>
-      <div className="flex min-h-screen flex-col">
-        <TwoFactorGuard />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </div>
-      <CartDrawer />
+      <CartDrawerProvider>
+        <div className="flex min-h-screen flex-col">
+          <TwoFactorGuard />
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+        <CartDrawer />
+      </CartDrawerProvider>
     </CartCountProvider>
   );
 }
