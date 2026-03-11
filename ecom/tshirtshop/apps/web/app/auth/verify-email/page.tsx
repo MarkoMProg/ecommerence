@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 function VerifyEmailContent() {
@@ -38,12 +39,12 @@ function VerifyEmailContent() {
           <p className="text-gray-600 mb-4">
             Your email has been verified successfully. You can now sign in.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
           >
             Go to Sign In
-          </a>
+          </Link>
         </div>
       )}
 
@@ -55,9 +56,9 @@ function VerifyEmailContent() {
           <p className="text-gray-600 mb-4">
             The verification link is invalid or has expired.
           </p>
-          <a href="/" className="text-blue-600 hover:text-blue-800">
+          <Link href="/" className="text-blue-600 hover:text-blue-800">
             Go back to home
-          </a>
+          </Link>
         </div>
       )}
     </div>

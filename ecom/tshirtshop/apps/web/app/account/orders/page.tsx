@@ -162,7 +162,6 @@ function ReorderFeedback({
 // ── Cancel order inline (account list) ────────────────────────────────────────
 
 function CancelOrderInline({
-  orderId,
   state,
   onConfirm,
   onStartConfirm,
