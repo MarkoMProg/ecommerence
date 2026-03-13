@@ -1,5 +1,5 @@
 import { Injectable, Inject, ConflictException } from '@nestjs/common';
-import { eq, desc, asc, sql, and, or, ilike, gte, lte, type SQL } from 'drizzle-orm';
+import { eq, desc, asc, sql, and, or, ilike, gte, lte, inArray, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -240,9 +240,20 @@ export class CatalogService {
 
     const total = countResult[0]?.count ?? 0;
 
-    const images = await this.db.select().from(productImage);
-    const categories = await this.db.select().from(category);
-    const categoryMap = new Map(categories.map((c) => [c.id, c]));
+    // Fetch only images and categories for the current page's products (avoids full-table reads)
+    const productIds = data.map((p) => p.id);
+    const [images, categoryRows] =
+      productIds.length > 0
+        ? await Promise.all([
+            this.db.select().from(productImage).where(inArray(productImage.productId, productIds)),
+            this.db
+              .select()
+              .from(category)
+              .where(inArray(category.id, [...new Set(data.map((p) => p.categoryId))])),
+          ])
+        : [[], []];
+
+    const categoryMap = new Map(categoryRows.map((c) => [c.id, c]));
     const imagesByProduct = new Map<string, ProductImage[]>();
     for (const img of images) {
       const list = imagesByProduct.get(img.productId) ?? [];
@@ -257,7 +268,6 @@ export class CatalogService {
     }));
 
     // Enrich with rating stats
-    const productIds = enriched.map((p) => p.id);
     const ratingsMap = await this.reviewService.getProductsRatingStats(productIds);
     const withRatings = enriched.map((p) => {
       const stats = ratingsMap.get(p.id);

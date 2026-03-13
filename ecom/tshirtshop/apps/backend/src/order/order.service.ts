@@ -1,5 +1,5 @@
 import { Injectable, Inject, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
@@ -61,6 +61,42 @@ const PAID_STATUSES: OrderStatus[] = ['paid', 'shipped', 'completed'];
 /** Statuses that allow customer-initiated cancel-with-refund (paid, not yet shipped). */
 const CUSTOMER_CANCEL_ELIGIBLE_STATUSES: OrderStatus[] = ['paid'];
 
+type OrderRow = typeof order.$inferSelect;
+type OrderItemRow = typeof orderItem.$inferSelect;
+
+/** Assemble OrderDto from order row + items (avoids N+1 by batch-fetching items). */
+function toOrderDto(o: OrderRow, items: OrderItemRow[]): OrderDto {
+  return {
+    id: o.id,
+    userId: o.userId,
+    status: o.status,
+    shippingFullName: decrypt(o.shippingFullName),
+    shippingLine1: decrypt(o.shippingLine1),
+    shippingLine2: decryptNullable(o.shippingLine2),
+    shippingCity: decrypt(o.shippingCity),
+    shippingStateOrProvince: decrypt(o.shippingStateOrProvince),
+    shippingPostalCode: decrypt(o.shippingPostalCode),
+    shippingCountry: decrypt(o.shippingCountry),
+    shippingPhone: decryptNullable(o.shippingPhone),
+    subtotalCents: o.subtotalCents,
+    shippingCents: o.shippingCents,
+    totalCents: o.totalCents,
+    stripeSessionId: o.stripeSessionId ?? null,
+    paidAt: o.paidAt ?? null,
+    stripeRefundId: o.stripeRefundId ?? null,
+    refundedAt: o.refundedAt ?? null,
+    items: items.map((i) => ({
+      id: i.id,
+      productId: i.productId,
+      quantity: i.quantity,
+      priceCentsAtOrder: i.priceCentsAtOrder,
+      productNameAtOrder: i.productNameAtOrder,
+      selectedOptionAtOrder: i.selectedOptionAtOrder ?? null,
+    })),
+    createdAt: o.createdAt,
+  };
+}
+
 @Injectable()
 export class OrderService {
   constructor(
@@ -72,6 +108,7 @@ export class OrderService {
 
   /**
    * Get all orders (UI-007 admin). Returns most recent first.
+   * Batch-fetches orders + items to avoid N+1 queries.
    */
   async getAllOrders(): Promise<OrderDto[]> {
     const orders = await this.db
@@ -79,16 +116,27 @@ export class OrderService {
       .from(order)
       .orderBy(desc(order.createdAt));
 
-    const result: OrderDto[] = [];
-    for (const o of orders) {
-      const dto = await this.getOrderById(o.id);
-      if (dto) result.push(dto);
+    if (orders.length === 0) return [];
+
+    const orderIds = orders.map((o) => o.id);
+    const items = await this.db
+      .select()
+      .from(orderItem)
+      .where(inArray(orderItem.orderId, orderIds));
+
+    const itemsByOrder = new Map<string, OrderItemRow[]>();
+    for (const i of items) {
+      const list = itemsByOrder.get(i.orderId) ?? [];
+      list.push(i);
+      itemsByOrder.set(i.orderId, list);
     }
-    return result;
+
+    return orders.map((o) => toOrderDto(o, itemsByOrder.get(o.id) ?? []));
   }
 
   /**
    * Get orders for a user (UI-006). Returns most recent first.
+   * Batch-fetches orders + items to avoid N+1 queries.
    */
   async getOrdersByUserId(userId: string): Promise<OrderDto[]> {
     const orders = await this.db
@@ -97,12 +145,22 @@ export class OrderService {
       .where(eq(order.userId, userId))
       .orderBy(desc(order.createdAt));
 
-    const result: OrderDto[] = [];
-    for (const o of orders) {
-      const dto = await this.getOrderById(o.id);
-      if (dto) result.push(dto);
+    if (orders.length === 0) return [];
+
+    const orderIds = orders.map((o) => o.id);
+    const items = await this.db
+      .select()
+      .from(orderItem)
+      .where(inArray(orderItem.orderId, orderIds));
+
+    const itemsByOrder = new Map<string, OrderItemRow[]>();
+    for (const i of items) {
+      const list = itemsByOrder.get(i.orderId) ?? [];
+      list.push(i);
+      itemsByOrder.set(i.orderId, list);
     }
-    return result;
+
+    return orders.map((o) => toOrderDto(o, itemsByOrder.get(o.id) ?? []));
   }
 
   /**
@@ -119,35 +177,7 @@ export class OrderService {
       .from(orderItem)
       .where(eq(orderItem.orderId, orderId));
 
-    return {
-      id: o.id,
-      userId: o.userId,
-      status: o.status,
-      shippingFullName: decrypt(o.shippingFullName),
-      shippingLine1: decrypt(o.shippingLine1),
-      shippingLine2: decryptNullable(o.shippingLine2),
-      shippingCity: decrypt(o.shippingCity),
-      shippingStateOrProvince: decrypt(o.shippingStateOrProvince),
-      shippingPostalCode: decrypt(o.shippingPostalCode),
-      shippingCountry: decrypt(o.shippingCountry),
-      shippingPhone: decryptNullable(o.shippingPhone),
-      subtotalCents: o.subtotalCents,
-      shippingCents: o.shippingCents,
-      totalCents: o.totalCents,
-      stripeSessionId: o.stripeSessionId ?? null,
-      paidAt: o.paidAt ?? null,
-      stripeRefundId: o.stripeRefundId ?? null,
-      refundedAt: o.refundedAt ?? null,
-      items: items.map((i) => ({
-        id: i.id,
-        productId: i.productId,
-        quantity: i.quantity,
-        priceCentsAtOrder: i.priceCentsAtOrder,
-        productNameAtOrder: i.productNameAtOrder,
-        selectedOptionAtOrder: i.selectedOptionAtOrder ?? null,
-      })),
-      createdAt: o.createdAt,
-    };
+    return toOrderDto(o, items);
   }
 
   /**
