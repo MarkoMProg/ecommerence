@@ -1,5 +1,15 @@
 /** DTOs and validation for review endpoints (REV-002). */
 
+import {
+  sanitizeString,
+  sanitizeMultilineString,
+  containsHtml,
+  hasControlChars,
+  isValidRating,
+  MAX_REVIEW_BODY_LENGTH,
+  MAX_REVIEW_TITLE_LENGTH,
+} from '../../common/sanitize';
+
 export interface CreateReviewBody {
   rating: number;
   title?: string;
@@ -25,24 +35,42 @@ export function validateCreateReview(body: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
   const b = body as Record<string, unknown>;
 
+  // Rating: required, integer 1–5
   if (b?.rating == null || typeof b.rating !== 'number') {
     errors.push({ field: 'rating', message: 'Rating is required and must be a number' });
-  } else if (!Number.isInteger(b.rating) || b.rating < 1 || b.rating > 5) {
+  } else if (!isValidRating(b.rating)) {
     errors.push({ field: 'rating', message: 'Rating must be an integer between 1 and 5' });
   }
 
+  // Title: optional, sanitized, max length, no HTML
   if (b?.title != null) {
     if (typeof b.title !== 'string') {
       errors.push({ field: 'title', message: 'Title must be a string' });
-    } else if (b.title.length > 255) {
-      errors.push({ field: 'title', message: 'Title must not exceed 255 characters' });
+    } else {
+      const title = sanitizeString(b.title);
+      if (title.length > MAX_REVIEW_TITLE_LENGTH) {
+        errors.push({ field: 'title', message: `Title must not exceed ${MAX_REVIEW_TITLE_LENGTH} characters` });
+      }
+      if (hasControlChars(b.title)) {
+        errors.push({ field: 'title', message: 'Title contains invalid characters' });
+      }
+      if (containsHtml(title)) {
+        errors.push({ field: 'title', message: 'Title must not contain HTML' });
+      }
     }
   }
 
+  // Body: required, multiline, max length, no HTML
   if (!b?.body || typeof b.body !== 'string' || b.body.trim().length < 1) {
     errors.push({ field: 'body', message: 'Review body is required' });
-  } else if (b.body.length > 5000) {
-    errors.push({ field: 'body', message: 'Review body must not exceed 5000 characters' });
+  } else {
+    const bodyText = sanitizeMultilineString(b.body);
+    if (bodyText.length > MAX_REVIEW_BODY_LENGTH) {
+      errors.push({ field: 'body', message: `Review body must not exceed ${MAX_REVIEW_BODY_LENGTH} characters` });
+    }
+    if (containsHtml(bodyText)) {
+      errors.push({ field: 'body', message: 'Review body must not contain HTML' });
+    }
   }
 
   return errors;
@@ -65,7 +93,7 @@ export function validateUpdateReview(body: unknown): ValidationError[] {
   if (b?.rating != null) {
     if (typeof b.rating !== 'number') {
       errors.push({ field: 'rating', message: 'Rating must be a number' });
-    } else if (!Number.isInteger(b.rating) || b.rating < 1 || b.rating > 5) {
+    } else if (!isValidRating(b.rating)) {
       errors.push({ field: 'rating', message: 'Rating must be an integer between 1 and 5' });
     }
   }
@@ -73,16 +101,28 @@ export function validateUpdateReview(body: unknown): ValidationError[] {
   if (b?.title != null) {
     if (typeof b.title !== 'string') {
       errors.push({ field: 'title', message: 'Title must be a string' });
-    } else if (b.title.length > 255) {
-      errors.push({ field: 'title', message: 'Title must not exceed 255 characters' });
+    } else {
+      const title = sanitizeString(b.title);
+      if (title.length > MAX_REVIEW_TITLE_LENGTH) {
+        errors.push({ field: 'title', message: `Title must not exceed ${MAX_REVIEW_TITLE_LENGTH} characters` });
+      }
+      if (containsHtml(title)) {
+        errors.push({ field: 'title', message: 'Title must not contain HTML' });
+      }
     }
   }
 
   if (b?.body != null) {
     if (typeof b.body !== 'string' || b.body.trim().length < 1) {
       errors.push({ field: 'body', message: 'Review body must be a non-empty string' });
-    } else if (b.body.length > 5000) {
-      errors.push({ field: 'body', message: 'Review body must not exceed 5000 characters' });
+    } else {
+      const bodyText = sanitizeMultilineString(b.body);
+      if (bodyText.length > MAX_REVIEW_BODY_LENGTH) {
+        errors.push({ field: 'body', message: `Review body must not exceed ${MAX_REVIEW_BODY_LENGTH} characters` });
+      }
+      if (containsHtml(bodyText)) {
+        errors.push({ field: 'body', message: 'Review body must not contain HTML' });
+      }
     }
   }
 

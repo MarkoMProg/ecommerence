@@ -11,6 +11,16 @@ import {
   adminUploadImage,
   type AdminProduct,
 } from "@/lib/api/admin";
+import {
+  containsHtml,
+  isValidPriceCents,
+  isValidStockQuantity,
+  isValidImageUrl,
+  MAX_PRICE_CENTS,
+  MAX_STOCK_QUANTITY,
+  MAX_PRODUCT_NAME_LENGTH,
+  MAX_PRODUCT_DESCRIPTION_LENGTH,
+} from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -266,14 +276,35 @@ export default function AdminEditProductPage() {
       setError("Name, description, category, and brand are required.");
       return;
     }
+    if (form.name.trim().length > MAX_PRODUCT_NAME_LENGTH) {
+      setError(`Product name must not exceed ${MAX_PRODUCT_NAME_LENGTH} characters.`);
+      return;
+    }
+    if (containsHtml(form.name)) { setError("Product name must not contain HTML."); return; }
+    if (form.description.trim().length > MAX_PRODUCT_DESCRIPTION_LENGTH) {
+      setError(`Description must not exceed ${MAX_PRODUCT_DESCRIPTION_LENGTH} characters.`);
+      return;
+    }
+    if (containsHtml(form.description)) { setError("Description must not contain HTML."); return; }
+    if (containsHtml(form.brand)) { setError("Brand must not contain HTML."); return; }
     if (isNaN(price) || price < 0) {
       setError("Price must be a valid positive number.");
+      return;
+    }
+    if (!isValidPriceCents(price)) {
+      setError(`Price must not exceed $${(MAX_PRICE_CENTS / 100).toLocaleString()}.`);
+      return;
+    }
+    if (!isValidStockQuantity(stock)) {
+      setError(`Stock must not exceed ${MAX_STOCK_QUANTITY.toLocaleString()} units.`);
       return;
     }
     if (images.some((img) => img.uploading))
       return setError("Please wait for all images to finish uploading.");
 
     const validImages = images.filter((img) => img.url.trim());
+    const invalidImage = validImages.find((img) => !isValidImageUrl(img.url.trim()));
+    if (invalidImage) { setError(`Invalid image URL: ${invalidImage.url}`); return; }
     setSubmitting(true);
     const result = await adminUpdateProduct(product.id, {
       name: form.name.trim(),

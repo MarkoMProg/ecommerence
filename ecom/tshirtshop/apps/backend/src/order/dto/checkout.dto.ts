@@ -1,5 +1,15 @@
 /** DTOs and validation for checkout endpoint (CHK-002) */
 
+import {
+  sanitizeString,
+  hasControlChars,
+  containsHtml,
+  isValidPhone,
+  isValidCountry,
+  isValidPostalCode,
+  SUPPORTED_COUNTRIES,
+} from '../../common/sanitize';
+
 export interface ShippingAddressInput {
   fullName?: string;
   line1?: string;
@@ -16,12 +26,6 @@ export interface ValidationError {
   message: string;
 }
 
-/** Supported shipping countries. Must match frontend select options. */
-const SUPPORTED_COUNTRIES = [
-  'EE', 'LV', 'LT', 'FI', 'SE', 'NO', 'DK', 'DE', 'FR', 'NL', 'BE', 'PL', 'ES', 'IT', 'AT', 'IE', 'PT',
-  'CZ', 'GR', 'RO', 'HU', 'BG', 'HR', 'SK', 'SI', 'LU', 'CY', 'MT', 'GB', 'US', 'CA', 'CH', 'IS',
-] as const;
-
 /** Max lengths per DB/spec. */
 const MAX_LENGTHS = {
   fullName: 200,
@@ -33,55 +37,6 @@ const MAX_LENGTHS = {
   phone: 30,
 } as const;
 
-/** Postal code format per country. Normalize (trim, collapse spaces) before matching. */
-const POSTAL_PATTERNS: Record<string, RegExp> = {
-  US: /^\d{5}([\s-]?\d{4})?$/,
-  CA: /^[A-Za-z]\d[A-Za-z][\s-]?\d[A-Za-z]\d$/i,
-  GB: /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}$/i,
-  EE: /^\d{5}$/,
-  LV: /^(LV-)?\d{4}$/i,
-  LT: /^(LT-)?\d{5}$/i,
-  FI: /^\d{5}$/,
-  SE: /^\d{3}\s?\d{2}$/,
-  NO: /^\d{4}$/,
-  DK: /^\d{4}$/,
-  DE: /^\d{5}$/,
-  FR: /^\d{5}$/,
-  NL: /^\d{4}\s?[A-Za-z]{2}$/i,
-  BE: /^\d{4}$/,
-  PL: /^\d{2}-\d{3}$|^\d{5}$/,
-  ES: /^\d{5}$/,
-  IT: /^\d{5}$/,
-  AT: /^\d{4}$/,
-  PT: /^\d{4}-\d{3}$|^\d{7}$/,
-  CZ: /^\d{3}\s?\d{2}$|^\d{5}$/,
-  GR: /^\d{3}\s?\d{2}$|^\d{5}$/,
-  RO: /^\d{6}$/,
-  HU: /^\d{4}$/,
-  BG: /^\d{4}$/,
-  HR: /^\d{5}$/,
-  SK: /^\d{3}\s?\d{2}$|^\d{5}$/,
-  SI: /^\d{4}$/,
-  LU: /^\d{4}$/,
-  CY: /^\d{4}$/,
-  MT: /^[A-Za-z]{3}\s?\d{2,4}$/i,
-  CH: /^\d{4}$/,
-  IS: /^\d{3}$/,
-  IE: /^[A-Za-z0-9\s-]{3,10}$/i,
-};
-
-function normalizePostalCode(s: string): string {
-  return s.replace(/\s+/g, ' ').trim();
-}
-
-/** Phone: digits, spaces, hyphens, parentheses, plus. Length 10–30 chars, min 10 digits. */
-const PHONE_PATTERN = /^[+\s\-()\d]{10,30}$/;
-const PHONE_DIGITS_MIN = 10;
-
-function hasControlChars(s: string): boolean {
-  return /[\x00-\x1f\x7f]/.test(s);
-}
-
 export function validateShippingAddress(addr: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
   const a = addr as Record<string, unknown>;
@@ -91,51 +46,63 @@ export function validateShippingAddress(addr: unknown): ValidationError[] {
     return errors;
   }
 
-  const fullName = typeof a.fullName === 'string' ? a.fullName.trim() : '';
+  // Helper: check raw string for control chars before sanitizing
+  const raw = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+  const fullName = sanitizeString(a.fullName);
   if (!fullName) {
     errors.push({ field: 'shippingAddress.fullName', message: 'fullName is required' });
   } else {
     if (fullName.length > MAX_LENGTHS.fullName) {
       errors.push({ field: 'shippingAddress.fullName', message: `fullName must not exceed ${MAX_LENGTHS.fullName} characters` });
     }
-    if (hasControlChars(fullName)) {
+    if (hasControlChars(raw(a.fullName))) {
       errors.push({ field: 'shippingAddress.fullName', message: 'fullName contains invalid characters' });
+    }
+    if (containsHtml(fullName)) {
+      errors.push({ field: 'shippingAddress.fullName', message: 'fullName must not contain HTML' });
     }
   }
 
-  const line1 = typeof a.line1 === 'string' ? a.line1.trim() : '';
+  const line1 = sanitizeString(a.line1);
   if (!line1) {
     errors.push({ field: 'shippingAddress.line1', message: 'line1 is required' });
   } else {
     if (line1.length > MAX_LENGTHS.line1) {
       errors.push({ field: 'shippingAddress.line1', message: `line1 must not exceed ${MAX_LENGTHS.line1} characters` });
     }
-    if (hasControlChars(line1)) {
+    if (hasControlChars(raw(a.line1))) {
       errors.push({ field: 'shippingAddress.line1', message: 'line1 contains invalid characters' });
+    }
+    if (containsHtml(line1)) {
+      errors.push({ field: 'shippingAddress.line1', message: 'line1 must not contain HTML' });
     }
   }
 
-  const line2 = typeof a.line2 === 'string' ? a.line2.trim() : '';
+  const line2 = sanitizeString(a.line2);
   if (line2 && line2.length > MAX_LENGTHS.line2) {
     errors.push({ field: 'shippingAddress.line2', message: `line2 must not exceed ${MAX_LENGTHS.line2} characters` });
   }
-  if (line2 && hasControlChars(line2)) {
+  if (line2 && hasControlChars(raw(a.line2))) {
     errors.push({ field: 'shippingAddress.line2', message: 'line2 contains invalid characters' });
   }
 
-  const city = typeof a.city === 'string' ? a.city.trim() : '';
+  const city = sanitizeString(a.city);
   if (!city) {
     errors.push({ field: 'shippingAddress.city', message: 'city is required' });
   } else {
     if (city.length > MAX_LENGTHS.city) {
       errors.push({ field: 'shippingAddress.city', message: `city must not exceed ${MAX_LENGTHS.city} characters` });
     }
-    if (hasControlChars(city)) {
+    if (hasControlChars(raw(a.city))) {
       errors.push({ field: 'shippingAddress.city', message: 'city contains invalid characters' });
+    }
+    if (containsHtml(city)) {
+      errors.push({ field: 'shippingAddress.city', message: 'city must not contain HTML' });
     }
   }
 
-  const stateOrProvince = typeof a.stateOrProvince === 'string' ? a.stateOrProvince.trim() : '';
+  const stateOrProvince = sanitizeString(a.stateOrProvince);
   if (!stateOrProvince) {
     errors.push({ field: 'shippingAddress.stateOrProvince', message: 'stateOrProvince is required' });
   } else {
@@ -144,39 +111,31 @@ export function validateShippingAddress(addr: unknown): ValidationError[] {
     }
   }
 
-  const country = typeof a.country === 'string' ? a.country.trim().toUpperCase() : '';
+  const country = sanitizeString(a.country).toUpperCase();
   if (!country) {
     errors.push({ field: 'shippingAddress.country', message: 'country is required' });
-  } else if (!SUPPORTED_COUNTRIES.includes(country as (typeof SUPPORTED_COUNTRIES)[number])) {
+  } else if (!isValidCountry(country)) {
     errors.push({ field: 'shippingAddress.country', message: `country must be one of: ${SUPPORTED_COUNTRIES.join(', ')}` });
   }
 
-  const postalCode = typeof a.postalCode === 'string' ? a.postalCode.trim() : '';
+  const postalCode = sanitizeString(a.postalCode);
   if (!postalCode) {
     errors.push({ field: 'shippingAddress.postalCode', message: 'postalCode is required' });
   } else {
     if (postalCode.length > MAX_LENGTHS.postalCode) {
       errors.push({ field: 'shippingAddress.postalCode', message: `postalCode must not exceed ${MAX_LENGTHS.postalCode} characters` });
     }
-    if (country && POSTAL_PATTERNS[country]) {
-      const normalized = normalizePostalCode(postalCode);
-      if (!POSTAL_PATTERNS[country].test(normalized)) {
-        errors.push({ field: 'shippingAddress.postalCode', message: `postalCode format invalid for ${country}` });
-      }
+    if (country && !isValidPostalCode(postalCode, country)) {
+      errors.push({ field: 'shippingAddress.postalCode', message: `postalCode format invalid for ${country}` });
     }
   }
 
-  const phone = typeof a.phone === 'string' ? a.phone.trim() : '';
+  const phone = sanitizeString(a.phone);
   if (phone) {
     if (phone.length > MAX_LENGTHS.phone) {
       errors.push({ field: 'shippingAddress.phone', message: `phone must not exceed ${MAX_LENGTHS.phone} characters` });
-    } else if (!PHONE_PATTERN.test(phone)) {
-      errors.push({ field: 'shippingAddress.phone', message: 'phone format invalid' });
-    } else {
-      const digitCount = (phone.match(/\d/g) ?? []).length;
-      if (digitCount < PHONE_DIGITS_MIN) {
-        errors.push({ field: 'shippingAddress.phone', message: 'phone must contain at least 10 digits' });
-      }
+    } else if (!isValidPhone(phone)) {
+      errors.push({ field: 'shippingAddress.phone', message: 'phone must contain at least 10 digits' });
     }
   }
 

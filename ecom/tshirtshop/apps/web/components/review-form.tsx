@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { createReview, type Review } from "@/lib/api/reviews";
+import {
+  containsHtml,
+  MAX_REVIEW_BODY_LENGTH,
+  MAX_REVIEW_TITLE_LENGTH,
+} from "@/lib/validation";
 
 interface ReviewFormProps {
   productId: string;
@@ -22,6 +27,22 @@ export function ReviewForm({ productId, onReviewCreated }: ReviewFormProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
+  const titleError =
+    title && containsHtml(title)
+      ? "Title must not contain HTML"
+      : title.length > MAX_REVIEW_TITLE_LENGTH
+        ? `Title must not exceed ${MAX_REVIEW_TITLE_LENGTH} characters`
+        : "";
+
+  const bodyError =
+    body && containsHtml(body)
+      ? "Review must not contain HTML"
+      : body.length > MAX_REVIEW_BODY_LENGTH
+        ? `Review must not exceed ${MAX_REVIEW_BODY_LENGTH} characters`
+        : "";
+
+  const hasClientErrors = !!titleError || !!bodyError;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating < 1 || rating > 5) {
@@ -30,6 +51,10 @@ export function ReviewForm({ productId, onReviewCreated }: ReviewFormProps) {
     }
     if (!body.trim()) {
       setErrorMsg("Please write a review.");
+      return;
+    }
+    if (hasClientErrors) {
+      setErrorMsg("Please fix the errors above.");
       return;
     }
 
@@ -107,10 +132,11 @@ export function ReviewForm({ productId, onReviewCreated }: ReviewFormProps) {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          maxLength={255}
+          maxLength={MAX_REVIEW_TITLE_LENGTH}
           placeholder="Summarise your review"
           className="w-full rounded-md border border-white/20 bg-transparent px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#FF4D00] focus:outline-none"
         />
+        {titleError && <p className="mt-1 text-xs text-red-400">{titleError}</p>}
       </div>
 
       {/* Body */}
@@ -125,11 +151,15 @@ export function ReviewForm({ productId, onReviewCreated }: ReviewFormProps) {
           id="review-body"
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          maxLength={5000}
+          maxLength={MAX_REVIEW_BODY_LENGTH}
           rows={4}
           placeholder="Share your experience with this product…"
           className="w-full rounded-md border border-white/20 bg-transparent px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#FF4D00] focus:outline-none"
         />
+        <div className="mt-1 flex justify-between">
+          {bodyError ? <p className="text-xs text-red-400">{bodyError}</p> : <span />}
+          <span className="text-xs text-white/40">{body.length}/{MAX_REVIEW_BODY_LENGTH}</span>
+        </div>
       </div>
 
       {errorMsg && (

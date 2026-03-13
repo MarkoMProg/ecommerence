@@ -120,12 +120,12 @@ describe('crypto.util — AES-256-GCM field encryption', () => {
       expect(() => decrypt(corrupted)).toThrow();
     });
 
-    it('throws when format is invalid (missing segments)', () => {
-      expect(() => decrypt('notvalidatall')).toThrow(/invalid ciphertext format/i);
+    it('returns plain text as-is when format is not ciphertext (legacy data)', () => {
+      expect(decrypt('notvalidatall')).toBe('notvalidatall');
     });
 
-    it('throws when given only two segments', () => {
-      expect(() => decrypt('aabb:ccdd')).toThrow(/invalid ciphertext format/i);
+    it('returns plain text as-is when given only two segments (legacy data)', () => {
+      expect(decrypt('aabb:ccdd')).toBe('aabb:ccdd');
     });
   });
 

@@ -6,6 +6,16 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { fetchCategories, type ApiCategory } from "@/lib/api/catalog";
 import { adminCreateProduct, adminUploadImage } from "@/lib/api/admin";
+import {
+  containsHtml,
+  isValidPriceCents,
+  isValidStockQuantity,
+  isValidImageUrl,
+  MAX_PRICE_CENTS,
+  MAX_STOCK_QUANTITY,
+  MAX_PRODUCT_NAME_LENGTH,
+  MAX_PRODUCT_DESCRIPTION_LENGTH,
+} from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -215,15 +225,24 @@ export default function AdminNewProductPage() {
     const stock = parseInt(form.stockQuantity, 10) || 0;
 
     if (!form.name.trim()) return setError("Product name is required.");
+    if (form.name.trim().length > MAX_PRODUCT_NAME_LENGTH) return setError(`Product name must not exceed ${MAX_PRODUCT_NAME_LENGTH} characters.`);
+    if (containsHtml(form.name)) return setError("Product name must not contain HTML.");
     if (!form.description.trim()) return setError("Description is required.");
+    if (form.description.trim().length > MAX_PRODUCT_DESCRIPTION_LENGTH) return setError(`Description must not exceed ${MAX_PRODUCT_DESCRIPTION_LENGTH} characters.`);
+    if (containsHtml(form.description)) return setError("Description must not contain HTML.");
     if (!form.categoryId) return setError("Category is required.");
     if (!form.brand.trim()) return setError("Brand is required.");
+    if (containsHtml(form.brand)) return setError("Brand must not contain HTML.");
     if (isNaN(price) || price < 0) return setError("Price must be a valid positive number.");
+    if (!isValidPriceCents(price)) return setError(`Price must not exceed $${(MAX_PRICE_CENTS / 100).toLocaleString()}.`);
     if (stock < 0) return setError("Stock quantity cannot be negative.");
+    if (!isValidStockQuantity(stock)) return setError(`Stock must not exceed ${MAX_STOCK_QUANTITY.toLocaleString()} units.`);
     if (images.some((img) => img.uploading))
       return setError("Please wait for all images to finish uploading.");
 
     const validImages = images.filter((img) => img.url.trim());
+    const invalidImage = validImages.find((img) => !isValidImageUrl(img.url.trim()));
+    if (invalidImage) return setError(`Invalid image URL: ${invalidImage.url}. Only http/https URLs with valid image extensions are allowed.`);
     setSubmitting(true);
     const result = await adminCreateProduct({
       name: form.name.trim(),

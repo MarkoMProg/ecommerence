@@ -47,15 +47,28 @@ export function encrypt(plaintext: string): string {
 }
 
 /**
+ * Returns true if the value looks like AES-256-GCM ciphertext produced by `encrypt`.
+ * Format: "<24-char hex IV>:<32-char hex authTag>:<hex ciphertext>"
+ */
+function isEncrypted(value: string): boolean {
+  const parts = value.split(':');
+  if (parts.length !== 3) return false;
+  const [iv, tag] = parts;
+  // IV = 12 bytes = 24 hex chars, authTag = 16 bytes = 32 hex chars
+  return iv!.length === 24 && tag!.length === 32 && /^[0-9a-f:]+$/i.test(value);
+}
+
+/**
  * Decrypts a value produced by `encrypt`.
- * Throws if the ciphertext has been tampered with (GCM auth tag mismatch).
+ * If the value doesn't look like ciphertext (e.g. legacy plain-text data),
+ * returns it as-is instead of throwing.
  */
 export function decrypt(ciphertext: string): string {
+  if (!isEncrypted(ciphertext)) {
+    return ciphertext;
+  }
   const key = getKey();
   const parts = ciphertext.split(':');
-  if (parts.length !== 3) {
-    throw new Error('Invalid ciphertext format — expected "<iv>:<authTag>:<data>"');
-  }
   const [ivHex, tagHex, encHex] = parts as [string, string, string];
   const iv = Buffer.from(ivHex, 'hex');
   const tag = Buffer.from(tagHex, 'hex');

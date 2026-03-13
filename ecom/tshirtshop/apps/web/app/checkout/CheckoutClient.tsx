@@ -10,6 +10,7 @@ import type { SavedAddress } from "@/lib/api/addresses";
 import { fetchMyPaymentMethods } from "@/lib/api/billing";
 import type { SavedPaymentMethod } from "@/lib/api/billing";
 import { useAuth } from "@/components/auth-provider";
+import { isValidPhone, isValidPostalCode, containsHtml, sanitizeString } from "@/lib/validation";
 import {
   Select,
   SelectContent,
@@ -102,6 +103,24 @@ function isAddressValid(a: ShippingAddress): boolean {
   );
 }
 
+/** Per-field validation errors for the shipping address form. */
+function validateAddress(a: ShippingAddress): Partial<Record<keyof ShippingAddress, string>> {
+  const errors: Partial<Record<keyof ShippingAddress, string>> = {};
+  if (a.fullName && containsHtml(a.fullName)) errors.fullName = "Must not contain HTML";
+  if (a.fullName && a.fullName.trim().length > 200) errors.fullName = "Must not exceed 200 characters";
+  if (a.line1 && containsHtml(a.line1)) errors.line1 = "Must not contain HTML";
+  if (a.line1 && a.line1.trim().length > 255) errors.line1 = "Must not exceed 255 characters";
+  if (a.city && containsHtml(a.city)) errors.city = "Must not contain HTML";
+  if (a.city && a.city.trim().length > 100) errors.city = "Must not exceed 100 characters";
+  if (a.postalCode && a.country && !isValidPostalCode(a.postalCode, a.country)) {
+    errors.postalCode = "Invalid postal code format for selected country";
+  }
+  if (a.phone && !isValidPhone(a.phone)) {
+    errors.phone = "Invalid phone format (10+ digits required)";
+  }
+  return errors;
+}
+
 export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) {
   const router = useRouter();
   const { session } = useAuth();
@@ -111,6 +130,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
   const [placeStatus, setPlaceStatus] = useState<"idle" | "loading" | "error">("idle");
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({});
 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
@@ -177,10 +197,12 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
   const totalCents = cart.totalCents + shippingCents;
   const totalDollars = (totalCents / 100).toFixed(2);
   const subtotalDollars = (cart.totalCents / 100).toFixed(2);
-  const canPlace = isAddressValid(address);
+  const canPlace = isAddressValid(address) && Object.keys(fieldErrors).length === 0;
 
   function updateAddress(field: keyof ShippingAddress, value: string) {
-    setAddress((prev) => ({ ...prev, [field]: value }));
+    const next = { ...address, [field]: value };
+    setAddress(next);
+    setFieldErrors(validateAddress(next));
     setPlaceError(null);
   }
 
@@ -281,6 +303,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
                 placeholder="Jane Doe"
                 autoComplete="name"
               />
+              {fieldErrors.fullName && <p className="mt-1 text-xs text-red-400">{fieldErrors.fullName}</p>}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="checkout-line1" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
@@ -295,6 +318,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
                 placeholder="123 Main St"
                 autoComplete="address-line1"
               />
+              {fieldErrors.line1 && <p className="mt-1 text-xs text-red-400">{fieldErrors.line1}</p>}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="checkout-line2" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
@@ -323,6 +347,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
                 placeholder="Austin"
                 autoComplete="address-level2"
               />
+              {fieldErrors.city && <p className="mt-1 text-xs text-red-400">{fieldErrors.city}</p>}
             </div>
             <div>
               <label htmlFor="checkout-state" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
@@ -351,6 +376,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
                 placeholder="78701"
                 autoComplete="postal-code"
               />
+              {fieldErrors.postalCode && <p className="mt-1 text-xs text-red-400">{fieldErrors.postalCode}</p>}
             </div>
             <div>
               <label htmlFor="checkout-country" className="mb-1 block text-xs uppercase tracking-widest text-white/60">
@@ -388,6 +414,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
                 placeholder="+1 (555) 123-4567"
                 autoComplete="tel"
               />
+              {fieldErrors.phone && <p className="mt-1 text-xs text-red-400">{fieldErrors.phone}</p>}
             </div>
           </form>
         </section>

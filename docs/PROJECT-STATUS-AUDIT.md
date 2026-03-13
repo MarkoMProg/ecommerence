@@ -10,11 +10,11 @@
 
 The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)** complete, **Phase 2 (Commerce)** largely complete, and **Phase 3 (Experience)** substantially implemented. Authentication, catalog, cart, checkout, Stripe payment, and order lifecycle are done. **PAY-001 to PAY-004** (Stripe integration) are implemented. Order confirmation page offers **Complete payment** (redirect to Stripe for pending orders) and **Cancel order** (with Yes/No confirmation). Coupons (e.g. FRESHP100 free shipping) supported at checkout. Cart is cleared when order is created. Product URLs use slugs (`/shop/[slug]`).
 
-| Phase | Status | Completion |
-|-------|--------|------------|
-| Phase 1 — Foundation | Complete | ~98% |
-| Phase 2 — Commerce | In Progress | ~90% |
-| Phase 3 — Experience | In Progress | ~70% |
+| Phase                | Status      | Completion |
+| -------------------- | ----------- | ---------- |
+| Phase 1 — Foundation | Complete    | ~98%       |
+| Phase 2 — Commerce   | In Progress | ~90%       |
+| Phase 3 — Experience | In Progress | ~70%       |
 
 ---
 
@@ -22,15 +22,15 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ### 2.1 Docs Structure (Reference)
 
-| Doc | Purpose |
-|-----|---------|
-| `START-HERE.md` | Entry point, tech stack, rules |
-| `01-REQUIREMENTS/project-overview.md` | Full spec, deliverables |
-| `03-ARCHITECTURE/system-architecture.md` | Modular monolith, layers |
-| `03-ARCHITECTURE/authentication-architecture.md` | Auth flows, tokens, 2FA |
-| `04-TASKS/master-task-board.md` | Task tracking |
-| `07-DEVOPS/environment-setup.md` | Local setup, env vars |
-| `DESIGN-SPEC.md` | Premium DnD Apparel visual design, brand, layout |
+| Doc                                              | Purpose                                          |
+| ------------------------------------------------ | ------------------------------------------------ |
+| `START-HERE.md`                                  | Entry point, tech stack, rules                   |
+| `01-REQUIREMENTS/project-overview.md`            | Full spec, deliverables                          |
+| `03-ARCHITECTURE/system-architecture.md`         | Modular monolith, layers                         |
+| `03-ARCHITECTURE/authentication-architecture.md` | Auth flows, tokens, 2FA                          |
+| `04-TASKS/master-task-board.md`                  | Task tracking                                    |
+| `07-DEVOPS/environment-setup.md`                 | Local setup, env vars                            |
+| `DESIGN-SPEC.md`                                 | Premium DnD Apparel visual design, brand, layout |
 
 ### 2.2 Alignment
 
@@ -45,29 +45,29 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ### 3.1 Infrastructure (FND-001 to FND-006)
 
-| Task | Doc Status | Actual Status | Notes |
-|------|------------|----------------|-------|
-| FND-001 | DONE | DONE | Monorepo (Turborepo, npm workspaces) |
-| FND-002 | DONE | DONE | NestJS backend configured |
-| FND-003 | DONE | DONE | Next.js 16, App Router |
-| FND-004 | DONE | DONE | PostgreSQL + Drizzle |
-| FND-005 | DONE | DONE | Drizzle ORM; schema in `auth/`, `catalog/`, `cart/`, `order/schema.ts` |
-| FND-006 | NOT STARTED | NOT STARTED | No Dockerfiles |
+| Task    | Doc Status  | Actual Status | Notes                                                                  |
+| ------- | ----------- | ------------- | ---------------------------------------------------------------------- |
+| FND-001 | DONE        | DONE          | Monorepo (Turborepo, npm workspaces)                                   |
+| FND-002 | DONE        | DONE          | NestJS backend configured                                              |
+| FND-003 | DONE        | DONE          | Next.js 16, App Router                                                 |
+| FND-004 | DONE        | DONE          | PostgreSQL + Drizzle                                                   |
+| FND-005 | DONE        | DONE          | Drizzle ORM; schema in `auth/`, `catalog/`, `cart/`, `order/schema.ts` |
+| FND-006 | NOT STARTED | NOT STARTED   | No Dockerfiles                                                         |
 
 ### 3.2 Authentication (AUTH-001 to AUTH-010)
 
-| Task | Doc Status | Actual Status | Notes |
-|------|------------|----------------|-------|
-| AUTH-001 | DONE | DONE | better-auth + NestJS adapter |
-| AUTH-002 | DONE | DONE | Email/password registration |
-| AUTH-003 | DONE | DONE | Login |
-| AUTH-004 | DONE | DONE | JWT via better-auth |
-| AUTH-005 | DONE | DONE | Refresh token rotation |
-| AUTH-006 | DONE | DONE | Token revocation (logout) |
-| AUTH-007 | NOT STARTED | **PARTIAL** | Google OAuth done (when GOOGLE_CLIENT_ID/SECRET set); Facebook OAuth not configured |
-| AUTH-008 | NOT STARTED | **PARTIAL** | CAPTCHA optional for dev; works when keys set |
-| AUTH-009 | DONE | DONE | Password reset flow implemented |
-| AUTH-010 | DONE | DONE | 2FA (TOTP) setup page exists |
+| Task     | Doc Status  | Actual Status | Notes                                                                               |
+| -------- | ----------- | ------------- | ----------------------------------------------------------------------------------- |
+| AUTH-001 | DONE        | DONE          | better-auth + NestJS adapter                                                        |
+| AUTH-002 | DONE        | DONE          | Email/password registration                                                         |
+| AUTH-003 | DONE        | DONE          | Login                                                                               |
+| AUTH-004 | DONE        | DONE          | JWT via better-auth                                                                 |
+| AUTH-005 | DONE        | DONE          | Refresh token rotation                                                              |
+| AUTH-006 | DONE        | DONE          | Token revocation (logout)                                                           |
+| AUTH-007 | NOT STARTED | **PARTIAL**   | Google OAuth done (when GOOGLE_CLIENT_ID/SECRET set); Facebook OAuth not configured |
+| AUTH-008 | NOT STARTED | **PARTIAL**   | CAPTCHA optional for dev; works when keys set                                       |
+| AUTH-009 | DONE        | DONE          | Password reset flow implemented                                                     |
+| AUTH-010 | DONE        | DONE          | 2FA (TOTP) setup page exists                                                        |
 
 **Recent changes (2026-02-14):**
 
@@ -78,55 +78,55 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ### 3.3 Database Design (DB-001 to DB-007)
 
-| Task | Doc Status | Actual Status | Notes |
-|------|------------|----------------|-------|
-| DB-001 | **DONE** | **DONE** | ERD in `docs/ERD.md` (auth + catalog + cart) |
-| DB-002 | DONE | DONE | Users schema (better-auth: user, session, account, verification, two_factor) |
-| DB-003 | DONE | DONE | Products table in `apps/backend/src/catalog/schema.ts` |
-| DB-004 | DONE | DONE | Categories table in same file |
-| DB-005 | NOT STARTED | **PARTIAL** | Brand as column on product; no separate brands table |
-| DB-006 | DONE | DONE | product_image table in catalog schema |
-| DB-007 | NOT STARTED | NOT STARTED | No extra indexes on catalog tables yet |
+| Task   | Doc Status  | Actual Status | Notes                                                                        |
+| ------ | ----------- | ------------- | ---------------------------------------------------------------------------- |
+| DB-001 | **DONE**    | **DONE**      | ERD in `docs/ERD.md` (auth + catalog + cart)                                 |
+| DB-002 | DONE        | DONE          | Users schema (better-auth: user, session, account, verification, two_factor) |
+| DB-003 | DONE        | DONE          | Products table in `apps/backend/src/catalog/schema.ts`                       |
+| DB-004 | DONE        | DONE          | Categories table in same file                                                |
+| DB-005 | NOT STARTED | **PARTIAL**   | Brand as column on product; no separate brands table                         |
+| DB-006 | DONE        | DONE          | product_image table in catalog schema                                        |
+| DB-007 | NOT STARTED | NOT STARTED   | No extra indexes on catalog tables yet                                       |
 
 **Current schema:** `auth/schema.ts` (user, session, account, verification, two_factor) + `catalog/schema.ts` (category, product, product_image) + `cart/schema.ts` (cart, cart_item) + `order/schema.ts` (order, order_item). Drizzle config and DatabaseModule include all four. **Run `npm run db:push` from apps/backend** to apply schema changes.
 
 ### 3.4 Product Catalog (CAT-001 to CAT-006)
 
-| Task | Status | Notes |
-|------|--------|-------|
-| CAT-001 | **DONE** | Product CRUD API: `ProductsController`, `CatalogService`, DTOs; list, getById, create, update, delete |
-| CAT-002 | **DONE** | Category browsing: `CategoriesController` list + getById |
-| CAT-003 | **DONE** | ILIKE search on name + description; `q` query param; shop page search form |
-| CAT-004 | **DONE** | Faceted filtering: brand (distinct brands API), minPrice, maxPrice; shop page filter form; URL params preserved |
-| CAT-005 | **DONE** | Sort options: newest (default), price-asc, price-desc, name-asc, name-desc, rating-desc; sort dropdown on shop page |
+| Task    | Status   | Notes                                                                                                                          |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| CAT-001 | **DONE** | Product CRUD API: `ProductsController`, `CatalogService`, DTOs; list, getById, create, update, delete                          |
+| CAT-002 | **DONE** | Category browsing: `CategoriesController` list + getById                                                                       |
+| CAT-003 | **DONE** | ILIKE search on name + description; `q` query param; shop page search form                                                     |
+| CAT-004 | **DONE** | Faceted filtering: brand (distinct brands API), minPrice, maxPrice; shop page filter form; URL params preserved                |
+| CAT-005 | **DONE** | Sort options: newest (default), price-asc, price-desc, name-asc, name-desc, rating-desc; sort dropdown on shop page            |
 | CAT-006 | **DONE** | Search suggestions: `GET /api/v1/products/suggestions?q=`; autocomplete dropdown on shop search (products, categories, brands) |
 
 **Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands`, `GET /api/v1/products/suggestions`. Product schema has `isArchived` (soft-delete; archived hidden from storefront). Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands, fetchSearchSuggestions). Shop page has `ShopSearchInput` (autocomplete) and `ShopFiltersForm` (client component for sort onChange).
 
 ### 3.5 Frontend Pages
 
-| Page | Status | Location | Notes |
-|------|--------|----------|-------|
-| Home | **DONE (API)** | `/` | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API) |
-| Product listing | **DONE (API)** | `/shop` | Search form, category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories` |
-| Product detail | **DONE (API)** | `/shop/[slug]` | Gallery, size selector, accordion, related products; fetches by slug from API |
-| Cart | **DONE** | `/cart` | Guest cart (cookie); user cart (session); merge on login (CART-005, CART-006) |
-| Checkout | **DONE** | `/checkout` | Order summary, shipping address form (CHK-002 validation), coupon code (FRESHP100), Place Order wired to `POST /api/v1/checkout`; redirects to Stripe or `/checkout/confirmation`; cart cleared on order creation |
-| Order confirmation | **DONE** | `/checkout/confirmation` | Fetches order via `GET /api/v1/orders/:id`; displays items, totals, shipping address; **Complete payment** (pending orders → Stripe via `POST /api/v1/checkout/:orderId/payment-url`); **Cancel order** with Yes/No confirmation |
-| User account | **DONE** | `/account` | Profile (name, email), order history (GET /api/v1/orders), 2FA/sign out links; redirects to login when unauthenticated |
-| Admin dashboard | **DONE** | `/admin` | Dashboard, products (CRUD, bulk CSV/JSON upload, archive/unarchive, delete blocked if in orders), orders, users, reviews; AdminGuard (role + 2FA). No standalone categories admin — categories from public API. |
-| Auth flows | Done | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback |
+| Page               | Status         | Location                                     | Notes                                                                                                                                                                                                                            |
+| ------------------ | -------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home               | **DONE (API)** | `/`                                          | Hero video (dragon-hero.webm), Featured Drops (API), Editorial, Category nav (API)                                                                                                                                               |
+| Product listing    | **DONE (API)** | `/shop`                                      | Search form, category filter, product grid; fetches from `/api/v1/products`, `/api/v1/categories`                                                                                                                                |
+| Product detail     | **DONE (API)** | `/shop/[slug]`                               | Gallery, size selector, accordion, related products; fetches by slug from API                                                                                                                                                    |
+| Cart               | **DONE**       | `/cart`                                      | Guest cart (cookie); user cart (session); merge on login (CART-005, CART-006)                                                                                                                                                    |
+| Checkout           | **DONE**       | `/checkout`                                  | Order summary, shipping address form (CHK-002 validation), coupon code (FRESHP100), Place Order wired to `POST /api/v1/checkout`; redirects to Stripe or `/checkout/confirmation`; cart cleared on order creation                |
+| Order confirmation | **DONE**       | `/checkout/confirmation`                     | Fetches order via `GET /api/v1/orders/:id`; displays items, totals, shipping address; **Complete payment** (pending orders → Stripe via `POST /api/v1/checkout/:orderId/payment-url`); **Cancel order** with Yes/No confirmation |
+| User account       | **DONE**       | `/account`                                   | Profile (name, email), order history (GET /api/v1/orders), 2FA/sign out links; redirects to login when unauthenticated                                                                                                           |
+| Admin dashboard    | **DONE**       | `/admin`                                     | Dashboard, products (CRUD, bulk CSV/JSON upload, archive/unarchive, delete blocked if in orders), orders, users, reviews; AdminGuard (role + 2FA). No standalone categories admin — categories from public API.                  |
+| Auth flows         | Done           | `/auth/login`, `/auth/forgot-password`, etc. | Login, signup, forgot, reset, 2FA setup, verify-email, callback                                                                                                                                                                  |
 
 **Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Cart Drawer:** Slide-out cart drawer (`CartDrawer`, `CartDrawerProvider`) — open from header or product detail; syncs with cart page via `CART_UPDATED_EVENT`. **Branding:** Darkloom. **API clients:** `lib/api/catalog.ts`, `cart.ts`, `checkout.ts`, `orders.ts` — use `API_URL` (default `http://127.0.0.1:3000`); Next.js rewrites `/api/v1/*` for client. **API unreachable:** Home and Shop pages gracefully degrade with user message when backend is down.
 
 ### 3.6 Design & UX (New)
 
-| Item | Status | Notes |
-|------|--------|-------|
-| DESIGN-SPEC.md | DONE | Premium DnD Apparel design document |
-| Design tokens | DONE | Colors (#0A0A0A, #FF4D00, #7A5FFF, #E6C068), typography (Inter, Space Grotesk) |
-| Responsive layout | DONE | Mobile-first, hamburger nav, touch targets (min 44px), small-screen optimizations |
-| Dark mode | DONE | Default; design spec compliant |
+| Item              | Status | Notes                                                                             |
+| ----------------- | ------ | --------------------------------------------------------------------------------- |
+| DESIGN-SPEC.md    | DONE   | Premium DnD Apparel design document                                               |
+| Design tokens     | DONE   | Colors (#0A0A0A, #FF4D00, #7A5FFF, #E6C068), typography (Inter, Space Grotesk)    |
+| Responsive layout | DONE   | Mobile-first, hamburger nav, touch targets (min 44px), small-screen optimizations |
+| Dark mode         | DONE   | Default; design spec compliant                                                    |
 
 ### 3.7 Commerce & Experience
 
@@ -141,18 +141,18 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ### 4.1 Required for Full Auth (Production)
 
-| Variable | Required | Default (Dev) |
-|----------|----------|---------------|
-| `DATABASE_URL` | Yes | — |
-| `BETTER_AUTH_SECRET` | Yes | — |
-| `UI_URL` | No | `http://localhost:3001` |
-| `RESEND_API_KEY` | No (email fails) | — |
-| `RECAPTCHA_SECRET_KEY` | No (captcha disabled) | — |
-| `NEXT_PUBLIC_RECAPTCHA_SITEKEY` | No (captcha hidden) | — |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | For OAuth | — |
-| `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | For OAuth | — |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | For Stripe payment | — |
-| `ADMIN_EMAILS` | Comma-separated admin emails; run `npm run db:bootstrap-admin` to promote | Not in .env.example |
+| Variable                                        | Required                                                                  | Default (Dev)           |
+| ----------------------------------------------- | ------------------------------------------------------------------------- | ----------------------- |
+| `DATABASE_URL`                                  | Yes                                                                       | —                       |
+| `BETTER_AUTH_SECRET`                            | Yes                                                                       | —                       |
+| `UI_URL`                                        | No                                                                        | `http://localhost:3001` |
+| `RESEND_API_KEY`                                | No (email fails)                                                          | —                       |
+| `RECAPTCHA_SECRET_KEY`                          | No (captcha disabled)                                                     | —                       |
+| `NEXT_PUBLIC_RECAPTCHA_SITEKEY`                 | No (captcha hidden)                                                       | —                       |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`     | For OAuth                                                                 | —                       |
+| `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | For OAuth                                                                 | —                       |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`   | For Stripe payment                                                        | —                       |
+| `ADMIN_EMAILS`                                  | Comma-separated admin emails; run `npm run db:bootstrap-admin` to promote | Not in .env.example     |
 
 ### 4.2 Minimal Dev Setup
 
@@ -205,14 +205,14 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ## 6. Risk & Compliance Notes
 
-| Area | Status | Action |
-|------|--------|--------|
-| Security | Auth follows best practices | Add rate limiting (SEC-002) when needed |
-| Data | No card storage | Maintain as-is |
-| Tests | 339 pass, 0 fail | Add cart/checkout integration tests; no E2E yet |
-| Docker | Not implemented | Required for final deliverable |
-| Build | Fixed | Auth-provider type, Suspense, API types, AccountShell exact, cart-cookie match — production build passes |
-| OAuth | Conditional registration | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev |
+| Area     | Status                                                                                                                          | Action                                                                                                   |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Security | Auth follows best practices; **input validation hardened** (sanitization, HTML injection checks, semantic bounds, whitelisting) | Add rate limiting (SEC-002) when needed                                                                  |
+| Data     | No card storage                                                                                                                 | Maintain as-is                                                                                           |
+| Tests    | 339 pass, 0 fail                                                                                                                | Add cart/checkout integration tests; no E2E yet; run tests to verify validation changes                  |
+| Docker   | Not implemented                                                                                                                 | Required for final deliverable                                                                           |
+| Build    | Fixed                                                                                                                           | Auth-provider type, Suspense, API types, AccountShell exact, cart-cookie match — production build passes |
+| OAuth    | Conditional registration                                                                                                        | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev                       |
 
 ---
 
@@ -240,26 +240,27 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ## 9. Changelog (Audit Updates)
 
-| Date | Changes |
-|------|---------|
-| 2026-02-18 (audit) | Full audit refresh. Phase 2 ~65%, Phase 3 ~60%. Cart, Checkout (CHK-001–004), Orders (ORD-001–002), UI-004, UI-005 DONE. Order schema, confirmation page, address validation (CHK-002), order summary (CHK-003). 108 tests. API unreachable handling on Home/Shop. Recommended next: PAY-001, ORD-003, UI-006, FND-006. |
-| 2026-02-18 (UI-006) | User account page. GET /api/v1/orders (my orders) with auth, /account page (profile, order history, 2FA/sign out), header nav → /account. |
-| 2026-02-18 (UI-007) | Admin dashboard. AdminGuard + ADMIN_EMAILS. /admin (dashboard, products CRUD, orders list+status). Product POST/PATCH/DELETE protected. |
-| 2026-02-21 (ORD-005) | Refund workflow. New status "refunded"; POST /api/v1/admin/orders/:id/refund; Refund button in admin orders for paid/shipped/completed. |
-| 2026-02-21 (REV-001) | Review schema. Tables: review (productId, userId, rating, title, body), review_helpful_vote (reviewId, userId, helpful). Unique (productId, userId) per review. |
-| 2026-02-21 (REV-002) | Review API. GET/POST /api/v1/products/:id/reviews (list, create); PATCH/DELETE /api/v1/reviews/:id (update, delete own). Auth required for create/update/delete. |
-| 2026-02-21 (REV-003) | Rating aggregation. ReviewService.getRatingSummary; product API returns averageRating, reviewCount; product detail shows stars and review count. |
-| 2026-02-21 (REV-004) | Helpful voting. POST /api/v1/reviews/:id/helpful; review list includes helpfulCount; product detail Reviews section with Helpful button. |
-| 2026-02-21 (ADM-004) | User management. GET /api/v1/admin/users (list, search, paginated), GET /api/v1/admin/users/:id (detail). Admin users page and user detail page. |
-| 2026-02-18 (CART-005/006) | Guest cart + persistent user cart. OptionalAuthGuard on cart/checkout. Merge guest→user on login. Checkout associates order with userId. |
-| 2026-02-18 | CART-001–CART-004 DONE; UI-004 cart page; CHK-001–CHK-004, ORD-001/002; Place Order wired |
-| 2026-02-18 | CAT-003 DONE (search); forRoutes path fix (api/v1/*path); OAuth providers conditional; Phase 1 ~88% |
-| 2026-02-18 | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error) |
-| 2026-03-04 (audit) | Full audit refresh. PAY-001–004 DONE (Stripe). Complete payment for pending orders (POST /checkout/:orderId/payment-url). Cancel order with Yes/No confirmation. Coupons (FRESHP100). Product slug URLs. Cart cleared on order. European countries in checkout. Phase 2 ~90%, Phase 3 ~70%. 279 tests pass, 12 fail (catalog.service.spec.ts). |
-| 2026-03-07 (audit) | Full project audit. Product archive/unarchive (isArchived), bulk upload (CSV/JSON), delete protection (archive if in orders). AdminGuard: role + 2FA required; admin pages: products, orders, users, reviews. CART-006 DONE. Sort: rating-desc added. 289 tests pass, 2 fail (catalog-api.spec.ts getById NotFound mock). No admin categories CRUD page. FND-006 (Docker) still NOT STARTED. |
-| 2026-03-11 (audit) | Full project audit. **339 tests pass, 0 fail** (catalog-api.spec.ts fixed). Build fixes: AccountShell `exact` optional property type, cart-cookie `match[2]` undefined guard. Cart Drawer: slide-out drawer (CartDrawer, CartDrawerProvider) from header/product detail. ESLint fixes: unused orderId (CancelOrderInline), `<a>`→`<Link>` (verify-email), no-useless-catch (adminBulkUploadProducts). 37 ESLint warnings remain (no-img-element, no-explicit-any, turbo env vars). FND-006 (Docker) still NOT STARTED. |
-| 2026-02-14 | Initial audit |
+| Date                      | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-18 (audit)        | Full audit refresh. Phase 2 ~65%, Phase 3 ~60%. Cart, Checkout (CHK-001–004), Orders (ORD-001–002), UI-004, UI-005 DONE. Order schema, confirmation page, address validation (CHK-002), order summary (CHK-003). 108 tests. API unreachable handling on Home/Shop. Recommended next: PAY-001, ORD-003, UI-006, FND-006.                                                                                                                                                                                                |
+| 2026-02-18 (UI-006)       | User account page. GET /api/v1/orders (my orders) with auth, /account page (profile, order history, 2FA/sign out), header nav → /account.                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-02-18 (UI-007)       | Admin dashboard. AdminGuard + ADMIN_EMAILS. /admin (dashboard, products CRUD, orders list+status). Product POST/PATCH/DELETE protected.                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-02-21 (ORD-005)      | Refund workflow. New status "refunded"; POST /api/v1/admin/orders/:id/refund; Refund button in admin orders for paid/shipped/completed.                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-02-21 (REV-001)      | Review schema. Tables: review (productId, userId, rating, title, body), review_helpful_vote (reviewId, userId, helpful). Unique (productId, userId) per review.                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-02-21 (REV-002)      | Review API. GET/POST /api/v1/products/:id/reviews (list, create); PATCH/DELETE /api/v1/reviews/:id (update, delete own). Auth required for create/update/delete.                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-02-21 (REV-003)      | Rating aggregation. ReviewService.getRatingSummary; product API returns averageRating, reviewCount; product detail shows stars and review count.                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-02-21 (REV-004)      | Helpful voting. POST /api/v1/reviews/:id/helpful; review list includes helpfulCount; product detail Reviews section with Helpful button.                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-02-21 (ADM-004)      | User management. GET /api/v1/admin/users (list, search, paginated), GET /api/v1/admin/users/:id (detail). Admin users page and user detail page.                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-02-18 (CART-005/006) | Guest cart + persistent user cart. OptionalAuthGuard on cart/checkout. Merge guest→user on login. Checkout associates order with userId.                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-02-18                | CART-001–CART-004 DONE; UI-004 cart page; CHK-001–CHK-004, ORD-001/002; Place Order wired                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-02-18                | CAT-003 DONE (search); forRoutes path fix (api/v1/\*path); OAuth providers conditional; Phase 1 ~88%                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-02-18                | Added frontend mockup status (UI-001, UI-002, UI-003); DESIGN-SPEC.md; responsive design; auth moved to /auth/login; updated phase completion estimates; added Design & UX section; build note (auth-provider type error)                                                                                                                                                                                                                                                                                              |
+| 2026-03-04 (audit)        | Full audit refresh. PAY-001–004 DONE (Stripe). Complete payment for pending orders (POST /checkout/:orderId/payment-url). Cancel order with Yes/No confirmation. Coupons (FRESHP100). Product slug URLs. Cart cleared on order. European countries in checkout. Phase 2 ~90%, Phase 3 ~70%. 279 tests pass, 12 fail (catalog.service.spec.ts).                                                                                                                                                                         |
+| 2026-03-07 (audit)        | Full project audit. Product archive/unarchive (isArchived), bulk upload (CSV/JSON), delete protection (archive if in orders). AdminGuard: role + 2FA required; admin pages: products, orders, users, reviews. CART-006 DONE. Sort: rating-desc added. 289 tests pass, 2 fail (catalog-api.spec.ts getById NotFound mock). No admin categories CRUD page. FND-006 (Docker) still NOT STARTED.                                                                                                                           |
+| 2026-03-11 (audit)        | Full project audit. **339 tests pass, 0 fail** (catalog-api.spec.ts fixed). Build fixes: AccountShell `exact` optional property type, cart-cookie `match[2]` undefined guard. Cart Drawer: slide-out drawer (CartDrawer, CartDrawerProvider) from header/product detail. ESLint fixes: unused orderId (CancelOrderInline), `<a>`→`<Link>` (verify-email), no-useless-catch (adminBulkUploadProducts). 37 ESLint warnings remain (no-img-element, no-explicit-any, turbo env vars). FND-006 (Docker) still NOT STARTED. |
+| 2026-02-14                | Initial audit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| (input-validation)        | **Comprehensive input validation overhaul.** Created `common/sanitize.ts` (shared backend utility: sanitization, syntactic validators, semantic bounds, whitelists). Enhanced all 6 backend DTOs (auth, catalog, review, cart, checkout, address) with: control char stripping, HTML injection detection, email normalization, country-specific postal code validation, phone format validation, price/stock/quantity semantic bounds, image URL whitelisting. Created `lib/validation.ts` (shared frontend utility mirroring backend rules). Enhanced checkout form (per-field errors: postal code format, phone format, HTML checks). Enhanced review form (title/body length limits, HTML warning, character counter). Enhanced admin product forms (price/stock bounds, description length, image URL validation, HTML checks). |
 
 ---
 
-*End of audit document*
+_End of audit document_

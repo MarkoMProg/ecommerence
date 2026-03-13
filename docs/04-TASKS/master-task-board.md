@@ -6,9 +6,9 @@ This document is the **single source of truth** for tracking all work required t
 
 It is used by:
 
-* Developers
-* AI coding agents
-* Reviewers
+- Developers
+- AI coding agents
+- Reviewers
 
 It maps **requirements → implementation tasks → completion status**.
 
@@ -48,7 +48,7 @@ Each task must have one of the following statuses:
 ## 3.2 Authentication System
 
 | ID       | Task                                  | Status      |
-| -------- | ------------------------------------- | ----------- |
+| -------- | ------------------------------------- | ----------- | ------------------------------------ |
 | AUTH-001 | Integrate better-auth                 | DONE        |
 | AUTH-002 | Implement email/password registration | DONE        |
 | AUTH-003 | Implement login functionality         | DONE        |
@@ -58,7 +58,7 @@ Each task must have one of the following statuses:
 | AUTH-007 | Add OAuth login support               | IN PROGRESS | Google done; Facebook not configured |
 | AUTH-008 | Integrate CAPTCHA                     | NOT STARTED |
 | AUTH-009 | Implement password reset flow         | DONE        |
-| AUTH-010 | Implement 2FA support                | DONE        |
+| AUTH-010 | Implement 2FA support                 | DONE        |
 
 ---
 
@@ -78,25 +78,25 @@ Each task must have one of the following statuses:
 
 ## 3.4 Product Catalog
 
-| ID      | Task                           | Status      |
-| ------- | ------------------------------ | ----------- |
-| CAT-001 | Implement product CRUD API     | DONE        |
-| CAT-002 | Implement category browsing    | DONE        |
-| CAT-003 | Implement search functionality | DONE        |
-| CAT-004 | Implement faceted filtering    | DONE        |
-| CAT-005 | Implement sorting options      | DONE        |
-| CAT-006 | Implement search suggestions   | DONE        |
+| ID      | Task                           | Status |
+| ------- | ------------------------------ | ------ |
+| CAT-001 | Implement product CRUD API     | DONE   |
+| CAT-002 | Implement category browsing    | DONE   |
+| CAT-003 | Implement search functionality | DONE   |
+| CAT-004 | Implement faceted filtering    | DONE   |
+| CAT-005 | Implement sorting options      | DONE   |
+| CAT-006 | Implement search suggestions   | DONE   |
 
 ---
 
 ## 3.5 Testing (Foundation)
 
-| ID       | Task                   | Status      |
-| -------- | ---------------------- | ----------- |
-| TEST-001 | JWT unit tests         | DONE        |
-| TEST-002 | Input validation tests | DONE        |
-| TEST-003 | Product model tests    | DONE        |
-| TEST-004 | API integration tests  | DONE        |
+| ID       | Task                   | Status |
+| -------- | ---------------------- | ------ |
+| TEST-001 | JWT unit tests         | DONE   |
+| TEST-002 | Input validation tests | DONE   |
+| TEST-003 | Product model tests    | DONE   |
+| TEST-004 | API integration tests  | DONE   |
 
 ---
 
@@ -106,48 +106,48 @@ Each task must have one of the following statuses:
 
 ## 4.1 Shopping Cart
 
-| ID       | Task                           | Status      |
-| -------- | ------------------------------ | ----------- |
-| CART-001 | Implement cart database schema | DONE        |
-| CART-002 | Add item to cart API           | DONE        |
-| CART-003 | Remove item API                | DONE        |
-| CART-004 | Update quantity API            | DONE        |
-| CART-005 | Implement guest cart logic     | DONE        |
-| CART-006 | Implement persistent user cart | DONE        |
+| ID       | Task                           | Status |
+| -------- | ------------------------------ | ------ |
+| CART-001 | Implement cart database schema | DONE   |
+| CART-002 | Add item to cart API           | DONE   |
+| CART-003 | Remove item API                | DONE   |
+| CART-004 | Update quantity API            | DONE   |
+| CART-005 | Implement guest cart logic     | DONE   |
+| CART-006 | Implement persistent user cart | DONE   |
 
 ---
 
 ## 4.2 Checkout Process
 
-| ID      | Task                          | Status      |
-| ------- | ----------------------------- | ----------- |
-| CHK-001 | Implement checkout API        | DONE        |
-| CHK-002 | Implement address validation  | DONE        |
-| CHK-003 | Implement order summary logic | DONE        |
-| CHK-004 | Implement order confirmation  | DONE        |
+| ID      | Task                          | Status |
+| ------- | ----------------------------- | ------ |
+| CHK-001 | Implement checkout API        | DONE   |
+| CHK-002 | Implement address validation  | DONE   |
+| CHK-003 | Implement order summary logic | DONE   |
+| CHK-004 | Implement order confirmation  | DONE   |
 
 ---
 
 ## 4.3 Payment Integration
 
-| ID      | Task                              | Status      |
-| ------- | --------------------------------- | ----------- |
-| PAY-001 | Integrate Stripe Checkout sandbox | DONE        |
-| PAY-002 | Implement payment validation flow | DONE        |
-| PAY-003 | Handle payment failures           | DONE        |
-| PAY-004 | Implement payment status tracking | DONE        |
+| ID      | Task                              | Status |
+| ------- | --------------------------------- | ------ |
+| PAY-001 | Integrate Stripe Checkout sandbox | DONE   |
+| PAY-002 | Implement payment validation flow | DONE   |
+| PAY-003 | Handle payment failures           | DONE   |
+| PAY-004 | Implement payment status tracking | DONE   |
 
 ---
 
 ## 4.4 Order Management
 
-| ID      | Task                              | Status      |
-| ------- | --------------------------------- | ----------- |
-| ORD-001 | Implement order schema            | DONE        |
-| ORD-002 | Implement order creation API      | DONE        |
-| ORD-003 | Implement order status lifecycle  | DONE        |
-| ORD-004 | Implement order cancellation flow | DONE        |
-| ORD-005 | Implement refund workflow         | DONE        |
+| ID      | Task                              | Status |
+| ------- | --------------------------------- | ------ |
+| ORD-001 | Implement order schema            | DONE   |
+| ORD-002 | Implement order creation API      | DONE   |
+| ORD-003 | Implement order status lifecycle  | DONE   |
+| ORD-004 | Implement order cancellation flow | DONE   |
+| ORD-005 | Implement refund workflow         | DONE   |
 
 ---
 
@@ -157,49 +157,59 @@ Each task must have one of the following statuses:
 
 ## 5.1 Frontend Pages
 
-| ID     | Task                           | Status      |
-| ------ | ------------------------------ | ----------- |
-| UI-001 | Implement home page            | DONE        |
-| UI-002 | Implement product listing page | DONE        |
-| UI-003 | Implement product detail page  | DONE        |
-| UI-004 | Implement cart page            | DONE        |
-| UI-005 | Implement checkout page        | DONE        |
-| UI-006 | Implement user account page    | DONE        |
-| UI-007 | Implement admin dashboard      | DONE        |
+| ID     | Task                           | Status |
+| ------ | ------------------------------ | ------ |
+| UI-001 | Implement home page            | DONE   |
+| UI-002 | Implement product listing page | DONE   |
+| UI-003 | Implement product detail page  | DONE   |
+| UI-004 | Implement cart page            | DONE   |
+| UI-005 | Implement checkout page        | DONE   |
+| UI-006 | Implement user account page    | DONE   |
+| UI-007 | Implement admin dashboard      | DONE   |
 
 ---
 
 ## 5.2 Reviews System
 
-| ID      | Task                         | Status      |
-| ------- | ---------------------------- | ----------- |
-| REV-001 | Implement review schema      | DONE        |
-| REV-002 | Implement review API         | DONE        |
-| REV-003 | Implement rating aggregation | DONE        |
-| REV-004 | Implement helpful voting     | DONE        |
+| ID      | Task                         | Status |
+| ------- | ---------------------------- | ------ |
+| REV-001 | Implement review schema      | DONE   |
+| REV-002 | Implement review API         | DONE   |
+| REV-003 | Implement rating aggregation | DONE   |
+| REV-004 | Implement helpful voting     | DONE   |
 
 ---
 
 ## 5.3 Admin Features
 
-| ID      | Task                            | Status      |
-| ------- | ------------------------------- | ----------- |
-| ADM-001 | Implement RBAC system           | DONE        |
-| ADM-002 | Implement product admin tools   | DONE        |
-| ADM-003 | Implement order management UI   | DONE        |
-| ADM-004 | Implement user management tools | DONE        |
+| ID      | Task                            | Status |
+| ------- | ------------------------------- | ------ |
+| ADM-001 | Implement RBAC system           | DONE   |
+| ADM-002 | Implement product admin tools   | DONE   |
+| ADM-003 | Implement order management UI   | DONE   |
+| ADM-004 | Implement user management tools | DONE   |
 
 ---
 
 ## 5.4 Security & Performance
 
-| ID       | Task                        | Status      |
-| -------- | --------------------------- | ----------- |
-| SEC-001  | Implement TLS configuration | NOT STARTED |
-| SEC-002  | Implement rate limiting     | NOT STARTED |
-| SEC-003  | Implement input validation  | NOT STARTED |
-| PERF-001 | Implement caching strategy  | NOT STARTED |
-| PERF-002 | Conduct load testing        | NOT STARTED |
+| ID       | Task                                             | Status      |
+| -------- | ------------------------------------------------ | ----------- |
+| SEC-001  | Implement TLS configuration                      | NOT STARTED |
+| SEC-002  | Implement rate limiting                          | NOT STARTED |
+| SEC-003  | Implement input validation                       | DONE        |
+| SEC-004  | Encrypt PII address fields at rest (AES-256-GCM) | DONE        |
+| SEC-005  | Encrypt PII order shipping fields at rest        | DONE        |
+| PERF-001 | Implement caching strategy                       | NOT STARTED |
+| PERF-002 | Conduct load testing                             | DONE        |
+
+---
+
+## 5.5 Load Testing Evidence
+
+- Load test report identifies maximum concurrent users before response times exceed 5 seconds: Stress run reached 160 VUs and exceeded 5 seconds (max 5.65s), so the current upper bound is below this spike point for strict sub-5s behavior.
+- Load test report shows transaction throughput: Load scenario sustained about 20.7 req/s (11,248 requests in 9 minutes). Stress scenario sustained about 91.9 req/s (88,383 requests in 16 minutes).
+- Student has identified potential bottlenecks and can propose solutions: Identified N+1 order loading, expensive product/catalog query patterns, cart query amplification, and default DB pool constraints. Proposed fixes include batching and query refactors, targeted indexes on hot filters/joins, DB pool tuning, caching strategy, and horizontal scaling with rate-limiting/graceful degradation for traffic spikes.
 
 ---
 
@@ -207,9 +217,9 @@ Each task must have one of the following statuses:
 
 All tasks must:
 
-* Map directly to project requirements
-* Be assigned an ID
-* Have clear completion criteria
-* Include testing requirements
+- Map directly to project requirements
+- Be assigned an ID
+- Have clear completion criteria
+- Include testing requirements
 
 No feature may be implemented without an existing task entry.
