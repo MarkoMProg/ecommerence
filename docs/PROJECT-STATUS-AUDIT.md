@@ -1,7 +1,7 @@
 # Project Status Audit — tshirtshop
 
-**Generated:** 2026-03-11 (full audit)  
-**Previous:** 2026-03-07  
+**Generated:** 2026-03-13 (full audit)  
+**Previous:** 2026-03-11  
 **Purpose:** Correlate implementation with documentation and provide recommended next steps.
 
 ---
@@ -101,7 +101,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | CAT-005 | **DONE** | Sort options: newest (default), price-asc, price-desc, name-asc, name-desc, rating-desc; sort dropdown on shop page            |
 | CAT-006 | **DONE** | Search suggestions: `GET /api/v1/products/suggestions?q=`; autocomplete dropdown on shop search (products, categories, brands) |
 
-**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands`, `GET /api/v1/products/suggestions`. Product schema has `isArchived` (soft-delete; archived hidden from storefront). Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands, fetchSearchSuggestions). Shop page has `ShopSearchInput` (autocomplete) and `ShopFiltersForm` (client component for sort onChange).
+**Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands`, `GET /api/v1/products/suggestions`. Product schema has `isArchived` (soft-delete; archived hidden from storefront). Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands, fetchSearchSuggestions). Shop page has `ShopSearchInput` (autocomplete) and `ShopFiltersForm` (client component for sort onChange). **Performance:** `listProducts` fetches only images and categories for the current page's product IDs (no full-table reads).
 
 ### 3.5 Frontend Pages
 
@@ -134,6 +134,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 - **Checkout:** **UI-005, CHK-001 to CHK-004, ORD-001, ORD-002 DONE** — Checkout page with order summary, shipping address form, coupon code (FRESHP100 free shipping), Place Order wired to `POST /api/v1/checkout`. Order schema (order, order_item), CheckoutService creates order from cart (status: pending); **cart cleared on order creation**. **CHK-002**: address validation (European countries supported). **CHK-003**: `GET /api/v1/checkout/summary` (subtotal, shipping, total from cart; coupon support). **CHK-004**: `GET /api/v1/orders/:id`, confirmation page fetches and displays full order details. **ORD-003 DONE**: `PATCH /api/v1/orders/:id/status`. **ORD-004 DONE**: `POST /api/v1/orders/:id/cancel`; Cancel button with Yes/No confirmation dialog. **ORD-005 DONE**: `POST /api/v1/admin/orders/:id/refund`. **PAY-001 to PAY-004 DONE**: Stripe Checkout Session, verify-payment, webhook, payment status (stripeSessionId, paidAt). **Complete payment** for pending orders: `POST /api/v1/checkout/:orderId/payment-url` returns Stripe checkout URL.
 - **Tests:** Auth + catalog API + order DTO + review + admin + bulk-upload tests. **339 pass**, **0 fail**. No cart or checkout integration tests yet.
 - **Build:** Production build passes.
+- **Performance:** Product listing (`GET /api/v1/products`) — scoped image/category fetches (no full-table reads). Order listing (`getAllOrders`, `getOrdersByUserId`) — batch fetch orders + items to avoid N+1 queries.
 
 ---
 
@@ -234,7 +235,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 **Current state:** Phase 1 complete. Phase 2: Catalog, Cart, Checkout (with coupons), Orders, **Stripe payment** (PAY-001–004) implemented. Full flow: add to cart → checkout (address, coupon) → place order → Stripe → confirmation (or return without paying → Complete payment / Cancel order from order history). Phase 3: Home, Shop, Product detail (slug URLs), Cart, Checkout, User account, Admin done.
 
-**Recommended next steps:** Add **ADMIN_EMAILS** to `.env.example`, **FND-006** (Docker), **SEC-002** (rate limiting). ESLint: 37 warnings (no errors) — mostly `@next/next/no-img-element`, `no-explicit-any`, `turbo/no-undeclared-env-vars`.
+**Recommended next steps:** Add **ADMIN_EMAILS** to `.env.example`, **FND-006** (Docker), **SEC-002** (rate limiting). ESLint: 39 warnings (no errors) — mostly `@next/next/no-img-element`, `no-explicit-any`, `turbo/no-undeclared-env-vars`, `react-hooks/exhaustive-deps`.
 
 ---
 
@@ -258,6 +259,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | 2026-03-04 (audit)        | Full audit refresh. PAY-001–004 DONE (Stripe). Complete payment for pending orders (POST /checkout/:orderId/payment-url). Cancel order with Yes/No confirmation. Coupons (FRESHP100). Product slug URLs. Cart cleared on order. European countries in checkout. Phase 2 ~90%, Phase 3 ~70%. 279 tests pass, 12 fail (catalog.service.spec.ts).                                                                                                                                                                         |
 | 2026-03-07 (audit)        | Full project audit. Product archive/unarchive (isArchived), bulk upload (CSV/JSON), delete protection (archive if in orders). AdminGuard: role + 2FA required; admin pages: products, orders, users, reviews. CART-006 DONE. Sort: rating-desc added. 289 tests pass, 2 fail (catalog-api.spec.ts getById NotFound mock). No admin categories CRUD page. FND-006 (Docker) still NOT STARTED.                                                                                                                           |
 | 2026-03-11 (audit)        | Full project audit. **339 tests pass, 0 fail** (catalog-api.spec.ts fixed). Build fixes: AccountShell `exact` optional property type, cart-cookie `match[2]` undefined guard. Cart Drawer: slide-out drawer (CartDrawer, CartDrawerProvider) from header/product detail. ESLint fixes: unused orderId (CancelOrderInline), `<a>`→`<Link>` (verify-email), no-useless-catch (adminBulkUploadProducts). 37 ESLint warnings remain (no-img-element, no-explicit-any, turbo env vars). FND-006 (Docker) still NOT STARTED. |
+| 2026-03-13 (audit)        | **Performance optimizations.** Catalog `listProducts`: replaced full-table reads of `product_image` and `category` with scoped queries (`WHERE product_id IN (...)`, `WHERE id IN (...)` for current page only). Order `getAllOrders` and `getOrdersByUserId`: batch fetch orders + items in 2 queries instead of N+1 `getOrderById` calls; added `toOrderDto` helper. 339 tests pass, build passes. ESLint: 39 warnings. |
 | 2026-02-14                | Initial audit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | (input-validation)        | **Comprehensive input validation overhaul.** Created `common/sanitize.ts` (shared backend utility: sanitization, syntactic validators, semantic bounds, whitelists). Enhanced all 6 backend DTOs (auth, catalog, review, cart, checkout, address) with: control char stripping, HTML injection detection, email normalization, country-specific postal code validation, phone format validation, price/stock/quantity semantic bounds, image URL whitelisting. Created `lib/validation.ts` (shared frontend utility mirroring backend rules). Enhanced checkout form (per-field errors: postal code format, phone format, HTML checks). Enhanced review form (title/body length limits, HTML warning, character counter). Enhanced admin product forms (price/stock bounds, description length, image URL validation, HTML checks). |
 
