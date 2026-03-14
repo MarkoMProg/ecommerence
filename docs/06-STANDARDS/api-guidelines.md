@@ -1,4 +1,3 @@
-
 # API Guidelines
 
 All APIs follow REST conventions.
@@ -14,3 +13,7 @@ Response format:
 }
 
 Protected routes require Bearer JWT tokens.
+
+---
+
+**Full endpoint reference:** [api-endpoints.md](./api-endpoints.md)
