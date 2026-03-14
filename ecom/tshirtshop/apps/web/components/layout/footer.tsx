@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="border-t border-white/10 bg-[#0A0A0A]">
       <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 sm:py-16">
-        <div className="grid gap-10 sm:gap-12 md:grid-cols-4">
+        <div className="grid gap-10 sm:gap-12 md:grid-cols-2 lg:grid-cols-5">
           <div>
             <Link
               href="/"
@@ -49,6 +49,29 @@ export function Footer() {
                   className="text-sm text-white/80 transition-colors hover:text-white"
                 >
                   Accessories
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-4 text-xs uppercase tracking-widest text-white/60">
+              Company
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/about"
+                  className="text-sm text-white/80 transition-colors hover:text-white"
+                >
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-sm text-white/80 transition-colors hover:text-white"
+                >
+                  Contact
                 </Link>
               </li>
             </ul>
