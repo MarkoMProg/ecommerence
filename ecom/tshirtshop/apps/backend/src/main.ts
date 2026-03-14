@@ -9,7 +9,11 @@ const authMountTokenBucketMiddleware = createTokenBucketRateLimitMiddleware(
   [
     { path: '/sign-in/email', capacity: 5, refillTokensPerSecond: 5 / 60 },
     { path: '/sign-up/email', capacity: 5, refillTokensPerSecond: 5 / 60 },
-    { path: '/request-password-reset', capacity: 3, refillTokensPerSecond: 3 / 60 },
+    {
+      path: '/request-password-reset',
+      capacity: 3,
+      refillTokensPerSecond: 3 / 60,
+    },
     { path: '/reset-password', capacity: 5, refillTokensPerSecond: 5 / 60 },
   ],
   new Map(),
@@ -17,7 +21,8 @@ const authMountTokenBucketMiddleware = createTokenBucketRateLimitMiddleware(
 );
 
 async function bootstrap() {
-  const useHttps = process.env.USE_HTTPS === '1' || process.env.USE_HTTPS === 'true';
+  const useHttps =
+    process.env.USE_HTTPS === '1' || process.env.USE_HTTPS === 'true';
   const certsDir = join(process.cwd(), 'certs');
   const keyPath = join(certsDir, 'key.pem');
   const certPath = join(certsDir, 'cert.pem');
@@ -29,12 +34,19 @@ async function bootstrap() {
         key: readFileSync(keyPath),
         cert: readFileSync(certPath),
       };
-      console.log('[main] HTTPS enabled (SEC-001). Using self-signed cert from certs/');
+      console.log(
+        '[main] HTTPS enabled (SEC-001). Using self-signed cert from certs/',
+      );
     } catch (err) {
-      console.warn('[main] USE_HTTPS=1 but failed to load certs:', (err as Error).message);
+      console.warn(
+        '[main] USE_HTTPS=1 but failed to load certs:',
+        (err as Error).message,
+      );
     }
   } else if (useHttps) {
-    console.warn('[main] USE_HTTPS=1 but certs not found. Run: node scripts/generate-tls-cert.mjs');
+    console.warn(
+      '[main] USE_HTTPS=1 but certs not found. Run: node scripts/generate-tls-cert.mjs',
+    );
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

@@ -24,9 +24,10 @@ import {
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
-const authControllerTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
-  { path: '/api/v1/auth/login', capacity: 5, refillTokensPerSecond: 5 / 60 },
-]);
+const authControllerTokenBucketMiddleware =
+  createTokenBucketRateLimitMiddleware([
+    { path: '/api/v1/auth/login', capacity: 5, refillTokensPerSecond: 5 / 60 },
+  ]);
 
 /** SEC-002: Rate limit checkout and payment endpoints. */
 const checkoutTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
@@ -66,20 +67,27 @@ export class AppModule implements NestModule {
       .forRoutes({ path: 'api/v1/auth/login', method: RequestMethod.POST });
 
     // SEC-002: Rate limit checkout and payment endpoints
-    consumer
-      .apply(checkoutTokenBucketMiddleware)
-      .forRoutes(
-        { path: 'api/v1/checkout', method: RequestMethod.POST },
-        { path: 'api/v1/checkout/verify-payment', method: RequestMethod.POST },
-        { path: 'api/v1/checkout/:orderId/payment-url', method: RequestMethod.POST },
-      );
+    consumer.apply(checkoutTokenBucketMiddleware).forRoutes(
+      { path: 'api/v1/checkout', method: RequestMethod.POST },
+      { path: 'api/v1/checkout/verify-payment', method: RequestMethod.POST },
+      {
+        path: 'api/v1/checkout/:orderId/payment-url',
+        method: RequestMethod.POST,
+      },
+    );
 
     // Ensure forwarded IP is present for auth-mounted routes.
     consumer
-      .apply((req: express.Request, _res: express.Response, next: express.NextFunction) => {
-        ensureForwardedForHeader(req);
-        next();
-      })
+      .apply(
+        (
+          req: express.Request,
+          _res: express.Response,
+          next: express.NextFunction,
+        ) => {
+          ensureForwardedForHeader(req);
+          next();
+        },
+      )
       .forRoutes({ path: 'api/auth/*path', method: RequestMethod.ALL });
 
     // Stripe webhook needs raw body for signature verification (PAY-002)

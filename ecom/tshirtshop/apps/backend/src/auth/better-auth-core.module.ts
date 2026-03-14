@@ -18,7 +18,9 @@ import * as authSchema from './schema';
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
         const resendApiKey = configService.get('RESEND_API_KEY');
         /** Minimal interface for email sending; stub used when RESEND_API_KEY is missing */
-        type EmailSender = { emails: { send: (opts: object) => Promise<unknown> } };
+        type EmailSender = {
+          emails: { send: (opts: object) => Promise<unknown> };
+        };
         const resend = resendApiKey
           ? new Resend(resendApiKey)
           : {
@@ -51,7 +53,10 @@ import * as authSchema from './schema';
           basePath: '/api/auth',
           secret: configService.get('BETTER_AUTH_SECRET'),
           appName: 'Darkloom',
-          database: drizzleAdapter(database, { provider: 'pg', schema: authSchema }),
+          database: drizzleAdapter(database, {
+            provider: 'pg',
+            schema: authSchema,
+          }),
 
           rateLimit: {
             // Disabled because auth endpoints are enforced with explicit token-bucket middleware.
@@ -205,11 +210,11 @@ import * as authSchema from './schema';
           trustedOrigins: [uiUrl],
 
           session: {
-            expiresIn: 60 * 60 * 24 * 2, 
-            updateAge: 60 * 60 * 24, 
+            expiresIn: 60 * 60 * 24 * 2,
+            updateAge: 60 * 60 * 24,
             cookieCache: {
               enabled: true,
-              maxAge: 60 * 5,  
+              maxAge: 60 * 5,
               strategy: 'jwt',
             },
           },
