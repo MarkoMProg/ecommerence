@@ -17,8 +17,16 @@ import { AddressModule } from './address/address.module';
 import { BillingModule } from './billing/billing.module';
 import { betterAuth } from 'better-auth';
 import * as express from 'express';
+import {
+  createTokenBucketRateLimitMiddleware,
+  ensureForwardedForHeader,
+} from './auth/token-bucket-rate-limit';
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
+
+const authControllerTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
+  { path: '/api/v1/auth/login', capacity: 5, refillTokensPerSecond: 5 / 60 },
+]);
 
 @Module({
   imports: [
@@ -46,6 +54,18 @@ type BetterAuthInstance = ReturnType<typeof betterAuth>;
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(authControllerTokenBucketMiddleware)
+      .forRoutes({ path: 'api/v1/auth/login', method: RequestMethod.POST });
+
+    // Ensure forwarded IP is present for auth-mounted routes.
+    consumer
+      .apply((req: express.Request, _res: express.Response, next: express.NextFunction) => {
+        ensureForwardedForHeader(req);
+        next();
+      })
+      .forRoutes({ path: 'api/auth/*path', method: RequestMethod.ALL });
+
     // Stripe webhook needs raw body for signature verification (PAY-002)
     consumer
       .apply(express.raw({ type: 'application/json' }))

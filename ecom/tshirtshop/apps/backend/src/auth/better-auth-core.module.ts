@@ -42,13 +42,40 @@ import * as authSchema from './schema';
         }
         const uiUrl = configService.get('UI_URL') ?? 'http://localhost:3001';
         const port = configService.get('PORT') ?? '3000';
-        const baseURL = `http://localhost:${port}`;
+        const baseURL = `http://localhost:${port}/api/auth`;
 
         return betterAuth({
           baseURL,
+          basePath: '/api/auth',
           secret: configService.get('BETTER_AUTH_SECRET'),
           appName: 'Darkloom',
           database: drizzleAdapter(database, { provider: 'pg', schema: authSchema }),
+
+          rateLimit: {
+            // Disabled because auth endpoints are enforced with explicit token-bucket middleware.
+            enabled: false,
+            storage: 'database',
+            window: 10,
+            max: 100,
+            customRules: {
+              '/sign-in/email': {
+                window: 60,
+                max: 5,
+              },
+              '/sign-up/email': {
+                window: 60,
+                max: 5,
+              },
+              '/request-password-reset': {
+                window: 60,
+                max: 3,
+              },
+              '/reset-password': {
+                window: 60,
+                max: 5,
+              },
+            },
+          },
 
           emailAndPassword: {
             enabled: true,
