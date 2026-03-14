@@ -42,7 +42,10 @@ jobs:
           cache-dependency-path: ecom/tshirtshop/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # WARNING: Uses npm install instead of npm ci because lightningcss optional
+        # platform binaries (linux-x64-gnu) are not reliably installed with npm ci
+        # in cross-platform monorepos. npm install resolves deps at CI time on Linux.
+        run: npm install --prefer-offline --no-audit
 
       - name: Lint
         run: npm run lint
