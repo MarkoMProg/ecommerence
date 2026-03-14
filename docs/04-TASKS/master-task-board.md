@@ -195,8 +195,8 @@ Each task must have one of the following statuses:
 
 | ID       | Task                                             | Status      |
 | -------- | ------------------------------------------------ | ----------- |
-| SEC-001  | Implement TLS configuration                      | NOT STARTED |
-| SEC-002  | Implement rate limiting                          | NOT STARTED |
+| SEC-001  | Implement TLS configuration                      | DONE        |
+| SEC-002  | Implement rate limiting                          | DONE        |
 | SEC-003  | Implement input validation                       | DONE        |
 | SEC-004  | Encrypt PII address fields at rest (AES-256-GCM) | DONE        |
 | SEC-005  | Encrypt PII order shipping fields at rest        | DONE        |

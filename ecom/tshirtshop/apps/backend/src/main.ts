@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { readFileSync, existsSync } from 'fs';
 import { AppModule } from './app.module';
 import { createTokenBucketRateLimitMiddleware } from './auth/token-bucket-rate-limit';
 
@@ -16,7 +17,30 @@ const authMountTokenBucketMiddleware = createTokenBucketRateLimitMiddleware(
 );
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  const useHttps = process.env.USE_HTTPS === '1' || process.env.USE_HTTPS === 'true';
+  const certsDir = join(process.cwd(), 'certs');
+  const keyPath = join(certsDir, 'key.pem');
+  const certPath = join(certsDir, 'cert.pem');
+
+  let httpsOptions: { key: Buffer; cert: Buffer } | undefined;
+  if (useHttps && existsSync(keyPath) && existsSync(certPath)) {
+    try {
+      httpsOptions = {
+        key: readFileSync(keyPath),
+        cert: readFileSync(certPath),
+      };
+      console.log('[main] HTTPS enabled (SEC-001). Using self-signed cert from certs/');
+    } catch (err) {
+      console.warn('[main] USE_HTTPS=1 but failed to load certs:', (err as Error).message);
+    }
+  } else if (useHttps) {
+    console.warn('[main] USE_HTTPS=1 but certs not found. Run: node scripts/generate-tls-cert.mjs');
+  }
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+    httpsOptions: httpsOptions ?? undefined,
+  });
 
   app.use('/api/auth', authMountTokenBucketMiddleware);
 
@@ -40,6 +64,9 @@ async function bootstrap() {
     exposedHeaders: ['Set-Cookie'],
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  const protocol = httpsOptions ? 'https' : 'http';
+  await app.listen(port);
+  console.log(`[main] Listening on ${protocol}://localhost:${port}`);
 }
 bootstrap();

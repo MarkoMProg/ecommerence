@@ -4,6 +4,25 @@ Documents configuration additions and changes. Do not modify .env files directly
 
 ---
 
+## 2026-03-14 — USE_HTTPS (SEC-001)
+
+**Added:** `USE_HTTPS` (backend)
+
+**Purpose:** Enable HTTPS with self-signed TLS certificate for local secure connections.
+
+**Format:** `USE_HTTPS=1` or `USE_HTTPS=true`
+
+**Default:** When unset, backend runs over HTTP.
+
+**Prerequisites:**
+1. Generate certs: `node scripts/generate-tls-cert.mjs` (from apps/backend). Requires OpenSSL.
+2. Creates `certs/key.pem` and `certs/cert.pem`.
+3. Set `USE_HTTPS=1` in .env.
+
+**Impact:** Backend listens on https://localhost:PORT. Browser will show certificate warning (self-signed); accept for local dev. Update UI_URL to https://localhost:3001 when testing HTTPS end-to-end.
+
+---
+
 ## 2026-02-18 — ADMIN_EMAILS (UI-007)
 
 **Added:** `ADMIN_EMAILS` (backend)

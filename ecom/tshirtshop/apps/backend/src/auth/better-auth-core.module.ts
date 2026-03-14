@@ -35,9 +35,11 @@ import * as authSchema from './schema';
             '[BetterAuth] RESEND_API_KEY not set. Email verification and password reset will fail. Add it to .env for production.',
           );
         }
+        // AUTH-008: CAPTCHA required for sign-up when keys are set. In production, keys should be set.
         if (!configService.get('RECAPTCHA_SECRET_KEY')) {
+          const isProd = configService.get('NODE_ENV') === 'production';
           console.warn(
-            '[BetterAuth] RECAPTCHA_SECRET_KEY not set. Sign-up captcha disabled. Add it to .env for production.',
+            `[BetterAuth] RECAPTCHA_SECRET_KEY not set. Sign-up captcha disabled.${isProd ? ' REQUIRED for production (AUTH-008).' : ' Add it to .env for production.'}`,
           );
         }
         const uiUrl = configService.get('UI_URL') ?? 'http://localhost:3001';
