@@ -81,4 +81,4 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`[main] Listening on ${protocol}://localhost:${port}`);
 }
-bootstrap();
+void bootstrap();

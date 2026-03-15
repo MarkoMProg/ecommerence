@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { eq, desc, ilike, sql, inArray, or } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -71,7 +71,7 @@ export class AdminUsersService {
     const total = countResult?.count ?? 0;
 
     const userIds = users.map((u) => u.id);
-    let orderCountMap = new Map<string, number>();
+    const orderCountMap = new Map<string, number>();
     if (userIds.length > 0) {
       const orderCounts = await this.db
         .select({
@@ -106,10 +106,7 @@ export class AdminUsersService {
    * Get user by ID for admin (ADM-004).
    */
   async getUserById(userId: string): Promise<AdminUserDetailDto | null> {
-    const [u] = await this.db
-      .select()
-      .from(user)
-      .where(eq(user.id, userId));
+    const [u] = await this.db.select().from(user).where(eq(user.id, userId));
     if (!u) return null;
 
     const [orderRow] = await this.db

@@ -38,17 +38,25 @@ describe('Checkout DTO Validators (CHK-002)', () => {
 
     it('should error when shippingAddress is missing', () => {
       const errors = validateShippingAddress(undefined);
-      expect(errors).toContainEqual({ field: 'shippingAddress', message: 'shippingAddress is required' });
+      expect(errors).toContainEqual({
+        field: 'shippingAddress',
+        message: 'shippingAddress is required',
+      });
     });
 
     it('should error when shippingAddress is not an object', () => {
       const errors = validateShippingAddress('invalid');
-      expect(errors).toContainEqual({ field: 'shippingAddress', message: 'shippingAddress is required' });
+      expect(errors).toContainEqual({
+        field: 'shippingAddress',
+        message: 'shippingAddress is required',
+      });
     });
 
     it('should error on missing fullName', () => {
       const errors = validateShippingAddress({ ...validAddress, fullName: '' });
-      expect(errors.some((e) => e.field === 'shippingAddress.fullName')).toBe(true);
+      expect(errors.some((e) => e.field === 'shippingAddress.fullName')).toBe(
+        true,
+      );
     });
 
     it('should error on fullName exceeding max length', () => {
@@ -56,12 +64,20 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         ...validAddress,
         fullName: 'x'.repeat(201),
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.fullName' && e.message.includes('exceed'))).toBe(true);
+      expect(
+        errors.some(
+          (e) =>
+            e.field === 'shippingAddress.fullName' &&
+            e.message.includes('exceed'),
+        ),
+      ).toBe(true);
     });
 
     it('should error on missing line1', () => {
       const errors = validateShippingAddress({ ...validAddress, line1: '' });
-      expect(errors.some((e) => e.field === 'shippingAddress.line1')).toBe(true);
+      expect(errors.some((e) => e.field === 'shippingAddress.line1')).toBe(
+        true,
+      );
     });
 
     it('should error on missing city', () => {
@@ -70,18 +86,30 @@ describe('Checkout DTO Validators (CHK-002)', () => {
     });
 
     it('should error on missing stateOrProvince', () => {
-      const errors = validateShippingAddress({ ...validAddress, stateOrProvince: '' });
-      expect(errors.some((e) => e.field === 'shippingAddress.stateOrProvince')).toBe(true);
+      const errors = validateShippingAddress({
+        ...validAddress,
+        stateOrProvince: '',
+      });
+      expect(
+        errors.some((e) => e.field === 'shippingAddress.stateOrProvince'),
+      ).toBe(true);
     });
 
     it('should error on missing postalCode', () => {
-      const errors = validateShippingAddress({ ...validAddress, postalCode: '' });
-      expect(errors.some((e) => e.field === 'shippingAddress.postalCode')).toBe(true);
+      const errors = validateShippingAddress({
+        ...validAddress,
+        postalCode: '',
+      });
+      expect(errors.some((e) => e.field === 'shippingAddress.postalCode')).toBe(
+        true,
+      );
     });
 
     it('should error on missing country', () => {
       const errors = validateShippingAddress({ ...validAddress, country: '' });
-      expect(errors.some((e) => e.field === 'shippingAddress.country')).toBe(true);
+      expect(errors.some((e) => e.field === 'shippingAddress.country')).toBe(
+        true,
+      );
     });
 
     it('should error on unsupported country', () => {
@@ -89,7 +117,13 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         ...validAddress,
         country: 'XX',
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.country' && e.message.includes('country must be one of'))).toBe(true);
+      expect(
+        errors.some(
+          (e) =>
+            e.field === 'shippingAddress.country' &&
+            e.message.includes('country must be one of'),
+        ),
+      ).toBe(true);
     });
 
     it('should error on invalid US postal code', () => {
@@ -98,7 +132,13 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         country: 'US',
         postalCode: 'invalid',
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.postalCode' && e.message.includes('invalid'))).toBe(true);
+      expect(
+        errors.some(
+          (e) =>
+            e.field === 'shippingAddress.postalCode' &&
+            e.message.includes('invalid'),
+        ),
+      ).toBe(true);
     });
 
     it('should accept US 5+4 postal code', () => {
@@ -116,7 +156,9 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         country: 'CA',
         postalCode: '12345',
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.postalCode')).toBe(true);
+      expect(errors.some((e) => e.field === 'shippingAddress.postalCode')).toBe(
+        true,
+      );
     });
 
     it('should error on phone with too few digits', () => {
@@ -124,7 +166,13 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         ...validAddress,
         phone: '(555) 123-4', // 7 digits, passes format
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.phone' && e.message.includes('10 digits'))).toBe(true);
+      expect(
+        errors.some(
+          (e) =>
+            e.field === 'shippingAddress.phone' &&
+            e.message.includes('10 digits'),
+        ),
+      ).toBe(true);
     });
 
     it('should error on phone with invalid characters', () => {
@@ -132,11 +180,14 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         ...validAddress,
         phone: '555-1234@5678',
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.phone')).toBe(true);
+      expect(errors.some((e) => e.field === 'shippingAddress.phone')).toBe(
+        true,
+      );
     });
 
     it('should accept address without phone', () => {
-      const { phone, ...addr } = validAddress;
+      const addr = { ...validAddress };
+      delete (addr as { phone?: string }).phone;
       const errors = validateShippingAddress(addr);
       expect(errors).toHaveLength(0);
     });
@@ -151,7 +202,13 @@ describe('Checkout DTO Validators (CHK-002)', () => {
         ...validAddress,
         fullName: 'Jane\x00Doe',
       });
-      expect(errors.some((e) => e.field === 'shippingAddress.fullName' && e.message.includes('invalid'))).toBe(true);
+      expect(
+        errors.some(
+          (e) =>
+            e.field === 'shippingAddress.fullName' &&
+            e.message.includes('invalid'),
+        ),
+      ).toBe(true);
     });
   });
 });

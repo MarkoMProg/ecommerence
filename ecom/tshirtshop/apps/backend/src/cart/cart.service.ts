@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { eq, and, inArray, desc, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
@@ -106,7 +106,12 @@ export class CartService {
     }
     let userCartData = await this.getOrCreateUserCart(userId);
     for (const item of guestCart.items) {
-      userCartData = await this.addItem(userCartData.id, item.productId, item.quantity, item.selectedOption);
+      userCartData = await this.addItem(
+        userCartData.id,
+        item.productId,
+        item.quantity,
+        item.selectedOption,
+      );
     }
     await this.db.delete(cart).where(eq(cart.id, guestCartId));
     return userCartData;
@@ -124,16 +129,31 @@ export class CartService {
     if (cartId) {
       const existing = await this.getCartById(cartId);
       if (existing) {
-        cartData = await this.addItem(cartId, productId, quantity, selectedOption);
+        cartData = await this.addItem(
+          cartId,
+          productId,
+          quantity,
+          selectedOption,
+        );
       } else {
         cartData = await this.createGuestCart();
         created = true;
-        cartData = await this.addItem(cartData.id, productId, quantity, selectedOption);
+        cartData = await this.addItem(
+          cartData.id,
+          productId,
+          quantity,
+          selectedOption,
+        );
       }
     } else {
       cartData = await this.createGuestCart();
       created = true;
-      cartData = await this.addItem(cartData.id, productId, quantity, selectedOption);
+      cartData = await this.addItem(
+        cartData.id,
+        productId,
+        quantity,
+        selectedOption,
+      );
     }
     return { cart: cartData, created };
   }
@@ -146,35 +166,58 @@ export class CartService {
   ): Promise<CartWithItems> {
     if (quantity < 1) quantity = 1;
 
-    const [existingCart] = await this.db.select().from(cart).where(eq(cart.id, cartId));
+    const [existingCart] = await this.db
+      .select()
+      .from(cart)
+      .where(eq(cart.id, cartId));
     if (!existingCart) {
-      throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found',
+      });
     }
 
-    const [existingProduct] = await this.db.select().from(product).where(eq(product.id, productId));
+    const [existingProduct] = await this.db
+      .select()
+      .from(product)
+      .where(eq(product.id, productId));
     if (!existingProduct) {
-      throw new NotFoundException({ code: 'PRODUCT_NOT_FOUND', message: 'Product not found' });
+      throw new NotFoundException({
+        code: 'PRODUCT_NOT_FOUND',
+        message: 'Product not found',
+      });
     }
 
     const optionValue = selectedOption ?? null;
     const [existingItem] = await this.db
       .select()
       .from(cartItem)
-      .where(and(
-        eq(cartItem.cartId, cartId),
-        eq(cartItem.productId, productId),
-        optionValue !== null
-          ? eq(cartItem.selectedOption, optionValue)
-          : isNull(cartItem.selectedOption),
-      ));
+      .where(
+        and(
+          eq(cartItem.cartId, cartId),
+          eq(cartItem.productId, productId),
+          optionValue !== null
+            ? eq(cartItem.selectedOption, optionValue)
+            : isNull(cartItem.selectedOption),
+        ),
+      );
 
     // Stock check: total qty across ALL options of this product must not exceed stock
     const allProductItems = await this.db
       .select({ quantity: cartItem.quantity })
       .from(cartItem)
-      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)));
-    const currentTotalQty = allProductItems.reduce((sum, i) => sum + i.quantity, 0);
-    await this.inventoryService.assertSufficientStock(productId, currentTotalQty + quantity, existingProduct.name);
+      .where(
+        and(eq(cartItem.cartId, cartId), eq(cartItem.productId, productId)),
+      );
+    const currentTotalQty = allProductItems.reduce(
+      (sum, i) => sum + i.quantity,
+      0,
+    );
+    await this.inventoryService.assertSufficientStock(
+      productId,
+      currentTotalQty + quantity,
+      existingProduct.name,
+    );
 
     if (existingItem) {
       const newQty = existingItem.quantity + quantity;
@@ -199,7 +242,11 @@ export class CartService {
     }
 
     const [c] = await this.db.select().from(cart).where(eq(cart.id, cartId));
-    if (!c) throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
+    if (!c)
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found',
+      });
     return this.enrichCartWithItems(c);
   }
 
@@ -209,9 +256,15 @@ export class CartService {
   }
 
   async removeItem(cartId: string, itemId: string): Promise<CartWithItems> {
-    const [existingCart] = await this.db.select().from(cart).where(eq(cart.id, cartId));
+    const [existingCart] = await this.db
+      .select()
+      .from(cart)
+      .where(eq(cart.id, cartId));
     if (!existingCart) {
-      throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found',
+      });
     }
 
     const [existingItem] = await this.db
@@ -220,15 +273,20 @@ export class CartService {
       .where(and(eq(cartItem.cartId, cartId), eq(cartItem.id, itemId)));
 
     if (!existingItem) {
-      throw new NotFoundException({ code: 'ITEM_NOT_FOUND', message: 'Item not found in cart' });
+      throw new NotFoundException({
+        code: 'ITEM_NOT_FOUND',
+        message: 'Item not found in cart',
+      });
     }
 
-    await this.db
-      .delete(cartItem)
-      .where(eq(cartItem.id, existingItem.id));
+    await this.db.delete(cartItem).where(eq(cartItem.id, existingItem.id));
 
     const [c] = await this.db.select().from(cart).where(eq(cart.id, cartId));
-    if (!c) throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
+    if (!c)
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found',
+      });
     return this.enrichCartWithItems(c);
   }
 
@@ -237,9 +295,15 @@ export class CartService {
     itemId: string,
     quantity: number,
   ): Promise<CartWithItems> {
-    const [existingCart] = await this.db.select().from(cart).where(eq(cart.id, cartId));
+    const [existingCart] = await this.db
+      .select()
+      .from(cart)
+      .where(eq(cart.id, cartId));
     if (!existingCart) {
-      throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found',
+      });
     }
 
     if (quantity < 1) {
@@ -252,14 +316,22 @@ export class CartService {
       .where(and(eq(cartItem.cartId, cartId), eq(cartItem.id, itemId)));
 
     if (!existingItem) {
-      throw new NotFoundException({ code: 'ITEM_NOT_FOUND', message: 'Item not found in cart' });
+      throw new NotFoundException({
+        code: 'ITEM_NOT_FOUND',
+        message: 'Item not found in cart',
+      });
     }
 
     // Stock check: new quantity for this item + all OTHER items of the same product
     const allProductItems = await this.db
       .select({ id: cartItem.id, quantity: cartItem.quantity })
       .from(cartItem)
-      .where(and(eq(cartItem.cartId, cartId), eq(cartItem.productId, existingItem.productId)));
+      .where(
+        and(
+          eq(cartItem.cartId, cartId),
+          eq(cartItem.productId, existingItem.productId),
+        ),
+      );
     const otherItemsQty = allProductItems
       .filter((i) => i.id !== itemId)
       .reduce((sum, i) => sum + i.quantity, 0);
@@ -274,11 +346,17 @@ export class CartService {
       .where(eq(cartItem.id, existingItem.id));
 
     const [c] = await this.db.select().from(cart).where(eq(cart.id, cartId));
-    if (!c) throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found' });
+    if (!c)
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found',
+      });
     return this.enrichCartWithItems(c);
   }
 
-  private async enrichCartWithItems(c: typeof cart.$inferSelect): Promise<CartWithItems> {
+  private async enrichCartWithItems(
+    c: typeof cart.$inferSelect,
+  ): Promise<CartWithItems> {
     const items = await this.db
       .select({
         id: cartItem.id,
@@ -327,7 +405,10 @@ export class CartService {
     }));
 
     const itemCount = enriched.reduce((sum, i) => sum + i.quantity, 0);
-    const totalCents = enriched.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
+    const totalCents = enriched.reduce(
+      (sum, i) => sum + i.priceCents * i.quantity,
+      0,
+    );
 
     return {
       id: c.id,

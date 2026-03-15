@@ -1,13 +1,31 @@
-import { Controller, Get, Delete, Patch, Post, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Delete,
+  Patch,
+  Post,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { MulterFile } from '../common/multer-file.types';
 import { memoryStorage } from 'multer';
 import { AdminGuard } from './guards/admin.guard';
 import { OrderService } from '../order/order.service';
 import { CatalogService } from '../catalog/catalog.service';
-import { BulkUploadService, type BulkUploadResult, type BulkRowResult } from '../catalog/bulk-upload.service';
+import {
+  BulkUploadService,
+  type BulkProductEntry,
+  type BulkUploadResult,
+  type BulkRowResult,
+} from '../catalog/bulk-upload.service';
 import { ReviewService } from '../review/review.service';
-
 
 @Controller('api/v1/admin')
 @UseGuards(AdminGuard)
@@ -19,13 +37,11 @@ export class AdminController {
     private readonly reviewService: ReviewService,
   ) {}
 
- 
   @Get('dashboard')
   getDashboard() {
     return { success: true, data: { ok: true }, message: 'Admin access' };
   }
 
- 
   @Get('orders')
   async getOrders() {
     const orders = await this.orderService.getAllOrders();
@@ -64,7 +80,6 @@ export class AdminController {
     };
   }
 
- 
   @Post('orders/:orderId/refund')
   async refundOrder(@Param('orderId') orderId: string) {
     const order = await this.orderService.refundOrder(orderId.trim());
@@ -119,7 +134,8 @@ export class AdminController {
       limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
       fileFilter: (_req, file, cb) => {
         const allowed = /\.(csv|json)$/i;
-        const mimeOk = /^(text\/csv|application\/json|text\/plain|application\/octet-stream)$/i;
+        const mimeOk =
+          /^(text\/csv|application\/json|text\/plain|application\/octet-stream)$/i;
         if (!allowed.test(file.originalname) && !mimeOk.test(file.mimetype)) {
           return cb(
             new BadRequestException('Only .csv and .json files are accepted'),
@@ -130,27 +146,30 @@ export class AdminController {
       },
     }),
   )
-  async bulkUploadProducts(
-    @UploadedFile() file: MulterFile,
-  ) {
+  async bulkUploadProducts(@UploadedFile() file: MulterFile) {
     if (!file) {
       throw new BadRequestException({
         success: false,
         error: {
           code: 'NO_FILE',
-          message: 'No file provided. Upload a .csv or .json file with field name "file".',
+          message:
+            'No file provided. Upload a .csv or .json file with field name "file".',
         },
       });
     }
 
     const content = file.buffer.toString('utf-8');
-    const format = this.bulkUploadService.detectFormat(file.originalname, content);
+    const format = this.bulkUploadService.detectFormat(
+      file.originalname,
+      content,
+    );
 
-    let entries;
+    let entries: BulkProductEntry[];
     try {
-      entries = format === 'json'
-        ? this.bulkUploadService.parseJSON(content)
-        : this.bulkUploadService.parseCSV(content);
+      entries =
+        format === 'json'
+          ? this.bulkUploadService.parseJSON(content)
+          : this.bulkUploadService.parseCSV(content);
     } catch (err) {
       throw new BadRequestException({
         success: false,
@@ -164,7 +183,10 @@ export class AdminController {
     if (entries.length === 0) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'EMPTY_FILE', message: 'File contains no product entries.' },
+        error: {
+          code: 'EMPTY_FILE',
+          message: 'File contains no product entries.',
+        },
       });
     }
 
@@ -176,7 +198,12 @@ export class AdminController {
       const entry = entries[i];
       const validationError = this.bulkUploadService.validateEntry(entry);
       if (validationError) {
-        results.push({ row: i + 1, name: entry.name || '(unnamed)', status: 'error', error: validationError });
+        results.push({
+          row: i + 1,
+          name: entry.name || '(unnamed)',
+          status: 'error',
+          error: validationError,
+        });
         failed++;
         continue;
       }
@@ -201,7 +228,12 @@ export class AdminController {
           framingInfo: entry.framingInfo,
           images: entry.images,
         });
-        results.push({ row: i + 1, name: entry.name, status: 'created', productId: created.id });
+        results.push({
+          row: i + 1,
+          name: entry.name,
+          status: 'created',
+          productId: created.id,
+        });
         succeeded++;
       } catch (err) {
         results.push({
@@ -234,7 +266,10 @@ export class AdminController {
    * Translate raw database / service errors into human-readable messages.
    * Avoids exposing SQL queries or internal details to end users (coding-rules §10).
    */
-  private friendlyDbError(err: unknown, entry: { categoryId?: string }): string {
+  private friendlyDbError(
+    err: unknown,
+    entry: { categoryId?: string },
+  ): string {
     const raw = (err as Error).message ?? String(err);
 
     // Foreign-key violation on category_id
@@ -253,9 +288,14 @@ export class AdminController {
     }
 
     // Not-null constraint violation
-    if (raw.includes('not-null constraint') || raw.includes('null value in column')) {
+    if (
+      raw.includes('not-null constraint') ||
+      raw.includes('null value in column')
+    ) {
       const colMatch = raw.match(/column "(\w+)"/);
-      const col = colMatch ? colMatch[1].replace(/_/g, ' ') : 'a required field';
+      const col = colMatch
+        ? colMatch[1].replace(/_/g, ' ')
+        : 'a required field';
       return `Missing required value for "${col}". Please make sure all required fields are filled in.`;
     }
 

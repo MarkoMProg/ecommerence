@@ -57,7 +57,9 @@ export class UploadController {
           !IMAGE_MIME_REGEX.test(file.mimetype)
         ) {
           return cb(
-            new BadRequestException('Only image files (jpg, png, webp, avif, gif) are allowed'),
+            new BadRequestException(
+              'Only image files (jpg, png, webp, avif, gif) are allowed',
+            ),
             false,
           );
         }
@@ -68,12 +70,11 @@ export class UploadController {
       },
     }),
   )
-  async uploadImage(
-    @UploadedFile() file: MulterFile,
-    @Req() req: Request,
-  ) {
+  uploadImage(@UploadedFile() file: MulterFile, @Req() req: Request) {
     if (!file) {
-      throw new BadRequestException('No file provided. Send a multipart/form-data request with field name "file".');
+      throw new BadRequestException(
+        'No file provided. Send a multipart/form-data request with field name "file".',
+      );
     }
 
     // Build full URL so the browser can reference it directly.

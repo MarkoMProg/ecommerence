@@ -28,7 +28,9 @@ afterAll(() => {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Build a realistic-looking encrypted row, as if it came out of the DB. */
-function buildEncryptedRow(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+function buildEncryptedRow(
+  overrides: Partial<Record<string, unknown>> = {},
+): Record<string, unknown> {
   return {
     id: 'addr-1',
     userId: 'user-1',
@@ -55,6 +57,7 @@ function buildEncryptedRow(overrides: Partial<Record<string, unknown>> = {}): Re
  * Returns a minimal Drizzle-like mock DB that captures inserted/updated values
  * and returns pre-configured rows for selects.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for test utilities
 function buildMockDb(selectRows: Record<string, unknown>[] = []) {
   const insertedValues: Record<string, unknown>[] = [];
   const updatedValues: Record<string, unknown>[] = [];
@@ -119,7 +122,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       const results = await service.listAddresses('user-1');
 
       expect(results).toHaveLength(1);
-      const row = results[0]!;
+      const row = results[0];
       // Plaintext values should be returned
       expect(row.fullName).toBe('Jane Doe');
       expect(row.phone).toBe('+1 555 000 0000');
@@ -146,9 +149,9 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       const [row] = await service.listAddresses('user-1');
 
       // Ciphertext contains ':' separators — plaintext fields should not
-      expect(row!.fullName).not.toContain(':');
-      expect(row!.line1).not.toContain(':');
-      expect(row!.city).not.toContain(':');
+      expect(row.fullName).not.toContain(':');
+      expect(row.line1).not.toContain(':');
+      expect(row.city).not.toContain(':');
     });
   });
 
@@ -184,13 +187,17 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
           return makeSelectChain(captured).from;
         }),
         update: jest.fn().mockReturnValue({
-          set: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) }),
+          set: jest
+            .fn()
+            .mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) }),
         }),
         insert: jest.fn().mockReturnValue({
-          values: jest.fn().mockImplementation((vals: Record<string, unknown>) => {
-            captured.push(vals);
-            return Promise.resolve();
-          }),
+          values: jest
+            .fn()
+            .mockImplementation((vals: Record<string, unknown>) => {
+              captured.push(vals);
+              return Promise.resolve();
+            }),
         }),
       };
       return { db, captured };
@@ -225,7 +232,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       });
 
       expect(captured).toHaveLength(1);
-      const stored = captured[0]!;
+      const stored = captured[0];
 
       // fullName in DB must NOT be the plaintext
       expect(stored['fullName']).not.toBe('Jane Doe');
@@ -254,7 +261,9 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
           return selectCallIdx === 1 ? makeSelect([]) : makeSelect(captured);
         }),
         update: jest.fn().mockReturnValue({
-          set: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) }),
+          set: jest
+            .fn()
+            .mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) }),
         }),
         insert: jest.fn().mockReturnValue({
           values: jest.fn().mockImplementation((v: Record<string, unknown>) => {
@@ -276,7 +285,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         country: 'us', // should be upper-cased before encryption
       });
 
-      const stored = captured[0]!;
+      const stored = captured[0];
       const piiFields: Array<[string, string]> = [
         ['fullName', 'Jane Doe'],
         ['phone', '+1 555 000 0000'],
@@ -315,7 +324,9 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
           return selectCallIdx === 1 ? makeSelect([]) : makeSelect(captured);
         }),
         update: jest.fn().mockReturnValue({
-          set: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) }),
+          set: jest
+            .fn()
+            .mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) }),
         }),
         insert: jest.fn().mockReturnValue({
           values: jest.fn().mockImplementation((v: Record<string, unknown>) => {
@@ -336,8 +347,8 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         // phone and line2 intentionally omitted → should be null in DB
       });
 
-      expect(captured[0]!['phone']).toBeNull();
-      expect(captured[0]!['line2']).toBeNull();
+      expect(captured[0]['phone']).toBeNull();
+      expect(captured[0]['line2']).toBeNull();
     });
   });
 });

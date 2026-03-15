@@ -32,9 +32,9 @@ export interface ResetPasswordDto {
   token: string;
 }
 
-export interface RefreshTokenDto {
-  // refresh token comes from httpOnly cookie — no body required
-}
+/** Refresh token comes from httpOnly cookie — no body required */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- marker type for no-body endpoint
+export interface RefreshTokenDto {}
 
 export interface ValidationError {
   field: string;
@@ -49,11 +49,14 @@ const MAX_EMAIL_LENGTH = 254;
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
 
-export function validateRegister(body: any): ValidationError[] {
+export function validateRegister(body: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
+  const b = body as Record<string, unknown> | null | undefined;
+  if (!b || typeof b !== 'object')
+    return [{ field: 'body', message: 'Invalid request body' }];
 
-  const rawName = typeof body?.name === 'string' ? body.name : '';
-  const name = sanitizeString(body?.name);
+  const rawName = typeof b.name === 'string' ? b.name : '';
+  const name = sanitizeString(b.name);
   if (!name) {
     errors.push({ field: 'name', message: 'Name is required' });
   } else if (name.length > MAX_NAME_LENGTH) {
@@ -67,11 +70,14 @@ export function validateRegister(body: any): ValidationError[] {
     errors.push({ field: 'name', message: 'Name must not contain HTML' });
   }
 
-  const email = sanitizeString(body?.email).toLowerCase();
+  const email = sanitizeString(b.email).toLowerCase();
   if (!email) {
     errors.push({ field: 'email', message: 'Email is required' });
   } else if (email.length > MAX_EMAIL_LENGTH) {
-    errors.push({ field: 'email', message: `Email must not exceed ${MAX_EMAIL_LENGTH} characters` });
+    errors.push({
+      field: 'email',
+      message: `Email must not exceed ${MAX_EMAIL_LENGTH} characters`,
+    });
   } else if (!isValidEmail(email)) {
     errors.push({
       field: 'email',
@@ -79,36 +85,48 @@ export function validateRegister(body: any): ValidationError[] {
     });
   }
 
-  if (!body?.password || typeof body.password !== 'string') {
+  if (!b.password || typeof b.password !== 'string') {
     errors.push({ field: 'password', message: 'Password is required' });
-  } else if (body.password.length < MIN_PASSWORD_LENGTH) {
+  } else if (b.password.length < MIN_PASSWORD_LENGTH) {
     errors.push({
       field: 'password',
       message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
     });
-  } else if (body.password.length > MAX_PASSWORD_LENGTH) {
+  } else if (b.password.length > MAX_PASSWORD_LENGTH) {
     errors.push({
       field: 'password',
       message: `Password must not exceed ${MAX_PASSWORD_LENGTH} characters`,
     });
-  } else if (!/[A-Z]/.test(body.password)) {
+  } else if (!/[A-Z]/.test(b.password)) {
     errors.push({
       field: 'password',
       message: 'Password must contain at least one uppercase letter',
     });
-  } else if (!/[a-z]/.test(body.password)) {
+  } else if (!/[a-z]/.test(b.password)) {
     errors.push({
       field: 'password',
       message: 'Password must contain at least one lowercase letter',
     });
-  } else if (!/\d/.test(body.password)) {
+  } else if (!/\d/.test(b.password)) {
     errors.push({
       field: 'password',
       message: 'Password must contain at least one number',
     });
+  } else if (hasControlChars(b.password)) {
+    errors.push({
+      field: 'password',
+      message: 'Password contains invalid characters',
+    });
+  } else if (containsHtml(b.password)) {
+    errors.push({
+      field: 'password',
+      message: 'Password must not contain HTML',
+    });
   }
 
-  if (!body?.captchaToken || typeof body.captchaToken !== 'string') {
+  const captchaToken =
+    typeof b.captchaToken === 'string' ? b.captchaToken.trim() : '';
+  if (!captchaToken) {
     errors.push({
       field: 'captchaToken',
       message: 'Please complete the CAPTCHA',
@@ -118,10 +136,17 @@ export function validateRegister(body: any): ValidationError[] {
   return errors;
 }
 
-export function validateLogin(body: any): ValidationError[] {
-  const errors: ValidationError[] = [];
+function toBody(b: unknown): Record<string, unknown> | null {
+  if (!b || typeof b !== 'object') return null;
+  return b as Record<string, unknown>;
+}
 
-  const email = sanitizeString(body?.email).toLowerCase();
+export function validateLogin(body: unknown): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const b = toBody(body);
+  if (!b) return [{ field: 'body', message: 'Invalid request body' }];
+
+  const email = sanitizeString(b.email).toLowerCase();
   if (!email || !isValidEmail(email)) {
     errors.push({
       field: 'email',
@@ -129,21 +154,19 @@ export function validateLogin(body: any): ValidationError[] {
     });
   }
 
-  if (
-    !body?.password ||
-    typeof body.password !== 'string' ||
-    body.password.length < 1
-  ) {
+  if (!b.password || typeof b.password !== 'string' || b.password.length < 1) {
     errors.push({ field: 'password', message: 'Password is required' });
   }
 
   return errors;
 }
 
-export function validateForgotPassword(body: any): ValidationError[] {
+export function validateForgotPassword(body: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
+  const b = toBody(body);
+  if (!b) return [{ field: 'body', message: 'Invalid request body' }];
 
-  const email = sanitizeString(body?.email).toLowerCase();
+  const email = sanitizeString(b.email).toLowerCase();
   if (!email || !isValidEmail(email)) {
     errors.push({
       field: 'email',
@@ -154,36 +177,38 @@ export function validateForgotPassword(body: any): ValidationError[] {
   return errors;
 }
 
-export function validateResetPassword(body: any): ValidationError[] {
+export function validateResetPassword(body: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
+  const b = toBody(body);
+  if (!b) return [{ field: 'body', message: 'Invalid request body' }];
 
-  if (!body?.token || typeof body.token !== 'string') {
+  if (!b.token || typeof b.token !== 'string') {
     errors.push({ field: 'token', message: 'Reset token is required' });
   }
 
-  if (!body?.newPassword || typeof body.newPassword !== 'string') {
+  if (!b.newPassword || typeof b.newPassword !== 'string') {
     errors.push({ field: 'newPassword', message: 'New password is required' });
-  } else if (body.newPassword.length < MIN_PASSWORD_LENGTH) {
+  } else if (b.newPassword.length < MIN_PASSWORD_LENGTH) {
     errors.push({
       field: 'newPassword',
       message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
     });
-  } else if (body.newPassword.length > MAX_PASSWORD_LENGTH) {
+  } else if (b.newPassword.length > MAX_PASSWORD_LENGTH) {
     errors.push({
       field: 'newPassword',
       message: `Password must not exceed ${MAX_PASSWORD_LENGTH} characters`,
     });
-  } else if (!/[A-Z]/.test(body.newPassword)) {
+  } else if (!/[A-Z]/.test(b.newPassword)) {
     errors.push({
       field: 'newPassword',
       message: 'Password must contain at least one uppercase letter',
     });
-  } else if (!/[a-z]/.test(body.newPassword)) {
+  } else if (!/[a-z]/.test(b.newPassword)) {
     errors.push({
       field: 'newPassword',
       message: 'Password must contain at least one lowercase letter',
     });
-  } else if (!/\d/.test(body.newPassword)) {
+  } else if (!/\d/.test(b.newPassword)) {
     errors.push({
       field: 'newPassword',
       message: 'Password must contain at least one number',
@@ -193,12 +218,14 @@ export function validateResetPassword(body: any): ValidationError[] {
   return errors;
 }
 
-export function validateVerify2fa(body: any): ValidationError[] {
+export function validateVerify2fa(body: unknown): ValidationError[] {
   const errors: ValidationError[] = [];
+  const b = toBody(body);
+  if (!b) return [{ field: 'code', message: 'Invalid request body' }];
 
-  if (!body?.code || typeof body.code !== 'string') {
+  if (!b.code || typeof b.code !== 'string') {
     errors.push({ field: 'code', message: 'Verification code is required' });
-  } else if (!/^\d{6}$/.test(body.code)) {
+  } else if (!/^\d{6}$/.test(b.code)) {
     errors.push({ field: 'code', message: 'Code must be a 6-digit number' });
   }
 

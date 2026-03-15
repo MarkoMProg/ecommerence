@@ -31,9 +31,7 @@ function mockFile(filename = 'test.jpg'): MulterFile {
 function mockReq(host = 'localhost:3000', protocol = 'http'): Request {
   return {
     protocol,
-    get: jest.fn((header: string) =>
-      header === 'host' ? host : undefined,
-    ),
+    get: jest.fn((header: string) => (header === 'host' ? host : undefined)),
   } as unknown as Request;
 }
 
@@ -52,58 +50,59 @@ describe('UploadController', () => {
   });
 
   describe('POST /api/v1/uploads', () => {
-    it('returns success:true with a hosted url when file is provided', async () => {
-      const result = await controller.uploadImage(mockFile('abc123.jpg'), mockReq());
+    it('returns success:true with a hosted url when file is provided', () => {
+      const result = controller.uploadImage(mockFile('abc123.jpg'), mockReq());
       expect(result.success).toBe(true);
       expect(result.data.url).toBe('http://localhost:3000/uploads/abc123.jpg');
       expect(result.message).toBe('Image uploaded successfully');
     });
 
-    it('includes the filename in the response data', async () => {
-      const result = await controller.uploadImage(mockFile('product-hero.png'), mockReq());
+    it('includes the filename in the response data', () => {
+      const result = controller.uploadImage(
+        mockFile('product-hero.png'),
+        mockReq(),
+      );
       expect(result.data.filename).toBe('product-hero.png');
     });
 
-    it('uses the request protocol to build the url (https)', async () => {
-      const result = await controller.uploadImage(
+    it('uses the request protocol to build the url (https)', () => {
+      const result = controller.uploadImage(
         mockFile('img.webp'),
         mockReq('shop.example.com', 'https'),
       );
       expect(result.data.url).toBe('https://shop.example.com/uploads/img.webp');
     });
 
-    it('uses the request host to build the url (non-localhost)', async () => {
-      const result = await controller.uploadImage(
+    it('uses the request host to build the url (non-localhost)', () => {
+      const result = controller.uploadImage(
         mockFile('banner.avif'),
         mockReq('cdn.mystore.com', 'https'),
       );
       expect(result.data.url).toContain('cdn.mystore.com');
     });
 
-    it('url always starts with /uploads/ path segment', async () => {
-      const result = await controller.uploadImage(mockFile('x.gif'), mockReq());
+    it('url always starts with /uploads/ path segment', () => {
+      const result = controller.uploadImage(mockFile('x.gif'), mockReq());
       const url = new URL(result.data.url);
       expect(url.pathname).toMatch(/^\/uploads\//);
     });
 
-    it('throws BadRequestException when no file is provided (null)', async () => {
-      await expect(
-        controller.uploadImage(null as any, mockReq()),
-      ).rejects.toThrow(BadRequestException);
+    it('throws BadRequestException when no file is provided (null)', () => {
+      expect(() =>
+        controller.uploadImage(null as unknown as MulterFile, mockReq()),
+      ).toThrow(BadRequestException);
     });
 
-    it('throws BadRequestException when no file is provided (undefined)', async () => {
-      await expect(
-        controller.uploadImage(undefined as any, mockReq()),
-      ).rejects.toThrow(BadRequestException);
+    it('throws BadRequestException when no file is provided (undefined)', () => {
+      expect(() =>
+        controller.uploadImage(undefined as unknown as MulterFile, mockReq()),
+      ).toThrow(BadRequestException);
     });
 
-    it('BadRequestException message mentions the "file" field name', async () => {
-      await expect(
-        controller.uploadImage(null as any, mockReq()),
-      ).rejects.toMatchObject({
-        message: expect.stringMatching(/file/i),
-      });
+    it('BadRequestException message mentions the "file" field name', () => {
+      expect(() =>
+        controller.uploadImage(null as unknown as MulterFile, mockReq()),
+      ).toThrow(/file/i);
     });
   });
 });
