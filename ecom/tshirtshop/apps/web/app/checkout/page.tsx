@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { getCartIdFromCookies } from "@/lib/cart-cookie";
@@ -27,10 +26,6 @@ export default async function CheckoutPage({
   const cart = await fetchCart(cartId, {
     cookieHeader: cookieHeader || undefined,
   });
-
-  if (!cart || cart.items.length === 0) {
-    redirect("/cart");
-  }
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-16">

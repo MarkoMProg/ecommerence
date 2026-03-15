@@ -2,6 +2,92 @@
  * Catalog API client.
  * Fetches from backend. Always uses absolute URLs (required for Node fetch).
  */
+async function trustedFetch(urlString: string, init?: RequestInit): Promise<Response> {
+  const url = new URL(urlString);
+
+  if (typeof window !== "undefined" || url.protocol !== "https:") {
+    return fetch(urlString, init);
+  }
+
+  const http = process.getBuiltinModule("http") as typeof import("http");
+  const https = process.getBuiltinModule("https") as typeof import("https");
+  const fs = process.getBuiltinModule("fs") as typeof import("fs");
+  const path = process.getBuiltinModule("path") as typeof import("path");
+
+  const mkcertCaRoot = path.join(
+    process.env.LOCALAPPDATA || "C:\\Users\\nissa\\AppData\\Local",
+    "mkcert",
+    "rootCA.pem",
+  );
+  const devCA =
+    process.env.NODE_ENV !== "production" && fs.existsSync(mkcertCaRoot)
+      ? fs.readFileSync(mkcertCaRoot)
+      : undefined;
+
+  const method = init?.method || "GET";
+  const headers = new Headers(init?.headers);
+  headers.delete("content-length");
+
+  let bodyBuffer: Buffer | undefined;
+  if (init?.body != null && method !== "GET" && method !== "HEAD") {
+    if (typeof init.body === "string") {
+      bodyBuffer = Buffer.from(init.body);
+    } else if (init.body instanceof URLSearchParams) {
+      bodyBuffer = Buffer.from(init.body.toString());
+    } else if (init.body instanceof ArrayBuffer) {
+      bodyBuffer = Buffer.from(init.body);
+    } else if (ArrayBuffer.isView(init.body)) {
+      bodyBuffer = Buffer.from(init.body.buffer, init.body.byteOffset, init.body.byteLength);
+    } else if (init.body instanceof Blob) {
+      bodyBuffer = Buffer.from(await init.body.arrayBuffer());
+    } else {
+      throw new Error("Unsupported request body type");
+    }
+  }
+
+  return new Promise<Response>((resolve, reject) => {
+    const transport = url.protocol === "https:" ? https : http;
+    const request = transport.request(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80,
+        path: `${url.pathname}${url.search}`,
+        method,
+        headers: Object.fromEntries(headers.entries()),
+        ...(devCA ? { ca: devCA } : {}),
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () => {
+          const responseHeaders = new Headers();
+          for (const [key, value] of Object.entries(response.headers)) {
+            if (typeof value === "undefined") continue;
+            if (Array.isArray(value)) {
+              for (const item of value) responseHeaders.append(key, item);
+            } else {
+              responseHeaders.set(key, value);
+            }
+          }
+
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: response.statusCode || 502,
+              statusText: response.statusMessage,
+              headers: responseHeaders,
+            }),
+          );
+        });
+      },
+    );
+
+    request.on("error", reject);
+    if (bodyBuffer) request.write(bodyBuffer);
+    request.end();
+  });
+}
+
 function apiUrl(path: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}${path}`;
@@ -112,6 +198,13 @@ function parseSizeOptions(raw: string | null | undefined): string[] | null {
   return parts.length > 0 ? parts : null;
 }
 
+function normalizeImageUrl(url: string | undefined): string {
+  if (!url) return '';
+  return url
+    .replace('http://localhost:3000/', 'https://localhost:3000/')
+    .replace('http://127.0.0.1:3000/', 'https://127.0.0.1:3000/');
+}
+
 /** Maps API product shape to ProductDisplay. Exported for reuse (e.g. cart recommendations). */
 export function mapProduct(p: ApiProduct): ProductDisplay {
   const primaryImage = p.images.find((i) => i.isPrimary) ?? p.images[0];
@@ -120,7 +213,7 @@ export function mapProduct(p: ApiProduct): ProductDisplay {
     slug: p.slug,
     name: p.name,
     price: p.priceCents / 100,
-    imageUrl: primaryImage?.imageUrl ?? '',
+    imageUrl: normalizeImageUrl(primaryImage?.imageUrl),
     category: p.category?.slug ?? '',
     description: p.description,
     brand: p.brand,
@@ -152,7 +245,7 @@ function getFetchErrorDetail(err: unknown): string {
 
 async function fetchApi(url: string): Promise<Response> {
   try {
-    return await fetch(url, { cache: "no-store" });
+    return await trustedFetch(url, { cache: "no-store" });
   } catch (err) {
     const detail = getFetchErrorDetail(err);
     throw new Error(
@@ -188,7 +281,7 @@ export async function fetchSearchSuggestions(
   }
   const base = typeof window !== "undefined" ? window.location.origin : process.env.API_URL || "http://127.0.0.1:3000";
   const url = `${base}/api/v1/products/suggestions?q=${encodeURIComponent(trimmed)}&limit=${limit}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await trustedFetch(url, { cache: "no-store" });
   if (!res.ok) return { products: [], categories: [], brands: [] };
   const json = (await res.json()) as { success: boolean; data: SearchSuggestions };
   return json.success ? json.data : { products: [], categories: [], brands: [] };

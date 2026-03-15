@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
+import { fetchCartClient } from "@/lib/api/cart";
 import { createOrder, InsufficientStockError } from "@/lib/api/checkout";
 import { fetchMyAddresses } from "@/lib/api/addresses";
 import type { SavedAddress } from "@/lib/api/addresses";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/select";
 
 interface CheckoutClientProps {
-  cart: Cart;
+  cart: Cart | null;
   canceled?: boolean;
 }
 
@@ -125,6 +126,8 @@ function validateAddress(a: ShippingAddress): Partial<Record<keyof ShippingAddre
 export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) {
   const router = useRouter();
   const { session } = useAuth();
+  const [effectiveCart, setEffectiveCart] = useState<Cart | null>(cart);
+  const [cartLoading, setCartLoading] = useState(!cart);
   const [address, setAddress] = useState<ShippingAddress>(initialAddress);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
@@ -136,6 +139,31 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethod | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (cart) {
+      setEffectiveCart(cart);
+      setCartLoading(false);
+      return;
+    }
+
+    setCartLoading(true);
+    fetchCartClient()
+      .then((clientCart) => {
+        if (cancelled) return;
+        setEffectiveCart(clientCart);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setCartLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cart]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -192,12 +220,34 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
     });
   }
 
+  if (cartLoading) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center sm:p-12">
+        <p className="text-white/80">Loading checkout...</p>
+      </div>
+    );
+  }
+
+  if (!effectiveCart || effectiveCart.items.length === 0) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center sm:p-12">
+        <p className="mb-6 text-white/80">Your cart is empty.</p>
+        <Link
+          href="/cart"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-[#FF4D00] px-6 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90"
+        >
+          Back to Cart
+        </Link>
+      </div>
+    );
+  }
+
   const freeShippingByCoupon = appliedCoupon ? isFreeShippingCoupon(appliedCoupon) : false;
   const shippingCents =
-    freeShippingByCoupon || cart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
-  const totalCents = cart.totalCents + shippingCents;
+    freeShippingByCoupon || effectiveCart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+  const totalCents = effectiveCart.totalCents + shippingCents;
   const totalDollars = (totalCents / 100).toFixed(2);
-  const subtotalDollars = (cart.totalCents / 100).toFixed(2);
+  const subtotalDollars = (effectiveCart.totalCents / 100).toFixed(2);
   const canPlace = isAddressValid(address) && Object.keys(fieldErrors).length === 0;
 
   function updateAddress(field: keyof ShippingAddress, value: string) {
@@ -225,7 +275,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
           country: address.country.trim(),
           phone: address.phone.trim() || undefined,
         },
-        cart.id,
+        effectiveCart.id,
         appliedCoupon
       );
       if (checkoutUrl) {
@@ -461,7 +511,7 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
             Order summary
           </h2>
           <ul className="mb-6 space-y-4 border-b border-white/10 pb-6">
-            {cart.items.map((item) => {
+            {effectiveCart.items.map((item) => {
               const itemTotal = ((item.priceCents * item.quantity) / 100).toFixed(2);
               return (
                 <li key={item.id} className="flex gap-4">

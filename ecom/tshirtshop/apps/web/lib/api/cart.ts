@@ -17,6 +17,68 @@ function apiBase(): string {
   return process.env.API_URL || "http://127.0.0.1:3000";
 }
 
+async function trustedServerFetch(urlString: string, init?: RequestInit): Promise<Response> {
+  const url = new URL(urlString);
+
+  if (typeof window !== "undefined" || url.protocol !== "https:") {
+    return fetch(urlString, init);
+  }
+
+  const http = process.getBuiltinModule("http") as typeof import("http");
+  const https = process.getBuiltinModule("https") as typeof import("https");
+  const fs = process.getBuiltinModule("fs") as typeof import("fs");
+  const path = process.getBuiltinModule("path") as typeof import("path");
+
+  const mkcertCaRoot = path.join(
+    process.env.LOCALAPPDATA || "C:\\Users\\nissa\\AppData\\Local",
+    "mkcert",
+    "rootCA.pem",
+  );
+  const devCA =
+    process.env.NODE_ENV !== "production" && fs.existsSync(mkcertCaRoot)
+      ? fs.readFileSync(mkcertCaRoot)
+      : undefined;
+
+  return new Promise<Response>((resolve, reject) => {
+    const transport = url.protocol === "https:" ? https : http;
+    const req = transport.request(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80,
+        path: `${url.pathname}${url.search}`,
+        method: init?.method || "GET",
+        headers: Object.fromEntries(new Headers(init?.headers).entries()),
+        ...(devCA ? { ca: devCA } : {}),
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          const responseHeaders = new Headers();
+          for (const [key, value] of Object.entries(res.headers)) {
+            if (typeof value === "undefined") continue;
+            if (Array.isArray(value)) {
+              for (const item of value) responseHeaders.append(key, item);
+            } else {
+              responseHeaders.set(key, value);
+            }
+          }
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: res.statusCode || 502,
+              statusText: res.statusMessage,
+              headers: responseHeaders,
+            }),
+          );
+        });
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 export interface CartItem {
   id: string;
   productId: string;
@@ -66,7 +128,7 @@ export async function fetchCart(
   try {
     const headers: Record<string, string> = { ...cartHeaders(cartId) };
     if (options?.cookieHeader) headers["Cookie"] = options.cookieHeader;
-    const res = await fetch(`${apiBase()}/api/v1/cart`, {
+    const res = await trustedServerFetch(`${apiBase()}/api/v1/cart`, {
       headers,
       cache: "no-store",
       credentials: options?.cookieHeader ? "include" : undefined,

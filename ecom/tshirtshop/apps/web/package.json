@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3001 --webpack",
+    "dev": "next dev --port 3001 --webpack --experimental-https --experimental-https-key ../backend/certs/key.pem --experimental-https-cert ../backend/certs/cert.pem",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 50",

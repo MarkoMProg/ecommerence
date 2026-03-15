@@ -118,6 +118,7 @@ export default async function HomePage() {
               src="https://placehold.co/800x1000/1a1a1a/ffffff?text=CRAFTED"
               alt="Editorial"
               fill
+              unoptimized
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
             />
