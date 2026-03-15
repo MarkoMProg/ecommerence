@@ -31,7 +31,7 @@ export class CartController {
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader?: string,
   ) {
-    const user = (req as any).user as { id: string } | null;
+    const user = req.user;
     const guestCartId = cartIdHeader?.trim();
 
     if (user) {
@@ -40,7 +40,10 @@ export class CartController {
       if (guestCartId) {
         const guestCart = await this.cartService.getCartById(guestCartId);
         if (guestCart && !guestCart.userId) {
-          cart = await this.cartService.mergeGuestCartIntoUser(guestCartId, user.id);
+          cart = await this.cartService.mergeGuestCartIntoUser(
+            guestCartId,
+            user.id,
+          );
           merged = true;
         } else {
           cart = await this.cartService.getOrCreateUserCart(user.id);
@@ -84,7 +87,8 @@ export class CartController {
   async addItem(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
-    @Body() body: { productId?: string; quantity?: number; selectedOption?: string },
+    @Body()
+    body: { productId?: string; quantity?: number; selectedOption?: string },
   ) {
     const errors = validateAddCartItem(body);
     if (errors.length > 0) {
@@ -99,11 +103,13 @@ export class CartController {
     }
 
     const productId = (body.productId as string).trim();
-    const quantity = body.quantity != null ? Math.max(1, Math.floor(body.quantity)) : 1;
-    const selectedOption = typeof body.selectedOption === 'string' && body.selectedOption.trim()
-      ? body.selectedOption.trim()
-      : null;
-    const user = (req as any).user as { id: string } | null;
+    const quantity =
+      body.quantity != null ? Math.max(1, Math.floor(body.quantity)) : 1;
+    const selectedOption =
+      typeof body.selectedOption === 'string' && body.selectedOption.trim()
+        ? body.selectedOption.trim()
+        : null;
+    const user = req.user;
     const guestCartId = cartIdHeader?.trim();
 
     let cart;
@@ -114,10 +120,18 @@ export class CartController {
       if (guestCartId) {
         const guestCart = await this.cartService.getCartById(guestCartId);
         if (guestCart && !guestCart.userId) {
-          userCart = await this.cartService.mergeGuestCartIntoUser(guestCartId, user.id);
+          userCart = await this.cartService.mergeGuestCartIntoUser(
+            guestCartId,
+            user.id,
+          );
         }
       }
-      cart = await this.cartService.addItem(userCart.id, productId, quantity, selectedOption);
+      cart = await this.cartService.addItem(
+        userCart.id,
+        productId,
+        quantity,
+        selectedOption,
+      );
     } else {
       const result = await this.cartService.getOrCreateCartAndAddItem(
         guestCartId,
@@ -129,7 +143,12 @@ export class CartController {
       created = result.created;
     }
 
-    const response: { success: boolean; data: typeof cart; message: string; cartId?: string } = {
+    const response: {
+      success: boolean;
+      data: typeof cart;
+      message: string;
+      cartId?: string;
+    } = {
       success: true,
       data: cart,
       message: 'Item added to cart',
@@ -148,7 +167,7 @@ export class CartController {
     @Headers('x-cart-id') cartIdHeader: string | undefined,
     @Param('itemId') itemId: string,
   ) {
-    const user = (req as any).user as { id: string } | null;
+    const user = req.user;
     let cartId = cartIdHeader?.trim();
     if (user) {
       const userCart = await this.cartService.getOrCreateUserCart(user.id);
@@ -157,7 +176,10 @@ export class CartController {
     if (!cartId) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'CART_ID_REQUIRED', message: 'X-Cart-Id header is required for guests' },
+        error: {
+          code: 'CART_ID_REQUIRED',
+          message: 'X-Cart-Id header is required for guests',
+        },
       });
     }
     const cart = await this.cartService.removeItem(cartId, itemId.trim());
@@ -177,7 +199,7 @@ export class CartController {
     @Param('itemId') itemId: string,
     @Body() body: { quantity?: number },
   ) {
-    const user = (req as any).user as { id: string } | null;
+    const user = req.user;
     let cartId = cartIdHeader?.trim();
     if (user) {
       const userCart = await this.cartService.getOrCreateUserCart(user.id);
@@ -186,7 +208,10 @@ export class CartController {
     if (!cartId) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'CART_ID_REQUIRED', message: 'X-Cart-Id header is required for guests' },
+        error: {
+          code: 'CART_ID_REQUIRED',
+          message: 'X-Cart-Id header is required for guests',
+        },
       });
     }
     const errors = validateUpdateQuantity(body);
@@ -200,7 +225,8 @@ export class CartController {
         },
       });
     }
-    const quantity = body.quantity != null ? Math.max(0, Math.floor(body.quantity)) : 0;
+    const quantity =
+      body.quantity != null ? Math.max(0, Math.floor(body.quantity)) : 0;
     const cart = await this.cartService.updateItemQuantity(
       cartId,
       itemId.trim(),

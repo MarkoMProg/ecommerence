@@ -25,7 +25,7 @@ export class BillingController {
    */
   @Get('payment-methods')
   async listPaymentMethods(@Req() req: Request) {
-    const user = (req as any).user;
+    const user = req.user!;
     if (!this.billingService.isConfigured()) {
       return { success: true, data: [], configured: false };
     }
@@ -41,7 +41,7 @@ export class BillingController {
   @Post('setup-session')
   @HttpCode(HttpStatus.OK)
   async createSetupSession(@Req() req: Request) {
-    const user = (req as any).user;
+    const user = req.user!;
     const url = await this.billingService.createSetupSession(
       user.id,
       user.email,
@@ -57,7 +57,7 @@ export class BillingController {
   @Delete('payment-methods/:pmId')
   @HttpCode(HttpStatus.OK)
   async detachPaymentMethod(@Req() req: Request, @Param('pmId') pmId: string) {
-    const user = (req as any).user;
+    const user = req.user!;
     await this.billingService.detachPaymentMethod(user.id, pmId.trim());
     return { success: true, data: null };
   }
@@ -68,8 +68,11 @@ export class BillingController {
    */
   @Patch('payment-methods/:pmId/set-default')
   @HttpCode(HttpStatus.OK)
-  async setDefaultPaymentMethod(@Req() req: Request, @Param('pmId') pmId: string) {
-    const user = (req as any).user;
+  async setDefaultPaymentMethod(
+    @Req() req: Request,
+    @Param('pmId') pmId: string,
+  ) {
+    const user = req.user!;
     await this.billingService.setDefaultPaymentMethod(user.id, pmId.trim());
     return { success: true, data: null };
   }

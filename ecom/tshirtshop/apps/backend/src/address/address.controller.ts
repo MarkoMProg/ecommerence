@@ -27,7 +27,7 @@ export class AddressController {
   /** List all saved addresses for the current user. */
   @Get()
   async listAddresses(@Req() req: Request) {
-    const user = (req as any).user;
+    const user = req.user!;
     const addresses = await this.addressService.listAddresses(user.id);
     return { success: true, data: addresses };
   }
@@ -40,11 +40,18 @@ export class AddressController {
     if (errors.length > 0) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Validation failed', details: errors },
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          details: errors,
+        },
       });
     }
-    const user = (req as any).user;
-    const address = await this.addressService.createAddress(user.id, body as CreateAddressDto);
+    const user = req.user!;
+    const address = await this.addressService.createAddress(
+      user.id,
+      body as CreateAddressDto,
+    );
     return { success: true, data: address };
   }
 
@@ -59,11 +66,19 @@ export class AddressController {
     if (errors.length > 0) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Validation failed', details: errors },
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          details: errors,
+        },
       });
     }
-    const user = (req as any).user;
-    const address = await this.addressService.updateAddress(user.id, id.trim(), body as UpdateAddressDto);
+    const user = req.user!;
+    const address = await this.addressService.updateAddress(
+      user.id,
+      id.trim(),
+      body as UpdateAddressDto,
+    );
     if (!address) {
       throw new NotFoundException({
         success: false,
@@ -77,7 +92,7 @@ export class AddressController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async deleteAddress(@Req() req: Request, @Param('id') id: string) {
-    const user = (req as any).user;
+    const user = req.user!;
     const ok = await this.addressService.deleteAddress(user.id, id.trim());
     if (!ok) {
       throw new NotFoundException({
@@ -91,8 +106,11 @@ export class AddressController {
   /** Set an address as the default shipping address for the current user. */
   @Patch(':id/set-default-shipping')
   async setDefaultShipping(@Req() req: Request, @Param('id') id: string) {
-    const user = (req as any).user;
-    const address = await this.addressService.setDefaultShipping(user.id, id.trim());
+    const user = req.user!;
+    const address = await this.addressService.setDefaultShipping(
+      user.id,
+      id.trim(),
+    );
     if (!address) {
       throw new NotFoundException({
         success: false,
@@ -105,8 +123,11 @@ export class AddressController {
   /** Set an address as the default billing address for the current user. */
   @Patch(':id/set-default-billing')
   async setDefaultBilling(@Req() req: Request, @Param('id') id: string) {
-    const user = (req as any).user;
-    const address = await this.addressService.setDefaultBilling(user.id, id.trim());
+    const user = req.user!;
+    const address = await this.addressService.setDefaultBilling(
+      user.id,
+      id.trim(),
+    );
     if (!address) {
       throw new NotFoundException({
         success: false,

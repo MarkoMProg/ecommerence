@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
+import type { AuthUser } from '../../common/auth.types';
 import { BETTER_AUTH_INSTANCE } from '../../auth/constants';
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
@@ -41,27 +42,23 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException('Not authenticated');
     }
 
-    // Attach user to request for downstream handlers
+    const u = session.user as AuthUser;
     request.user = {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-      image: session.user.image,
-      emailVerified: session.user.emailVerified,
-      twoFactorEnabled: (session.user as any).twoFactorEnabled,
-      role: (session.user as any).role,
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      image: u.image,
+      emailVerified: u.emailVerified,
+      twoFactorEnabled: u.twoFactorEnabled,
+      role: u.role,
     };
     request.session = session.session;
 
-    // Check admin role (Better Auth admin plugin sets role field)
-    const userRole = (session.user as any).role;
-    if (userRole !== 'admin') {
+    if (u.role !== 'admin') {
       throw new ForbiddenException('Admin access required');
     }
 
-    // Enforce 2FA for admin users (security requirement)
-    const twoFactorEnabled = (session.user as any).twoFactorEnabled;
-    if (!twoFactorEnabled) {
+    if (!u.twoFactorEnabled) {
       throw new ForbiddenException(
         'Two-factor authentication is required for admin access. Please enable 2FA in your account settings.',
       );

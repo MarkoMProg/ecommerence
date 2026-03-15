@@ -1,9 +1,17 @@
-import { ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AdminGuard } from '../guards/admin.guard';
+
+interface MockAuthApi {
+  getSession: jest.Mock;
+}
 
 describe('AdminGuard', () => {
   let guard: AdminGuard;
-  let mockAuth: any;
+  let mockAuth: { api: MockAuthApi };
 
   const makeUser = (overrides: Record<string, unknown> = {}) => ({
     id: 'user-admin-1',
@@ -18,8 +26,10 @@ describe('AdminGuard', () => {
 
   const mockSession = { id: 'session-1', token: 'tok', userId: 'user-admin-1' };
 
-  function makeContext(headers: Record<string, string | string[]> = {}): ExecutionContext {
-    const request: any = { headers };
+  function makeContext(
+    headers: Record<string, string | string[]> = {},
+  ): ExecutionContext {
+    const request: { headers: Record<string, string | string[]> } = { headers };
     return {
       switchToHttp: () => ({ getRequest: () => request }),
     } as ExecutionContext;
@@ -120,7 +130,9 @@ describe('AdminGuard', () => {
       session: mockSession,
     });
     const ctx = makeContext({ cookie: 'better-auth.session=token' });
-    await expect(guard.canActivate(ctx)).rejects.toThrow('Admin access required');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Admin access required',
+    );
   });
 
   // ─── 2FA enforcement ─────────────────────────────────────────────────────
@@ -163,6 +175,8 @@ describe('AdminGuard', () => {
     });
     const ctx = makeContext({ cookie: 'better-auth.session=token' });
     // Role is checked before 2FA — message should be about admin access
-    await expect(guard.canActivate(ctx)).rejects.toThrow('Admin access required');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Admin access required',
+    );
   });
 });

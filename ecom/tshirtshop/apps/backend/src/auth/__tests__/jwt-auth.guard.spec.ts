@@ -2,9 +2,13 @@ import { BetterAuthGuard } from '../guards/jwt-auth.guard';
 import { UnauthorizedException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common';
 
+interface MockAuthApi {
+  getSession: jest.Mock;
+}
+
 describe('BetterAuthGuard', () => {
   let guard: BetterAuthGuard;
-  let mockAuth: any;
+  let mockAuth: { api: MockAuthApi };
 
   const mockUser = {
     id: 'user-1',
@@ -35,7 +39,7 @@ describe('BetterAuthGuard', () => {
   function createMockContext(
     headers: Record<string, string> = {},
   ): ExecutionContext {
-    const request: any = { headers };
+    const request: { headers: Record<string, string> } = { headers };
     return {
       switchToHttp: () => ({
         getRequest: () => request,

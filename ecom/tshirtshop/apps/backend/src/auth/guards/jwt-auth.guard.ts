@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
+import type { AuthUser } from '../../common/auth.types';
 import { BETTER_AUTH_INSTANCE } from '../constants';
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
@@ -34,14 +35,15 @@ export class BetterAuthGuard implements CanActivate {
       throw new UnauthorizedException('Not authenticated');
     }
 
+    const u = session.user as AuthUser;
     request.user = {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-      image: session.user.image,
-      emailVerified: session.user.emailVerified,
-      twoFactorEnabled: (session.user as any).twoFactorEnabled,
-      role: (session.user as any).role,
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      image: u.image,
+      emailVerified: u.emailVerified,
+      twoFactorEnabled: u.twoFactorEnabled,
+      role: u.role,
     };
 
     request.session = session.session;

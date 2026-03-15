@@ -69,7 +69,7 @@ export class ReviewsController {
         },
       });
     }
-    const user = (req as any).user;
+    const user = req.user!;
     const review = await this.reviewService.create(productId.trim(), user.id, {
       rating: body.rating,
       title: body.title,
@@ -101,7 +101,7 @@ export class ReviewsController {
         },
       });
     }
-    const user = (req as any).user;
+    const user = req.user!;
     const review = await this.reviewService.update(id.trim(), user.id, {
       rating: body.rating,
       title: body.title,
@@ -119,7 +119,7 @@ export class ReviewsController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(BetterAuthGuard)
   async delete(@Param('id') id: string, @Req() req: Request) {
-    const user = (req as any).user;
+    const user = req.user!;
     await this.reviewService.delete(id.trim(), user.id);
     return {
       success: true,
@@ -138,8 +138,12 @@ export class ReviewsController {
     @Body() body: { helpful?: boolean },
   ) {
     const helpful = body?.helpful === true;
-    const user = (req as any).user;
-    const result = await this.reviewService.voteHelpful(id.trim(), user.id, helpful);
+    const user = req.user!;
+    const result = await this.reviewService.voteHelpful(
+      id.trim(),
+      user.id,
+      helpful,
+    );
     return {
       success: true,
       data: result,

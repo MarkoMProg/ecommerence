@@ -73,7 +73,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(BetterAuthGuard)
   getMe(@Req() req: Request) {
-    return { user: (req as any).user };
+    return { user: req.user };
   }
 
   @Post('revoke-all')

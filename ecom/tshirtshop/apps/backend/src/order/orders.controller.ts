@@ -56,7 +56,7 @@ export class OrdersController {
   @Get()
   @UseGuards(BetterAuthGuard)
   async getMyOrders(@Req() req: Request) {
-    const user = (req as any).user;
+    const user = req.user!;
     const orders = await this.orderService.getOrdersByUserId(user.id);
     return {
       success: true,
@@ -74,7 +74,7 @@ export class OrdersController {
   @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.OK)
   async cancelOrder(@Req() req: Request, @Param('orderId') orderId: string) {
-    const user = (req as any).user as { id: string };
+    const user = req.user!;
     const id = orderId.trim();
 
     const existing = await this.orderService.getOrderById(id);
@@ -88,7 +88,10 @@ export class OrdersController {
     if (existing.userId !== user.id) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'ORDER_NOT_YOURS', message: 'You can only cancel your own orders' },
+        error: {
+          code: 'ORDER_NOT_YOURS',
+          message: 'You can only cancel your own orders',
+        },
       });
     }
 
@@ -120,7 +123,8 @@ export class OrdersController {
       success: false,
       error: {
         code: 'ORDER_NOT_CANCELLABLE',
-        message: 'This order can no longer be cancelled because it has already shipped.',
+        message:
+          'This order can no longer be cancelled because it has already shipped.',
       },
     });
   }
@@ -141,7 +145,10 @@ export class OrdersController {
         error: { code: 'STATUS_REQUIRED', message: 'status is required' },
       });
     }
-    const order = await this.orderService.updateOrderStatus(orderId.trim(), body.status.trim());
+    const order = await this.orderService.updateOrderStatus(
+      orderId.trim(),
+      body.status.trim(),
+    );
     if (!order) {
       throw new NotFoundException({
         success: false,
@@ -188,7 +195,7 @@ export class OrdersController {
   @UseGuards(BetterAuthGuard)
   @HttpCode(HttpStatus.OK)
   async reorder(@Req() req: Request, @Param('orderId') orderId: string) {
-    const user = (req as any).user as { id: string };
+    const user = req.user!;
 
     const order = await this.orderService.getOrderById(orderId.trim());
     if (!order) {
@@ -202,14 +209,20 @@ export class OrdersController {
     if (order.userId !== user.id) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'ORDER_NOT_YOURS', message: 'You can only reorder your own orders' },
+        error: {
+          code: 'ORDER_NOT_YOURS',
+          message: 'You can only reorder your own orders',
+        },
       });
     }
 
     if (!order.items.length) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'ORDER_EMPTY', message: 'Order has no items to reorder' },
+        error: {
+          code: 'ORDER_EMPTY',
+          message: 'Order has no items to reorder',
+        },
       });
     }
 
@@ -282,15 +295,25 @@ export class OrdersController {
 
     // Add available items to the user's cart (addItem merges with existing quantity)
     const validItems = itemResults.filter((r) => r.addedQuantity > 0);
-    let cartData: CartWithItems = await this.cartService.getOrCreateUserCart(user.id);
+    let cartData: CartWithItems = await this.cartService.getOrCreateUserCart(
+      user.id,
+    );
 
     for (const item of validItems) {
-      cartData = await this.cartService.addItem(cartData.id, item.productId, item.addedQuantity);
+      cartData = await this.cartService.addItem(
+        cartData.id,
+        item.productId,
+        item.addedQuantity,
+      );
     }
 
     const addedCount = itemResults.filter((r) => r.status === 'added').length;
-    const adjustedCount = itemResults.filter((r) => r.status === 'adjusted').length;
-    const unavailableCount = itemResults.filter((r) => r.status === 'unavailable').length;
+    const adjustedCount = itemResults.filter(
+      (r) => r.status === 'adjusted',
+    ).length;
+    const unavailableCount = itemResults.filter(
+      (r) => r.status === 'unavailable',
+    ).length;
 
     const message =
       validItems.length === 0

@@ -12,6 +12,6 @@ export class UsersController {
   @Get('profile')
   @UseGuards(BetterAuthGuard)
   getProfile(@Req() req: Request) {
-    return { user: (req as any).user };
+    return { user: req.user };
   }
 }

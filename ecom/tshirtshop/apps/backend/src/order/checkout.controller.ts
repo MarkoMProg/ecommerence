@@ -49,7 +49,7 @@ export class CheckoutController {
     @Headers('x-cart-id') cartIdHeader: string | undefined,
     @Query('coupon') couponCode: string | undefined,
   ) {
-    const user = (req as any).user as { id: string } | null;
+    const user = req.user;
     let cartId = cartIdHeader?.trim();
     if (user) {
       const userCart = await this.cartService.getOrCreateUserCart(user.id);
@@ -62,7 +62,10 @@ export class CheckoutController {
         message: 'No cart ID provided. Use X-Cart-Id header or log in.',
       };
     }
-    const summary = await this.checkoutService.getOrderSummary(cartId, couponCode?.trim() || null);
+    const summary = await this.checkoutService.getOrderSummary(
+      cartId,
+      couponCode?.trim() || null,
+    );
     return {
       success: true,
       data: summary,
@@ -80,7 +83,7 @@ export class CheckoutController {
     @Headers('x-cart-id') cartIdHeader: string | undefined,
     @Body() body: { shippingAddress?: unknown; couponCode?: string },
   ) {
-    const user = (req as any).user as { id: string } | null;
+    const user = req.user;
     let cartId = cartIdHeader?.trim();
     if (user) {
       const userCart = await this.cartService.getOrCreateUserCart(user.id);
@@ -89,7 +92,10 @@ export class CheckoutController {
     if (!cartId?.trim()) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'CART_ID_REQUIRED', message: 'X-Cart-Id header is required for guests' },
+        error: {
+          code: 'CART_ID_REQUIRED',
+          message: 'X-Cart-Id header is required for guests',
+        },
       });
     }
 
@@ -178,14 +184,18 @@ export class CheckoutController {
         success: false,
         error: {
           code: 'ORDER_NOT_PENDING',
-          message: 'Only pending orders can be paid. Order status: ' + order.status,
+          message:
+            'Only pending orders can be paid. Order status: ' + order.status,
         },
       });
     }
     if (!this.stripeService.isConfigured()) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'STRIPE_NOT_CONFIGURED', message: 'Payment is not available' },
+        error: {
+          code: 'STRIPE_NOT_CONFIGURED',
+          message: 'Payment is not available',
+        },
       });
     }
     // Look up Stripe customer for this order's user if available
@@ -207,7 +217,10 @@ export class CheckoutController {
     if (!checkoutUrl) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'STRIPE_NOT_CONFIGURED', message: 'Payment is not available' },
+        error: {
+          code: 'STRIPE_NOT_CONFIGURED',
+          message: 'Payment is not available',
+        },
       });
     }
     return {
@@ -229,11 +242,16 @@ export class CheckoutController {
     if (!sessionId) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'SESSION_ID_REQUIRED', message: 'session_id is required' },
+        error: {
+          code: 'SESSION_ID_REQUIRED',
+          message: 'session_id is required',
+        },
       });
     }
 
-    const existingOrder = orderId ? await this.orderService.getOrderById(orderId) : null;
+    const existingOrder = orderId
+      ? await this.orderService.getOrderById(orderId)
+      : null;
     const expectedTotalCents = existingOrder?.totalCents;
 
     let verifiedOrderId: string;
@@ -244,23 +262,34 @@ export class CheckoutController {
         expectedTotalCents,
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Payment verification failed';
+      const msg =
+        err instanceof Error ? err.message : 'Payment verification failed';
       let code = 'PAYMENT_VERIFICATION_FAILED';
       if (msg.includes('Payment not complete')) code = 'PAYMENT_NOT_COMPLETE';
-      else if (msg.includes('Session has no orderId') || msg.includes('does not match'))
+      else if (
+        msg.includes('Session has no orderId') ||
+        msg.includes('does not match')
+      )
         code = 'INVALID_SESSION';
-      else if (msg.includes('amount mismatch') || msg.includes('Payment amount'))
+      else if (
+        msg.includes('amount mismatch') ||
+        msg.includes('Payment amount')
+      )
         code = 'AMOUNT_MISMATCH';
-      else if (msg.includes('No such checkout.session')) code = 'SESSION_NOT_FOUND';
+      else if (msg.includes('No such checkout.session'))
+        code = 'SESSION_NOT_FOUND';
       throw new BadRequestException({
         success: false,
         error: { code, message: msg },
       });
     }
 
-    const updated = await this.orderService.markOrderPaidIfPending(verifiedOrderId, {
-      stripeSessionId: sessionId,
-    });
+    const updated = await this.orderService.markOrderPaidIfPending(
+      verifiedOrderId,
+      {
+        stripeSessionId: sessionId,
+      },
+    );
     if (!updated) {
       throw new BadRequestException({
         success: false,
