@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
 import { createOrder, InsufficientStockError } from "@/lib/api/checkout";
@@ -10,7 +11,7 @@ import type { SavedAddress } from "@/lib/api/addresses";
 import { fetchMyPaymentMethods } from "@/lib/api/billing";
 import type { SavedPaymentMethod } from "@/lib/api/billing";
 import { useAuth } from "@/components/auth-provider";
-import { isValidPhone, isValidPostalCode, containsHtml, sanitizeString } from "@/lib/validation";
+import { isValidPhone, isValidPostalCode, containsHtml } from "@/lib/validation";
 import {
   Select,
   SelectContent,
@@ -464,12 +465,14 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
               const itemTotal = ((item.priceCents * item.quantity) / 100).toFixed(2);
               return (
                 <li key={item.id} className="flex gap-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded bg-[#1A1A1A]">
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-[#1A1A1A]">
                     {item.imageUrl ? (
-                      <img
+                      <Image
                         src={item.imageUrl}
                         alt={item.productName}
-                        className="h-full w-full object-cover"
+                        fill
+                        sizes="64px"
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[10px] text-white/40">

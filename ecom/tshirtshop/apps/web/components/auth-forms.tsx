@@ -1,9 +1,21 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+
+/** Better Auth sign-in context with 2FA redirect flag */
+interface SignInContextData {
+  twoFactorRedirect?: boolean;
+}
+
+/** Better Auth 2FA enable response */
+interface TwoFactorEnableData {
+  totpURI?: string;
+  backupCodes?: string[];
+}
 import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import ReCAPTCHA from "react-google-recaptcha";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -174,7 +186,7 @@ export function LoginForm({
         { email, password },
         {
           async onSuccess(context) {
-            if ((context.data as any)?.twoFactorRedirect) {
+            if ((context.data as SignInContextData)?.twoFactorRedirect) {
               router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
             } else {
               router.push(redirectTo);
@@ -187,7 +199,7 @@ export function LoginForm({
         const msg = result.error.message || "Login failed";
         if (
           msg.toLowerCase().includes("two factor") ||
-          (result as any)?.data?.twoFactorRedirect
+          (result?.data as SignInContextData)?.twoFactorRedirect
         ) {
           router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
           return;
@@ -707,8 +719,9 @@ export function TwoFactorSetupForm() {
         setFormError(result.error.message || "Failed to enable 2FA");
         return;
       }
-      setTotpURI((result as any)?.data?.totpURI ?? null);
-      setBackupCodes((result as any)?.data?.backupCodes ?? []);
+      const data = (result?.data as TwoFactorEnableData) ?? {};
+      setTotpURI(data.totpURI ?? null);
+      setBackupCodes(data.backupCodes ?? []);
       clearActionState();
       setStep("verify");
     } catch {
@@ -973,7 +986,7 @@ export function TwoFactorSetupForm() {
         {totpURI && (
           <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-6">
             <div className="rounded-lg bg-white p-3 shadow-[0_0_30px_rgba(255,77,0,0.1)]">
-              <img
+              <Image
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(totpURI)}`}
                 alt="2FA QR Code"
                 width={180}

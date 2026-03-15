@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Plus } from "lucide-react";
 import { fetchCategories, type ApiCategory } from "@/lib/api/catalog";
 import { adminCreateProduct, adminUploadImage } from "@/lib/api/admin";
@@ -147,7 +148,7 @@ function ImageManager({
               {img.uploading ? (
                 <span className="text-xs text-white/40 animate-pulse">Uploading…</span>
               ) : img.url ? (
-                <img src={img.url} alt="" className="h-full w-full object-cover" />
+                <Image src={img.url} alt="" width={80} height={80} className="h-full w-full object-cover" unoptimized />
               ) : (
                 <svg className="h-8 w-8 text-white/20" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />

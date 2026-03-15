@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -65,7 +65,7 @@ export default function AdminUserDetailPage() {
   const [banDuration, setBanDuration] = useState("");
 
   // Load user via Better Auth admin plugin
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       const result = await authClient.admin.listUsers({
         query: {
@@ -84,12 +84,12 @@ export default function AdminUserDetailPage() {
     } catch {
       setUser(null);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
     loadUser();
-  }, [id]);
+  }, [id, loadUser]);
 
   // Load user orders
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function AdminUserDetailPage() {
         setUserOrders(filtered);
       }
     });
-  }, [user?.id]);
+  }, [user]);
 
   const clearMessages = () => {
     setActionError(null);

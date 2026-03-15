@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authClient } from "../../../lib/auth-client";
+import type { AuthUser } from "../../../components/auth-provider";
 
 /**
  * OAuth callback page.
@@ -21,7 +22,7 @@ export default function AuthCallbackPage() {
 
         const { data: session } = await authClient.getSession();
         if (session?.user) {
-          if ((session.user as any).twoFactorEnabled) {
+          if ((session.user as AuthUser).twoFactorEnabled) {
             window.location.href = `/auth/two-factor/verify?redirect=${encodeURIComponent(redirect)}`;
             return;
           }

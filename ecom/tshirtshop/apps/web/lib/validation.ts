@@ -10,6 +10,7 @@
 
 /** Strip ASCII control chars except newline and tab. */
 export function stripControlChars(s: string): string {
+  // eslint-disable-next-line no-control-regex -- intentionally matching control chars for sanitization
   return s.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
 }
 

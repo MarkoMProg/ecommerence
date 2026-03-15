@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { ShieldCheck, ShieldOff, LogOut, ExternalLink } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import type { AuthUser } from "@/components/auth-provider";
 
 export default function SecurityPage() {
   const { session, signOut } = useAuth();
-  const user = session?.user;
-  const twoFactorEnabled = !!(user as any)?.twoFactorEnabled;
+  const user = session?.user as AuthUser | undefined;
+  const twoFactorEnabled = !!user?.twoFactorEnabled;
 
   if (!user) return null;
 

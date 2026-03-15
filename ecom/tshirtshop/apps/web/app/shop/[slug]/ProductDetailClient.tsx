@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ThumbsUp, Star, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProductDisplay } from "@/lib/api/catalog";
 import { addToCart, StockError } from "@/lib/api/cart";
@@ -225,19 +226,23 @@ export default function ProductDetailClient({
       <div className="mb-16 grid grid-cols-1 gap-8 sm:mb-24 sm:gap-12 lg:grid-cols-2">
         {/* Left: Gallery */}
         <div className="space-y-4">
-          <div className="aspect-square overflow-hidden bg-[#1A1A1A]">
-            <img
+          <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
+            <Image
               src={product.imageUrl}
               alt={product.name}
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            <div className="h-16 w-16 min-w-[64px] shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-20 sm:w-20">
-              <img
+            <div className="relative h-16 w-16 min-w-[64px] shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-20 sm:w-20">
+              <Image
                 src={product.imageUrl}
                 alt=""
-                className="h-full w-full object-cover"
+                fill
+                sizes="80px"
+                className="object-cover"
               />
             </div>
           </div>
@@ -551,11 +556,13 @@ export default function ProductDetailClient({
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
           {relatedProducts.map((p) => (
             <Link key={p.id} href={`/shop/${p.slug}`} className="group block">
-              <div className="aspect-square overflow-hidden bg-[#1A1A1A]">
-                <img
+              <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
+                <Image
                   src={p.imageUrl}
                   alt={p.name}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 640px) 50vw, 33vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
               <div className="mt-2 sm:mt-4">

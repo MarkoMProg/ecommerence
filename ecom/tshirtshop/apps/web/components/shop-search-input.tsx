@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchSearchSuggestions } from "@/lib/api/catalog";
 import { useDebounce } from "@/lib/use-debounce";
@@ -105,7 +105,10 @@ export function ShopSearchInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [handleClickOutside]);
 
-  const currentFilters = { category, brand, minPrice, maxPrice, sort };
+  const currentFilters = useMemo(
+    () => ({ category, brand, minPrice, maxPrice, sort }),
+    [category, brand, minPrice, maxPrice, sort],
+  );
 
   const handleSuggestionClick = useCallback(
     (action: SuggestionAction) => {
@@ -114,7 +117,7 @@ export function ShopSearchInput({
       const href = buildShopHref(action, currentFilters);
       router.push(href);
     },
-    [category, brand, minPrice, maxPrice, sort, router],
+    [currentFilters, router],
   );
 
   const hasSuggestions =

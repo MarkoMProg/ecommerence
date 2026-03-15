@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
 import type { Cart, CartItem } from "@/lib/api/cart";
 import {
@@ -34,14 +35,16 @@ function CartDrawerItem({
     <li className="flex gap-4 border-b border-white/10 py-4 last:border-0">
       <Link
         href={`/shop/${item.slug}`}
-        className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-white/5"
+        className="relative block h-20 w-20 shrink-0 overflow-hidden rounded-md bg-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         {item.imageUrl ? (
-          <img
+          <Image
             src={item.imageUrl}
             alt={item.productName}
-            className="h-full w-full object-cover"
+            fill
+            sizes="80px"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-white/40 text-xs">

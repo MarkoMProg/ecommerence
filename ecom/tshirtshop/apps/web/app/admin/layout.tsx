@@ -15,6 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import type { AuthUser } from "@/components/auth-provider";
 import { checkAdminAccess } from "@/lib/api/admin";
 
 const adminNavLinks = [
@@ -46,7 +47,7 @@ export default function AdminLayout({
     }
 
     // Verify admin role via Better Auth admin plugin session role
-    const userRole = (session.user as any).role;
+    const userRole = (session.user as AuthUser).role;
     if (userRole !== "admin") {
       // Fallback: check admin access via custom endpoint
       checkAdminAccess().then((ok) => {
@@ -60,7 +61,7 @@ export default function AdminLayout({
     }
 
     // Enforce 2FA for admin access
-    const twoFactorEnabled = (session.user as any).twoFactorEnabled;
+    const twoFactorEnabled = (session.user as AuthUser).twoFactorEnabled;
     if (!twoFactorEnabled) {
       setNeeds2FA(true);
       setAuthorized(false);

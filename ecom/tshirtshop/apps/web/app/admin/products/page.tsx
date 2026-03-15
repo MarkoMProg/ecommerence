@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Archive, ArchiveRestore } from "lucide-react";
 import {
   fetchAdminProducts,
@@ -161,9 +162,11 @@ export default function AdminProductsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {product.images?.[0]?.imageUrl ? (
-                          <img
+                          <Image
                             src={product.images[0].imageUrl}
                             alt={product.name}
+                            width={40}
+                            height={40}
                             className="h-10 w-10 rounded object-cover"
                           />
                         ) : (

@@ -3,13 +3,15 @@
 import { createContext, useContext, useMemo, ReactNode } from "react";
 import { authClient } from "../lib/auth-client";
 
-interface AuthUser {
+/** Extended user type from better-auth session (includes custom fields from backend). */
+export interface AuthUser {
   id: string;
   email: string;
   name: string;
   image?: string | null;
   /** better-auth may return null when 2FA not configured */
   twoFactorEnabled?: boolean | null;
+  role?: string;
 }
 
 interface AuthContextType {

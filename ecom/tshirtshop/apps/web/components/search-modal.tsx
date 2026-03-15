@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, Loader2, Search, X } from "lucide-react";
 import { fetchProducts, type ProductDisplay } from "@/lib/api/catalog";
 import { useDebounce } from "@/lib/use-debounce";
@@ -31,13 +32,14 @@ function SearchResultRow({
       className="flex items-center gap-4 px-5 py-3 transition-colors duration-150 hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none"
     >
       {/* Thumbnail */}
-      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-white/5">
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-white/5">
         {product.imageUrl ? (
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
+            fill
+            sizes="48px"
+            className="object-cover"
           />
         ) : (
           <div className="h-full w-full bg-white/10" aria-hidden="true" />

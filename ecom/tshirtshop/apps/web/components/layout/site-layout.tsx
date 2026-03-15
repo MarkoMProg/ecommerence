@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { Footer } from "./footer";
 import { useAuth } from "@/components/auth-provider";
+import type { AuthUser } from "@/components/auth-provider";
 import { CartCountProvider } from "@/lib/cart-count-context";
 import { CartDrawerProvider } from "@/lib/cart-drawer-context";
 import { CartDrawer } from "@/components/cart-drawer";
@@ -36,7 +37,7 @@ function TwoFactorGuard() {
     const onAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p));
     if (onAuthPage) return;
 
-    const twoFactorEnabled = (session.user as any).twoFactorEnabled;
+    const twoFactorEnabled = (session.user as AuthUser).twoFactorEnabled;
     if (!twoFactorEnabled) return;
 
     const verified = sessionStorage.getItem("2fa_verified") === "true";

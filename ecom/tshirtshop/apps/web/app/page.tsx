@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Star } from "lucide-react";
 import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 
@@ -75,10 +76,12 @@ export default async function HomePage() {
                 className="group block"
               >
                 <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
-                  <img
+                  <Image
                     src={product.imageUrl}
                     alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 <div className="mt-2 sm:mt-4">
@@ -110,11 +113,13 @@ export default async function HomePage() {
       {/* 3. Editorial Section */}
       <section className="border-t border-white/10 bg-[#121212] py-12 sm:py-24">
         <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 px-4 sm:gap-12 sm:px-6 md:grid-cols-2 md:gap-16">
-          <div className="aspect-[4/5] min-h-[240px] overflow-hidden bg-[#1A1A1A]">
-            <img
+          <div className="relative aspect-[4/5] min-h-[240px] overflow-hidden bg-[#1A1A1A]">
+            <Image
               src="https://placehold.co/800x1000/1a1a1a/ffffff?text=CRAFTED"
               alt="Editorial"
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
           <div className="flex flex-col justify-center">

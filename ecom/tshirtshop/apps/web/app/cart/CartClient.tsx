@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { Cart } from "@/lib/api/cart";
 import {
   updateCartItemQuantity,
@@ -113,12 +114,14 @@ export function CartClient({ initialCart }: CartClientProps) {
                   href={`/shop/${item.slug}`}
                   className="flex shrink-0 gap-4 sm:min-w-[200px]"
                 >
-                  <div className={`h-20 w-20 shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-24 sm:w-24 ${isItemOos ? "opacity-50" : ""}`}>
+                  <div className={`relative h-20 w-20 shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-24 sm:w-24 ${isItemOos ? "opacity-50" : ""}`}>
                     {item.imageUrl ? (
-                      <img
+                      <Image
                         src={item.imageUrl}
                         alt={item.productName}
-                        className="h-full w-full object-cover"
+                        fill
+                        sizes="96px"
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-white/40 text-xs">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Suspense } from "react";
 import { Star } from "lucide-react";
 import { fetchProducts, fetchCategories, fetchBrands } from "@/lib/api/catalog";
@@ -153,10 +154,12 @@ export default async function ShopPage({
             className="group block"
           >
             <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
-              <img
+              <Image
                 src={product.imageUrl}
                 alt={product.name}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover:bg-black/40 group-hover:opacity-100">
                 <span className="rounded-md border border-white px-6 py-2 text-sm font-medium uppercase tracking-wider text-white">
