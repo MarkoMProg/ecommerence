@@ -51,7 +51,12 @@ export class AuthService {
         headers: data.headers,
       });
 
-      if ((result as any)?.twoFactorRedirect) {
+      if (
+        result &&
+        typeof result === 'object' &&
+        'twoFactorRedirect' in result &&
+        (result as { twoFactorRedirect?: unknown }).twoFactorRedirect
+      ) {
         return { twoFactorRequired: true };
       }
 
@@ -62,7 +67,7 @@ export class AuthService {
       return {
         user: result.user,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof UnauthorizedException) throw error;
       throw new UnauthorizedException('Invalid email or password');
     }

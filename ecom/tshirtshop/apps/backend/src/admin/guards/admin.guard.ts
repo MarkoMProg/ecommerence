@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { betterAuth } from 'better-auth';
 import type { AuthUser } from '../../common/auth.types';
 import { BETTER_AUTH_INSTANCE } from '../../auth/constants';
@@ -25,7 +26,7 @@ export class AdminGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
 
     const webHeaders = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {

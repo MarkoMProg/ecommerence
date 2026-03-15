@@ -16,20 +16,17 @@ import * as authSchema from './schema';
     {
       provide: BETTER_AUTH_INSTANCE,
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
-        const resendApiKey = configService.get('RESEND_API_KEY');
-        /** Minimal interface for email sending; stub used when RESEND_API_KEY is missing */
-        type EmailSender = {
-          emails: { send: (opts: object) => Promise<unknown> };
-        };
+        const resendApiKey = configService.get<string>('RESEND_API_KEY');
         const resend = resendApiKey
           ? new Resend(resendApiKey)
           : {
               emails: {
-                send: async () => {
-                  throw new Error(
-                    'RESEND_API_KEY is required for email sending. Add it to .env (see .env.example). Get a free key at https://resend.com',
-                  );
-                },
+                send: () =>
+                  Promise.reject(
+                    new Error(
+                      'RESEND_API_KEY is required for email sending. Add it to .env (see .env.example). Get a free key at https://resend.com',
+                    ),
+                  ),
               },
             };
         if (!resendApiKey) {
@@ -44,14 +41,15 @@ import * as authSchema from './schema';
             `[BetterAuth] RECAPTCHA_SECRET_KEY not set. Sign-up captcha disabled.${isProd ? ' REQUIRED for production (AUTH-008).' : ' Add it to .env for production.'}`,
           );
         }
-        const uiUrl = configService.get('UI_URL') ?? 'http://localhost:3001';
-        const port = configService.get('PORT') ?? '3000';
+        const uiUrl =
+          configService.get<string>('UI_URL') ?? 'http://localhost:3001';
+        const port = configService.get<string>('PORT') ?? '3000';
         const baseURL = `http://localhost:${port}/api/auth`;
 
         return betterAuth({
           baseURL,
           basePath: '/api/auth',
-          secret: configService.get('BETTER_AUTH_SECRET'),
+          secret: configService.get<string>('BETTER_AUTH_SECRET'),
           appName: 'Darkloom',
           database: drizzleAdapter(database, {
             provider: 'pg',
@@ -90,7 +88,7 @@ import * as authSchema from './schema';
             sendResetPassword: async ({ user, url }) => {
               try {
                 const from =
-                  configService.get('EMAIL_FROM') ??
+                  configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
                 console.log(
                   `[Resend] Attempting to send password reset email to ${user.email} from ${from}`,
@@ -133,7 +131,7 @@ import * as authSchema from './schema';
             sendVerificationEmail: async ({ user, url }) => {
               try {
                 const from =
-                  configService.get('EMAIL_FROM') ??
+                  configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
                 console.log(
                   `[Resend] Attempting to send verification email to ${user.email} from ${from}`,
@@ -168,21 +166,25 @@ import * as authSchema from './schema';
           },
 
           socialProviders: {
-            ...(configService.get('GOOGLE_CLIENT_ID') &&
-            configService.get('GOOGLE_CLIENT_SECRET')
+            ...(configService.get<string>('GOOGLE_CLIENT_ID') &&
+            configService.get<string>('GOOGLE_CLIENT_SECRET')
               ? {
                   google: {
-                    clientId: configService.get('GOOGLE_CLIENT_ID')!,
-                    clientSecret: configService.get('GOOGLE_CLIENT_SECRET')!,
+                    clientId: configService.get<string>('GOOGLE_CLIENT_ID')!,
+                    clientSecret: configService.get<string>(
+                      'GOOGLE_CLIENT_SECRET',
+                    )!,
                   },
                 }
               : {}),
-            ...(configService.get('FACEBOOK_CLIENT_ID') &&
-            configService.get('FACEBOOK_CLIENT_SECRET')
+            ...(configService.get<string>('FACEBOOK_CLIENT_ID') &&
+            configService.get<string>('FACEBOOK_CLIENT_SECRET')
               ? {
                   facebook: {
-                    clientId: configService.get('FACEBOOK_CLIENT_ID')!,
-                    clientSecret: configService.get('FACEBOOK_CLIENT_SECRET')!,
+                    clientId: configService.get<string>('FACEBOOK_CLIENT_ID')!,
+                    clientSecret: configService.get<string>(
+                      'FACEBOOK_CLIENT_SECRET',
+                    )!,
                   },
                 }
               : {}),
@@ -196,11 +198,13 @@ import * as authSchema from './schema';
             admin({
               defaultRole: 'user',
             }),
-            ...(configService.get('RECAPTCHA_SECRET_KEY')
+            ...(configService.get<string>('RECAPTCHA_SECRET_KEY')
               ? [
                   captcha({
                     provider: 'google-recaptcha',
-                    secretKey: configService.get('RECAPTCHA_SECRET_KEY')!,
+                    secretKey: configService.get<string>(
+                      'RECAPTCHA_SECRET_KEY',
+                    )!,
                     endpoints: ['sign-up'],
                   }),
                 ]

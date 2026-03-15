@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { validateCreateProduct, type CreateProductBody } from './dto/catalog.dto';
+import {
+  validateCreateProduct,
+  type CreateProductBody,
+} from './dto/catalog.dto';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +41,14 @@ export interface BulkUploadResult {
   results: BulkRowResult[];
 }
 
+/** Safely convert unknown to string. Returns undefined for objects to avoid [object Object]. */
+function safeString(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return undefined;
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -46,10 +57,15 @@ export class BulkUploadService {
 
   /** Parse a CSV string into BulkProductEntry[]. First row must be headers. */
   parseCSV(content: string): BulkProductEntry[] {
-    const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const lines = content
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .split('\n');
     if (lines.length < 2) return [];
 
-    const headers = this.parseCSVRow(lines[0]).map((h) => h.trim().toLowerCase());
+    const headers = this.parseCSVRow(lines[0]).map((h) =>
+      h.trim().toLowerCase(),
+    );
     const entries: BulkProductEntry[] = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -66,7 +82,9 @@ export class BulkUploadService {
         name: row['name'] ?? '',
         description: row['description'] ?? '',
         priceCents: parseInt(row['pricecents'] ?? '0', 10),
-        stockQuantity: row['stockquantity'] ? parseInt(row['stockquantity'], 10) : undefined,
+        stockQuantity: row['stockquantity']
+          ? parseInt(row['stockquantity'], 10)
+          : undefined,
         categoryId: row['categoryid'] ?? '',
         brand: row['brand'] ?? '',
         weightMetric: row['weightmetric'] || undefined,
@@ -96,31 +114,36 @@ export class BulkUploadService {
 
   /** Parse a JSON string (array of product objects) into BulkProductEntry[]. */
   parseJSON(content: string): BulkProductEntry[] {
-    const data = JSON.parse(content);
+    const data = JSON.parse(content) as unknown;
     if (!Array.isArray(data)) {
       throw new Error('JSON must be an array of product objects');
     }
 
     return data.map((item: Record<string, unknown>) => ({
-      name: String(item.name ?? ''),
-      description: String(item.description ?? ''),
+      name: safeString(item.name) ?? '',
+      description: safeString(item.description) ?? '',
       priceCents: Number(item.priceCents ?? 0),
-      stockQuantity: item.stockQuantity != null ? Number(item.stockQuantity) : undefined,
-      categoryId: String(item.categoryId ?? ''),
-      brand: String(item.brand ?? ''),
-      weightMetric: item.weightMetric ? String(item.weightMetric) : undefined,
-      weightImperial: item.weightImperial ? String(item.weightImperial) : undefined,
-      dimensionMetric: item.dimensionMetric ? String(item.dimensionMetric) : undefined,
-      dimensionImperial: item.dimensionImperial ? String(item.dimensionImperial) : undefined,
-      sizeOptions: item.sizeOptions ? String(item.sizeOptions) : undefined,
-      material: item.material ? String(item.material) : undefined,
-      fit: item.fit ? String(item.fit) : undefined,
-      careInstructions: item.careInstructions ? String(item.careInstructions) : undefined,
-      orientation: item.orientation ? String(item.orientation) : undefined,
-      framingInfo: item.framingInfo ? String(item.framingInfo) : undefined,
+      stockQuantity:
+        item.stockQuantity != null ? Number(item.stockQuantity) : undefined,
+      categoryId: safeString(item.categoryId) ?? '',
+      brand: safeString(item.brand) ?? '',
+      weightMetric: safeString(item.weightMetric),
+      weightImperial: safeString(item.weightImperial),
+      dimensionMetric: safeString(item.dimensionMetric),
+      dimensionImperial: safeString(item.dimensionImperial),
+      sizeOptions: safeString(item.sizeOptions),
+      material: safeString(item.material),
+      fit: safeString(item.fit),
+      careInstructions: safeString(item.careInstructions),
+      orientation: safeString(item.orientation),
+      framingInfo: safeString(item.framingInfo),
       images: Array.isArray(item.images)
         ? (item.images as unknown[]).map((img) =>
-            typeof img === 'string' ? { url: img } : { url: String((img as Record<string, unknown>).url ?? '') },
+            typeof img === 'string'
+              ? { url: img }
+              : {
+                  url: safeString((img as Record<string, unknown>).url) ?? '',
+                },
           )
         : Array.isArray(item.imageUrls)
           ? (item.imageUrls as string[]).map((url) => ({ url }))

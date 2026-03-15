@@ -16,6 +16,7 @@ import {
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import type { CartWithItems } from './cart.service';
 import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { CartService } from './cart.service';
 import { validateAddCartItem, validateUpdateQuantity } from './dto/cart.dto';
@@ -33,7 +34,7 @@ export class CartController {
     @Headers('x-cart-id') cartIdHeader?: string,
     @Query('limit') limitParam?: string,
   ) {
-    const user = req.user;
+    const user = req.user as { id: string } | null | undefined;
     const guestCartId = cartIdHeader?.trim();
     const limit = limitParam
       ? Math.min(12, Math.max(1, parseInt(limitParam, 10) || 6))
@@ -73,12 +74,12 @@ export class CartController {
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader?: string,
   ) {
-    const user = req.user;
+    const user = req.user as { id: string } | null | undefined;
     const guestCartId = cartIdHeader?.trim();
 
     if (user) {
       let merged = false;
-      let cart;
+      let cart: CartWithItems;
       if (guestCartId) {
         const guestCart = await this.cartService.getCartById(guestCartId);
         if (guestCart && !guestCart.userId) {
@@ -151,14 +152,16 @@ export class CartController {
       typeof body.selectedOption === 'string' && body.selectedOption.trim()
         ? body.selectedOption.trim()
         : null;
-    const user = req.user;
+    const user = req.user as { id: string } | null | undefined;
     const guestCartId = cartIdHeader?.trim();
 
-    let cart;
+    let cart: CartWithItems;
     let created = false;
 
     if (user) {
-      let userCart = await this.cartService.getOrCreateUserCart(user.id);
+      let userCart: CartWithItems = await this.cartService.getOrCreateUserCart(
+        user.id,
+      );
       if (guestCartId) {
         const guestCart = await this.cartService.getCartById(guestCartId);
         if (guestCart && !guestCart.userId) {
@@ -187,7 +190,7 @@ export class CartController {
 
     const response: {
       success: boolean;
-      data: typeof cart;
+      data: CartWithItems;
       message: string;
       cartId?: string;
     } = {
@@ -209,10 +212,11 @@ export class CartController {
     @Headers('x-cart-id') cartIdHeader: string | undefined,
     @Param('itemId') itemId: string,
   ) {
-    const user = req.user;
-    let cartId = cartIdHeader?.trim();
+    const user = req.user as { id: string } | null | undefined;
+    let cartId: string | undefined = cartIdHeader?.trim();
     if (user) {
-      const userCart = await this.cartService.getOrCreateUserCart(user.id);
+      const userCart: CartWithItems =
+        await this.cartService.getOrCreateUserCart(user.id);
       cartId = userCart.id;
     }
     if (!cartId) {
@@ -241,10 +245,11 @@ export class CartController {
     @Param('itemId') itemId: string,
     @Body() body: { quantity?: number },
   ) {
-    const user = req.user;
-    let cartId = cartIdHeader?.trim();
+    const user = req.user as { id: string } | null | undefined;
+    let cartId: string | undefined = cartIdHeader?.trim();
     if (user) {
-      const userCart = await this.cartService.getOrCreateUserCart(user.id);
+      const userCart: CartWithItems =
+        await this.cartService.getOrCreateUserCart(user.id);
       cartId = userCart.id;
     }
     if (!cartId) {

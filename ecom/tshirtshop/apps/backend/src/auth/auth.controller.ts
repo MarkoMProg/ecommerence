@@ -11,7 +11,12 @@ import {
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { BetterAuthGuard } from './guards/jwt-auth.guard';
-import { validateRegister, validateLogin } from './dto/auth.dto';
+import {
+  validateRegister,
+  validateLogin,
+  type RegisterDto,
+  type LoginDto,
+} from './dto/auth.dto';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -24,8 +29,8 @@ export class AuthController {
     if (errors.length > 0) {
       throw new BadRequestException({ message: 'Validation failed', errors });
     }
-
-    const { name, email, password } = req.body;
+    const body = req.body as RegisterDto;
+    const { name, email, password } = body;
     const headers = this.toWebHeaders(req);
     const result = await this.authService.register({
       name,
@@ -52,8 +57,8 @@ export class AuthController {
     if (errors.length > 0) {
       throw new BadRequestException({ message: 'Validation failed', errors });
     }
-
-    const { email, password } = req.body;
+    const body = req.body as LoginDto;
+    const { email, password } = body;
     const headers = this.toWebHeaders(req);
     const result = await this.authService.login({ email, password, headers });
 
