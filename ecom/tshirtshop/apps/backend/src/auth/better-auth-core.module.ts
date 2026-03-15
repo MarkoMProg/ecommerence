@@ -44,7 +44,15 @@ import * as authSchema from './schema';
         const uiUrl =
           configService.get<string>('UI_URL') ?? 'http://localhost:3001';
         const port = configService.get<string>('PORT') ?? '3000';
-        const baseURL = `http://localhost:${port}/api/auth`;
+        const configuredBaseUrl = configService.get<string>(
+          'BETTER_AUTH_BASE_URL',
+        );
+        const useHttps = ['1', 'true'].includes(
+          (configService.get<string>('USE_HTTPS') ?? '').toLowerCase(),
+        );
+        const protocol = useHttps ? 'https' : 'http';
+        const baseURL =
+          configuredBaseUrl ?? `${protocol}://localhost:${port}/api/auth`;
 
         return betterAuth({
           baseURL,
