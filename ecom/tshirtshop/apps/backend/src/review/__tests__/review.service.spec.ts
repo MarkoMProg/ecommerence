@@ -22,7 +22,9 @@ function thenable<T>(value: T): any {
     innerJoin: () => chain,
     groupBy: () => chain,
     values: () => ({ then: (fn: any) => fn(), catch: () => {} }),
-    set: () => ({ where: () => ({ then: (fn: any) => fn(), catch: () => {} }) }),
+    set: () => ({
+      where: () => ({ then: (fn: any) => fn(), catch: () => {} }),
+    }),
     then: (resolve: (v: T) => void) => resolve(value),
     catch: () => {},
   };
@@ -83,7 +85,7 @@ describe('ReviewService', () => {
   describe('listByProduct', () => {
     it('should return reviews with pagination shape', async () => {
       (mockDb.select as jest.Mock)
-        .mockReturnValueOnce(thenable([mockReview]))   // data query
+        .mockReturnValueOnce(thenable([mockReview])) // data query
         .mockReturnValueOnce(thenable([{ count: 1 }])); // count query
 
       const result = await service.listByProduct('prod-1', 1, 20);
@@ -149,7 +151,9 @@ describe('ReviewService', () => {
         // fetch user name
         .mockReturnValueOnce(thenable([{ name: 'Alice' }]))
         // re-read created review
-        .mockReturnValueOnce(thenable([{ ...mockReview, id: 'rev-new', rating: 5 }]));
+        .mockReturnValueOnce(
+          thenable([{ ...mockReview, id: 'rev-new', rating: 5 }]),
+        );
 
       const result = await service.create('prod-1', 'user-1', createData);
 
@@ -212,7 +216,9 @@ describe('ReviewService', () => {
         .mockReturnValueOnce(thenable([]))
         // user fetch returns empty
         .mockReturnValueOnce(thenable([]))
-        .mockReturnValueOnce(thenable([{ ...mockReview, userName: 'Anonymous' }]));
+        .mockReturnValueOnce(
+          thenable([{ ...mockReview, userName: 'Anonymous' }]),
+        );
 
       const result = await service.create('prod-1', 'user-1', createData);
       expect(result.userName).toBe('Anonymous');
@@ -281,9 +287,9 @@ describe('ReviewService', () => {
     it('should throw NotFoundException when review does not exist', async () => {
       (mockDb.select as jest.Mock).mockReturnValueOnce(thenable([]));
 
-      await expect(
-        service.delete('rev-nonexistent', 'user-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.delete('rev-nonexistent', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException when user is not the author', async () => {
@@ -291,9 +297,9 @@ describe('ReviewService', () => {
         thenable([{ ...mockReview, userId: 'different-user' }]),
       );
 
-      await expect(
-        service.delete('rev-1', 'user-1'),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.delete('rev-1', 'user-1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -319,7 +325,9 @@ describe('ReviewService', () => {
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(thenable([{ ...mockReview, userId: 'author-1' }]))
         // existing vote found
-        .mockReturnValueOnce(thenable([{ id: 'vote-1', reviewId: 'rev-1', userId: 'user-1' }]))
+        .mockReturnValueOnce(
+          thenable([{ id: 'vote-1', reviewId: 'rev-1', userId: 'user-1' }]),
+        )
         // recount
         .mockReturnValueOnce(thenable([{ count: 2 }]));
 
@@ -430,8 +438,14 @@ describe('ReviewService', () => {
       const result = await service.getProductsRatingStats(['prod-1', 'prod-2']);
 
       expect(result).toBeInstanceOf(Map);
-      expect(result.get('prod-1')).toEqual({ averageRating: 4.5, reviewCount: 10 });
-      expect(result.get('prod-2')).toEqual({ averageRating: 3.2, reviewCount: 5 });
+      expect(result.get('prod-1')).toEqual({
+        averageRating: 4.5,
+        reviewCount: 10,
+      });
+      expect(result.get('prod-2')).toEqual({
+        averageRating: 3.2,
+        reviewCount: 5,
+      });
     });
 
     it('should return empty Map when productIds is empty', async () => {

@@ -100,7 +100,10 @@ function validateStringField(
     errors.push({ field, message: `${field} is required` });
   } else if (val) {
     if (val.length > maxLen) {
-      errors.push({ field, message: `${field} must not exceed ${maxLen} characters` });
+      errors.push({
+        field,
+        message: `${field} must not exceed ${maxLen} characters`,
+      });
     }
     if (hasControlChars(val)) {
       errors.push({ field, message: `${field} contains invalid characters` });
@@ -111,24 +114,41 @@ function validateStringField(
   }
 }
 
-function validateImages(b: Record<string, unknown>, errors: ValidationError[]): void {
+function validateImages(
+  b: Record<string, unknown>,
+  errors: ValidationError[],
+): void {
   if (b?.images == null) return;
   if (!Array.isArray(b.images)) {
     errors.push({ field: 'images', message: 'images must be an array' });
     return;
   }
   if (b.images.length > MAX_IMAGES_PER_PRODUCT) {
-    errors.push({ field: 'images', message: `images must not exceed ${MAX_IMAGES_PER_PRODUCT} entries` });
+    errors.push({
+      field: 'images',
+      message: `images must not exceed ${MAX_IMAGES_PER_PRODUCT} entries`,
+    });
     return;
   }
   for (const img of b.images as unknown[]) {
     const entry = img as Record<string, unknown>;
-    if (!entry?.url || typeof entry.url !== 'string' || entry.url.trim().length < 1) {
-      errors.push({ field: 'images', message: 'Each image must have a non-empty url string' });
+    if (
+      !entry?.url ||
+      typeof entry.url !== 'string' ||
+      entry.url.trim().length < 1
+    ) {
+      errors.push({
+        field: 'images',
+        message: 'Each image must have a non-empty url string',
+      });
       break;
     }
     if (!isValidImageUrl(entry.url.trim())) {
-      errors.push({ field: 'images', message: 'Each image url must be a valid HTTP/HTTPS URL with an allowed image format' });
+      errors.push({
+        field: 'images',
+        message:
+          'Each image url must be a valid HTTP/HTTPS URL with an allowed image format',
+      });
       break;
     }
   }
@@ -149,17 +169,29 @@ export function validateCreateProduct(body: unknown): ValidationError[] {
     if (!desc) {
       errors.push({ field: 'description', message: 'Description is required' });
     } else if (desc.length > MAX_PRODUCT_DESCRIPTION_LENGTH) {
-      errors.push({ field: 'description', message: `Description must not exceed ${MAX_PRODUCT_DESCRIPTION_LENGTH} characters` });
+      errors.push({
+        field: 'description',
+        message: `Description must not exceed ${MAX_PRODUCT_DESCRIPTION_LENGTH} characters`,
+      });
     } else if (containsHtml(desc)) {
-      errors.push({ field: 'description', message: 'Description must not contain HTML' });
+      errors.push({
+        field: 'description',
+        message: 'Description must not contain HTML',
+      });
     }
   }
 
   // Price: required, semantic range check
   if (b?.priceCents == null || typeof b.priceCents !== 'number') {
-    errors.push({ field: 'priceCents', message: 'priceCents is required and must be a number' });
+    errors.push({
+      field: 'priceCents',
+      message: 'priceCents is required and must be a number',
+    });
   } else if (!isValidPriceCents(b.priceCents)) {
-    errors.push({ field: 'priceCents', message: `priceCents must be a non-negative integer up to ${MAX_PRICE_CENTS}` });
+    errors.push({
+      field: 'priceCents',
+      message: `priceCents must be a non-negative integer up to ${MAX_PRICE_CENTS}`,
+    });
   }
 
   // Category: required, must look like a UUID
@@ -170,13 +202,29 @@ export function validateCreateProduct(body: unknown): ValidationError[] {
 
   // Stock: optional, semantic range check
   if (b?.stockQuantity != null) {
-    if (typeof b.stockQuantity !== 'number' || !isValidStockQuantity(b.stockQuantity)) {
-      errors.push({ field: 'stockQuantity', message: `stockQuantity must be a non-negative integer up to ${MAX_STOCK_QUANTITY}` });
+    if (
+      typeof b.stockQuantity !== 'number' ||
+      !isValidStockQuantity(b.stockQuantity)
+    ) {
+      errors.push({
+        field: 'stockQuantity',
+        message: `stockQuantity must be a non-negative integer up to ${MAX_STOCK_QUANTITY}`,
+      });
     }
   }
 
   // Optional text fields: sanitize and limit length
-  for (const field of ['weightMetric', 'weightImperial', 'dimensionMetric', 'dimensionImperial', 'material', 'fit', 'careInstructions', 'framingInfo', 'sizeOptions'] as const) {
+  for (const field of [
+    'weightMetric',
+    'weightImperial',
+    'dimensionMetric',
+    'dimensionImperial',
+    'material',
+    'fit',
+    'careInstructions',
+    'framingInfo',
+    'sizeOptions',
+  ] as const) {
     if (b?.[field] != null) {
       validateStringField(b, field, MAX_OPTIONAL_TEXT_LENGTH, errors, false);
     }
@@ -185,8 +233,16 @@ export function validateCreateProduct(body: unknown): ValidationError[] {
   // Orientation: whitelist
   if (b?.orientation != null) {
     const orientation = sanitizeString(b.orientation).toLowerCase();
-    if (orientation && !ALLOWED_ORIENTATIONS.includes(orientation as typeof ALLOWED_ORIENTATIONS[number])) {
-      errors.push({ field: 'orientation', message: `orientation must be one of: ${ALLOWED_ORIENTATIONS.join(', ')}` });
+    if (
+      orientation &&
+      !ALLOWED_ORIENTATIONS.includes(
+        orientation as (typeof ALLOWED_ORIENTATIONS)[number],
+      )
+    ) {
+      errors.push({
+        field: 'orientation',
+        message: `orientation must be one of: ${ALLOWED_ORIENTATIONS.join(', ')}`,
+      });
     }
   }
 
@@ -204,32 +260,53 @@ export function validateUpdateProduct(body: unknown): ValidationError[] {
     validateStringField(b, 'name', MAX_PRODUCT_NAME_LENGTH, errors, false);
     const name = sanitizeString(b.name);
     if (typeof b.name === 'string' && !name) {
-      errors.push({ field: 'name', message: 'Name must be a non-empty string' });
+      errors.push({
+        field: 'name',
+        message: 'Name must be a non-empty string',
+      });
     }
   }
 
   if (b?.description != null) {
     if (typeof b.description !== 'string') {
-      errors.push({ field: 'description', message: 'Description must be a string' });
+      errors.push({
+        field: 'description',
+        message: 'Description must be a string',
+      });
     } else {
       const desc = sanitizeMultilineString(b.description);
       if (desc.length > MAX_PRODUCT_DESCRIPTION_LENGTH) {
-        errors.push({ field: 'description', message: `Description must not exceed ${MAX_PRODUCT_DESCRIPTION_LENGTH} characters` });
+        errors.push({
+          field: 'description',
+          message: `Description must not exceed ${MAX_PRODUCT_DESCRIPTION_LENGTH} characters`,
+        });
       } else if (containsHtml(desc)) {
-        errors.push({ field: 'description', message: 'Description must not contain HTML' });
+        errors.push({
+          field: 'description',
+          message: 'Description must not contain HTML',
+        });
       }
     }
   }
 
   if (b?.priceCents != null) {
     if (typeof b.priceCents !== 'number' || !isValidPriceCents(b.priceCents)) {
-      errors.push({ field: 'priceCents', message: `priceCents must be a non-negative integer up to ${MAX_PRICE_CENTS}` });
+      errors.push({
+        field: 'priceCents',
+        message: `priceCents must be a non-negative integer up to ${MAX_PRICE_CENTS}`,
+      });
     }
   }
 
   if (b?.stockQuantity != null) {
-    if (typeof b.stockQuantity !== 'number' || !isValidStockQuantity(b.stockQuantity)) {
-      errors.push({ field: 'stockQuantity', message: `stockQuantity must be a non-negative integer up to ${MAX_STOCK_QUANTITY}` });
+    if (
+      typeof b.stockQuantity !== 'number' ||
+      !isValidStockQuantity(b.stockQuantity)
+    ) {
+      errors.push({
+        field: 'stockQuantity',
+        message: `stockQuantity must be a non-negative integer up to ${MAX_STOCK_QUANTITY}`,
+      });
     }
   }
 
@@ -237,7 +314,10 @@ export function validateUpdateProduct(body: unknown): ValidationError[] {
     validateStringField(b, 'categoryId', 36, errors, false);
     const catId = sanitizeString(b.categoryId);
     if (typeof b.categoryId === 'string' && !catId) {
-      errors.push({ field: 'categoryId', message: 'categoryId must be a non-empty string' });
+      errors.push({
+        field: 'categoryId',
+        message: 'categoryId must be a non-empty string',
+      });
     }
   }
 
@@ -245,11 +325,24 @@ export function validateUpdateProduct(body: unknown): ValidationError[] {
     validateStringField(b, 'brand', MAX_BRAND_LENGTH, errors, false);
     const brand = sanitizeString(b.brand);
     if (typeof b.brand === 'string' && !brand) {
-      errors.push({ field: 'brand', message: 'Brand must be a non-empty string' });
+      errors.push({
+        field: 'brand',
+        message: 'Brand must be a non-empty string',
+      });
     }
   }
 
-  for (const field of ['weightMetric', 'weightImperial', 'dimensionMetric', 'dimensionImperial', 'material', 'fit', 'careInstructions', 'framingInfo', 'sizeOptions'] as const) {
+  for (const field of [
+    'weightMetric',
+    'weightImperial',
+    'dimensionMetric',
+    'dimensionImperial',
+    'material',
+    'fit',
+    'careInstructions',
+    'framingInfo',
+    'sizeOptions',
+  ] as const) {
     if (b?.[field] != null) {
       validateStringField(b, field, MAX_OPTIONAL_TEXT_LENGTH, errors, false);
     }
@@ -257,8 +350,16 @@ export function validateUpdateProduct(body: unknown): ValidationError[] {
 
   if (b?.orientation != null) {
     const orientation = sanitizeString(b.orientation).toLowerCase();
-    if (orientation && !ALLOWED_ORIENTATIONS.includes(orientation as typeof ALLOWED_ORIENTATIONS[number])) {
-      errors.push({ field: 'orientation', message: `orientation must be one of: ${ALLOWED_ORIENTATIONS.join(', ')}` });
+    if (
+      orientation &&
+      !ALLOWED_ORIENTATIONS.includes(
+        orientation as (typeof ALLOWED_ORIENTATIONS)[number],
+      )
+    ) {
+      errors.push({
+        field: 'orientation',
+        message: `orientation must be one of: ${ALLOWED_ORIENTATIONS.join(', ')}`,
+      });
     }
   }
 

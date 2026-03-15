@@ -24,7 +24,9 @@ export class StripeWebhookController {
 
   @Post('stripe')
   @HttpCode(HttpStatus.OK)
-  async handleStripeWebhook(@Req() req: Request): Promise<{ received: boolean }> {
+  async handleStripeWebhook(
+    @Req() req: Request,
+  ): Promise<{ received: boolean }> {
     const rawBody = req.body as Buffer | undefined;
 
     if (!rawBody || !Buffer.isBuffer(rawBody)) {
@@ -32,7 +34,8 @@ export class StripeWebhookController {
         success: false,
         error: {
           code: 'RAW_BODY_REQUIRED',
-          message: 'Webhook requires raw body. Ensure express.raw() is applied to this route.',
+          message:
+            'Webhook requires raw body. Ensure express.raw() is applied to this route.',
         },
       });
     }
@@ -41,7 +44,10 @@ export class StripeWebhookController {
     if (typeof signature !== 'string') {
       throw new BadRequestException({
         success: false,
-        error: { code: 'STRIPE_SIGNATURE_REQUIRED', message: 'Missing Stripe-Signature header' },
+        error: {
+          code: 'STRIPE_SIGNATURE_REQUIRED',
+          message: 'Missing Stripe-Signature header',
+        },
       });
     }
 

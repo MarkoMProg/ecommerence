@@ -116,11 +116,11 @@ describe('Review API (Controller Integration)', () => {
         body: 'OK quality',
       });
 
-      expect(reviewService.create).toHaveBeenCalledWith(
-        'prod-1',
-        'user-1',
-        { rating: 3, title: 'Decent', body: 'OK quality' },
-      );
+      expect(reviewService.create).toHaveBeenCalledWith('prod-1', 'user-1', {
+        rating: 3,
+        title: 'Decent',
+        body: 'OK quality',
+      });
     });
 
     it('should throw BadRequestException on missing body', async () => {
@@ -194,11 +194,11 @@ describe('Review API (Controller Integration)', () => {
     it('should pass fields to reviewService.update', async () => {
       await controller.update('rev-1', mockReq, { body: 'Updated body text' });
 
-      expect(reviewService.update).toHaveBeenCalledWith(
-        'rev-1',
-        'user-1',
-        { rating: undefined, title: undefined, body: 'Updated body text' },
-      );
+      expect(reviewService.update).toHaveBeenCalledWith('rev-1', 'user-1', {
+        rating: undefined,
+        title: undefined,
+        body: 'Updated body text',
+      });
     });
 
     it('should throw BadRequestException when no fields are provided', async () => {
@@ -280,9 +280,9 @@ describe('Review API (Controller Integration)', () => {
         }),
       );
 
-      await expect(
-        controller.delete('rev-1', mockReq),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(controller.delete('rev-1', mockReq)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -292,7 +292,9 @@ describe('Review API (Controller Integration)', () => {
     const mockReq = { user: { id: 'user-1' } } as any;
 
     it('should record helpful vote and return updated count', async () => {
-      const result = await controller.voteHelpful('rev-1', mockReq, { helpful: true });
+      const result = await controller.voteHelpful('rev-1', mockReq, {
+        helpful: true,
+      });
 
       expect(result.success).toBe(true);
       expect(result.data.helpfulCount).toBe(6);
@@ -302,19 +304,31 @@ describe('Review API (Controller Integration)', () => {
     it('should call service with helpful=true', async () => {
       await controller.voteHelpful('rev-1', mockReq, { helpful: true });
 
-      expect(reviewService.voteHelpful).toHaveBeenCalledWith('rev-1', 'user-1', true);
+      expect(reviewService.voteHelpful).toHaveBeenCalledWith(
+        'rev-1',
+        'user-1',
+        true,
+      );
     });
 
     it('should default to helpful=false when body.helpful is missing', async () => {
       await controller.voteHelpful('rev-1', mockReq, {});
 
-      expect(reviewService.voteHelpful).toHaveBeenCalledWith('rev-1', 'user-1', false);
+      expect(reviewService.voteHelpful).toHaveBeenCalledWith(
+        'rev-1',
+        'user-1',
+        false,
+      );
     });
 
     it('should default to helpful=false when body.helpful is not true', async () => {
       await controller.voteHelpful('rev-1', mockReq, { helpful: false });
 
-      expect(reviewService.voteHelpful).toHaveBeenCalledWith('rev-1', 'user-1', false);
+      expect(reviewService.voteHelpful).toHaveBeenCalledWith(
+        'rev-1',
+        'user-1',
+        false,
+      );
     });
 
     it('should propagate NotFoundException from service', async () => {

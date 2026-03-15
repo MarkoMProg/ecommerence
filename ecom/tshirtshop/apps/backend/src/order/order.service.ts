@@ -1,4 +1,9 @@
-import { Injectable, Inject, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { eq, desc, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -239,16 +244,36 @@ export class OrderService {
    * Update order status (ORD-003). Validates lifecycle transitions.
    * WARNING: Endpoint is unauthenticated. Add auth for production (admin or webhook secret).
    */
-  async updateOrderStatus(orderId: string, newStatus: string): Promise<OrderDto | null> {
+  async updateOrderStatus(
+    orderId: string,
+    newStatus: string,
+  ): Promise<OrderDto | null> {
     const status = newStatus.trim().toLowerCase();
-    if (!(['pending', 'paid', 'shipped', 'completed', 'cancelled', 'refunded'] as const).includes(status as OrderStatus)) {
+    if (
+      !(
+        [
+          'pending',
+          'paid',
+          'shipped',
+          'completed',
+          'cancelled',
+          'refunded',
+        ] as const
+      ).includes(status as OrderStatus)
+    ) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'INVALID_STATUS', message: `Invalid status: ${newStatus}` },
+        error: {
+          code: 'INVALID_STATUS',
+          message: `Invalid status: ${newStatus}`,
+        },
       });
     }
 
-    const [o] = await this.db.select().from(order).where(eq(order.id, orderId.trim()));
+    const [o] = await this.db
+      .select()
+      .from(order)
+      .where(eq(order.id, orderId.trim()));
     if (!o) return null;
 
     const allowed = ALLOWED_TRANSITIONS[o.status as OrderStatus];
@@ -274,7 +299,10 @@ export class OrderService {
 
     if (shouldRestock) {
       const items = await this.db
-        .select({ productId: orderItem.productId, quantity: orderItem.quantity })
+        .select({
+          productId: orderItem.productId,
+          quantity: orderItem.quantity,
+        })
         .from(orderItem)
         .where(eq(orderItem.orderId, orderId.trim()));
 
@@ -301,7 +329,9 @@ export class OrderService {
   async cancelOrderWithRefund(
     orderId: string,
     userId: string,
-  ): Promise<{ order: OrderDto; refundId: string } | { error: string; code: string }> {
+  ): Promise<
+    { order: OrderDto; refundId: string } | { error: string; code: string }
+  > {
     const id = orderId.trim();
     const [o] = await this.db.select().from(order).where(eq(order.id, id));
     if (!o) {
@@ -311,14 +341,18 @@ export class OrderService {
     if (o.userId !== userId) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'ORDER_NOT_YOURS', message: 'You can only cancel your own orders' },
+        error: {
+          code: 'ORDER_NOT_YOURS',
+          message: 'You can only cancel your own orders',
+        },
       });
     }
 
     if (!CUSTOMER_CANCEL_ELIGIBLE_STATUSES.includes(o.status as OrderStatus)) {
       if (['shipped', 'completed'].includes(o.status)) {
         return {
-          error: 'This order can no longer be cancelled because it has already shipped.',
+          error:
+            'This order can no longer be cancelled because it has already shipped.',
           code: 'ORDER_ALREADY_SHIPPED',
         };
       }
@@ -351,24 +385,31 @@ export class OrderService {
         .set({ status: 'cancelled', updatedAt: new Date() })
         .where(eq(order.id, id));
       const items = await this.db
-        .select({ productId: orderItem.productId, quantity: orderItem.quantity })
+        .select({
+          productId: orderItem.productId,
+          quantity: orderItem.quantity,
+        })
         .from(orderItem)
         .where(eq(orderItem.orderId, id));
       await this.inventoryService.incrementStockForOrder(items);
       const updated = await this.getOrderById(id);
-      return updated ? { order: updated, refundId: 'free_order' } : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
+      return updated
+        ? { order: updated, refundId: 'free_order' }
+        : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
     }
 
     if (!sessionId) {
       return {
-        error: 'This order was not paid via Stripe and cannot be refunded automatically.',
+        error:
+          'This order was not paid via Stripe and cannot be refunded automatically.',
         code: 'NO_STRIPE_PAYMENT',
       };
     }
 
     if (!this.stripeService.isConfigured()) {
       return {
-        error: 'Refunds are not available at this time. Please contact support.',
+        error:
+          'Refunds are not available at this time. Please contact support.',
         code: 'STRIPE_NOT_CONFIGURED',
       };
     }
@@ -392,16 +433,24 @@ export class OrderService {
         .where(eq(order.id, id));
 
       const items = await this.db
-        .select({ productId: orderItem.productId, quantity: orderItem.quantity })
+        .select({
+          productId: orderItem.productId,
+          quantity: orderItem.quantity,
+        })
         .from(orderItem)
         .where(eq(orderItem.orderId, id));
       await this.inventoryService.incrementStockForOrder(items);
 
       const updated = await this.getOrderById(id);
-      return updated ? { order: updated, refundId } : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
+      return updated
+        ? { order: updated, refundId }
+        : { error: 'Order not found', code: 'ORDER_NOT_FOUND' };
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Refund failed';
-      if (msg.includes('already been refunded') || msg.includes('Refund already exists')) {
+      if (
+        msg.includes('already been refunded') ||
+        msg.includes('Refund already exists')
+      ) {
         await this.db
           .update(order)
           .set({ status: 'cancelled', updatedAt: new Date() })

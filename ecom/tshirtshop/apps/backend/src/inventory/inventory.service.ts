@@ -41,7 +41,11 @@ export class InventoryService {
 
     const ids = items.map((i) => i.productId);
     const rows = await this.db
-      .select({ id: product.id, name: product.name, stockQuantity: product.stockQuantity })
+      .select({
+        id: product.id,
+        name: product.name,
+        stockQuantity: product.stockQuantity,
+      })
       .from(product)
       .where(inArray(product.id, ids));
 
@@ -81,7 +85,9 @@ export class InventoryService {
     if (items.length === 0) return { ok: true };
 
     // Deduplicate and sort by productId (consistent lock order prevents deadlocks)
-    const sorted = [...items].sort((a, b) => a.productId.localeCompare(b.productId));
+    const sorted = [...items].sort((a, b) =>
+      a.productId.localeCompare(b.productId),
+    );
     const failures: StockFailure[] = [];
 
     try {
@@ -91,7 +97,13 @@ export class InventoryService {
           const result = await tx.execute(
             sql`SELECT id, name, stock_quantity FROM product WHERE id = ${item.productId} FOR UPDATE`,
           );
-          const row = (result.rows as { id: string; name: string; stock_quantity: number }[])[0];
+          const row = (
+            result.rows as {
+              id: string;
+              name: string;
+              stock_quantity: number;
+            }[]
+          )[0];
           const available = row?.stock_quantity ?? 0;
 
           if (!row || available < item.quantity) {

@@ -35,7 +35,8 @@ export class BillingService {
     private readonly configService: ConfigService,
   ) {
     const key = configService.get<string>('STRIPE_SECRET_KEY')?.trim();
-    this.uiUrl = configService.get<string>('UI_URL')?.trim() ?? 'http://localhost:3001';
+    this.uiUrl =
+      configService.get<string>('UI_URL')?.trim() ?? 'http://localhost:3001';
     if (key?.startsWith('sk_')) {
       this.stripe = new Stripe(key);
     }
@@ -49,7 +50,10 @@ export class BillingService {
     if (!this.stripe) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'STRIPE_NOT_CONFIGURED', message: 'Payment is not available' },
+        error: {
+          code: 'STRIPE_NOT_CONFIGURED',
+          message: 'Payment is not available',
+        },
       });
     }
     return this.stripe;
@@ -70,7 +74,11 @@ export class BillingService {
    * Persists the customer ID to the DB on first creation.
    * Safe to call multiple times — never creates duplicates.
    */
-  async getOrCreateCustomer(userId: string, email: string, name: string): Promise<string> {
+  async getOrCreateCustomer(
+    userId: string,
+    email: string,
+    name: string,
+  ): Promise<string> {
     const stripe = this.requireStripe();
     const stored = await this.getStoredCustomerId(userId);
 
@@ -109,7 +117,11 @@ export class BillingService {
     if (!customerId) return [];
 
     const [pmsResult, customerResult] = await Promise.all([
-      stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 20 }),
+      stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+        limit: 20,
+      }),
       stripe.customers.retrieve(customerId),
     ]);
 
@@ -119,15 +131,17 @@ export class BillingService {
         ? customer.invoice_settings.default_payment_method
         : null;
 
-    return pmsResult.data.map((pm): PaymentMethodDto => ({
-      id: pm.id,
-      brand: pm.card?.brand ?? 'unknown',
-      last4: pm.card?.last4 ?? '****',
-      expMonth: pm.card?.exp_month ?? 0,
-      expYear: pm.card?.exp_year ?? 0,
-      funding: pm.card?.funding ?? 'unknown',
-      isDefault: pm.id === defaultPmId,
-    }));
+    return pmsResult.data.map(
+      (pm): PaymentMethodDto => ({
+        id: pm.id,
+        brand: pm.card?.brand ?? 'unknown',
+        last4: pm.card?.last4 ?? '****',
+        expMonth: pm.card?.exp_month ?? 0,
+        expYear: pm.card?.exp_year ?? 0,
+        funding: pm.card?.funding ?? 'unknown',
+        isDefault: pm.id === defaultPmId,
+      }),
+    );
   }
 
   /**
@@ -135,7 +149,11 @@ export class BillingService {
    * Redirects the user to Stripe's hosted page to securely add a card.
    * On success, Stripe auto-attaches the PM to the customer and redirects back.
    */
-  async createSetupSession(userId: string, email: string, name: string): Promise<string> {
+  async createSetupSession(
+    userId: string,
+    email: string,
+    name: string,
+  ): Promise<string> {
     const stripe = this.requireStripe();
     const customerId = await this.getOrCreateCustomer(userId, email, name);
 
@@ -148,7 +166,9 @@ export class BillingService {
     });
 
     if (!session.url) {
-      throw new Error('Failed to create Stripe setup session — no URL returned');
+      throw new Error(
+        'Failed to create Stripe setup session — no URL returned',
+      );
     }
     return session.url;
   }
@@ -182,7 +202,10 @@ export class BillingService {
     if (pm.customer !== customerId) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'PM_NOT_YOURS', message: 'Payment method does not belong to this account' },
+        error: {
+          code: 'PM_NOT_YOURS',
+          message: 'Payment method does not belong to this account',
+        },
       });
     }
 
@@ -217,7 +240,10 @@ export class BillingService {
     if (pm.customer !== customerId) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'PM_NOT_YOURS', message: 'Payment method does not belong to this account' },
+        error: {
+          code: 'PM_NOT_YOURS',
+          message: 'Payment method does not belong to this account',
+        },
       });
     }
 

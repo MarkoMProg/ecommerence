@@ -67,10 +67,7 @@ export class ProductsController {
   }
 
   @Get('suggestions')
-  async getSuggestions(
-    @Query('q') q?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async getSuggestions(@Query('q') q?: string, @Query('limit') limit?: string) {
     const suggestions = await this.catalogService.getSearchSuggestions(
       q ?? '',
       limit ? parseInt(limit, 10) : 10,
@@ -97,7 +94,8 @@ export class ProductsController {
     // Try by id column first (works for any id shape: UUID, numeric, slug-like).
     // Fall back to slug lookup so public storefront URLs still work.
     const byId = await this.catalogService.getProductById(idOrSlug);
-    const product = byId ?? (await this.catalogService.getProductBySlug(idOrSlug));
+    const product =
+      byId ?? (await this.catalogService.getProductBySlug(idOrSlug));
     if (!product) {
       throw new NotFoundException({
         success: false,

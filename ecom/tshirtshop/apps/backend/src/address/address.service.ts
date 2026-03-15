@@ -5,7 +5,12 @@ import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { userAddress } from './schema';
 import type { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
-import { encrypt, encryptNullable, decrypt, decryptNullable } from '../common/crypto.util';
+import {
+  encrypt,
+  encryptNullable,
+  decrypt,
+  decryptNullable,
+} from '../common/crypto.util';
 
 export type UserAddressRow = typeof userAddress.$inferSelect;
 
@@ -40,7 +45,10 @@ export class AddressService {
     return rows.map((r) => this.decryptRow(r));
   }
 
-  async createAddress(userId: string, dto: CreateAddressDto): Promise<UserAddressRow> {
+  async createAddress(
+    userId: string,
+    dto: CreateAddressDto,
+  ): Promise<UserAddressRow> {
     const existing = await this.listAddresses(userId);
     const isFirst = existing.length === 0;
 
@@ -49,13 +57,23 @@ export class AddressService {
       await this.db
         .update(userAddress)
         .set({ isDefaultShipping: false })
-        .where(and(eq(userAddress.userId, userId), eq(userAddress.isDefaultShipping, true)));
+        .where(
+          and(
+            eq(userAddress.userId, userId),
+            eq(userAddress.isDefaultShipping, true),
+          ),
+        );
     }
     if (dto.isDefaultBilling === true || isFirst) {
       await this.db
         .update(userAddress)
         .set({ isDefaultBilling: false })
-        .where(and(eq(userAddress.userId, userId), eq(userAddress.isDefaultBilling, true)));
+        .where(
+          and(
+            eq(userAddress.userId, userId),
+            eq(userAddress.isDefaultBilling, true),
+          ),
+        );
     }
 
     const id = randomUUID();
@@ -83,7 +101,7 @@ export class AddressService {
       .select()
       .from(userAddress)
       .where(eq(userAddress.id, id));
-    return this.decryptRow(created!);
+    return this.decryptRow(created);
   }
 
   async updateAddress(
@@ -102,27 +120,45 @@ export class AddressService {
       await this.db
         .update(userAddress)
         .set({ isDefaultShipping: false })
-        .where(and(eq(userAddress.userId, userId), eq(userAddress.isDefaultShipping, true)));
+        .where(
+          and(
+            eq(userAddress.userId, userId),
+            eq(userAddress.isDefaultShipping, true),
+          ),
+        );
     }
     if (dto.isDefaultBilling === true) {
       await this.db
         .update(userAddress)
         .set({ isDefaultBilling: false })
-        .where(and(eq(userAddress.userId, userId), eq(userAddress.isDefaultBilling, true)));
+        .where(
+          and(
+            eq(userAddress.userId, userId),
+            eq(userAddress.isDefaultBilling, true),
+          ),
+        );
     }
 
     const patch: Partial<typeof userAddress.$inferInsert> = {};
     if (dto.label !== undefined) patch.label = dto.label.trim() || 'Home';
-    if (dto.fullName !== undefined) patch.fullName = encrypt(dto.fullName.trim());
-    if (dto.phone !== undefined) patch.phone = encryptNullable(dto.phone.trim() || null);
+    if (dto.fullName !== undefined)
+      patch.fullName = encrypt(dto.fullName.trim());
+    if (dto.phone !== undefined)
+      patch.phone = encryptNullable(dto.phone.trim() || null);
     if (dto.line1 !== undefined) patch.line1 = encrypt(dto.line1.trim());
-    if (dto.line2 !== undefined) patch.line2 = encryptNullable(dto.line2.trim() || null);
+    if (dto.line2 !== undefined)
+      patch.line2 = encryptNullable(dto.line2.trim() || null);
     if (dto.city !== undefined) patch.city = encrypt(dto.city.trim());
-    if (dto.stateOrRegion !== undefined) patch.stateOrRegion = encrypt(dto.stateOrRegion.trim());
-    if (dto.postalCode !== undefined) patch.postalCode = encrypt(dto.postalCode.trim());
-    if (dto.country !== undefined) patch.country = encrypt(dto.country.trim().toUpperCase());
-    if (dto.isDefaultShipping !== undefined) patch.isDefaultShipping = dto.isDefaultShipping;
-    if (dto.isDefaultBilling !== undefined) patch.isDefaultBilling = dto.isDefaultBilling;
+    if (dto.stateOrRegion !== undefined)
+      patch.stateOrRegion = encrypt(dto.stateOrRegion.trim());
+    if (dto.postalCode !== undefined)
+      patch.postalCode = encrypt(dto.postalCode.trim());
+    if (dto.country !== undefined)
+      patch.country = encrypt(dto.country.trim().toUpperCase());
+    if (dto.isDefaultShipping !== undefined)
+      patch.isDefaultShipping = dto.isDefaultShipping;
+    if (dto.isDefaultBilling !== undefined)
+      patch.isDefaultBilling = dto.isDefaultBilling;
 
     if (Object.keys(patch).length > 0) {
       await this.db
@@ -153,7 +189,7 @@ export class AddressService {
     if (existing.isDefaultShipping || existing.isDefaultBilling) {
       const remaining = await this.listAddresses(userId);
       if (remaining.length > 0) {
-        const fallback = remaining[0]!;
+        const fallback = remaining[0];
         const promote: Partial<typeof userAddress.$inferInsert> = {};
         if (existing.isDefaultShipping && !fallback.isDefaultShipping) {
           promote.isDefaultShipping = true;
@@ -173,7 +209,10 @@ export class AddressService {
     return true;
   }
 
-  async setDefaultShipping(userId: string, id: string): Promise<UserAddressRow | null> {
+  async setDefaultShipping(
+    userId: string,
+    id: string,
+  ): Promise<UserAddressRow | null> {
     const [addr] = await this.db
       .select()
       .from(userAddress)
@@ -183,7 +222,12 @@ export class AddressService {
     await this.db
       .update(userAddress)
       .set({ isDefaultShipping: false })
-      .where(and(eq(userAddress.userId, userId), eq(userAddress.isDefaultShipping, true)));
+      .where(
+        and(
+          eq(userAddress.userId, userId),
+          eq(userAddress.isDefaultShipping, true),
+        ),
+      );
 
     await this.db
       .update(userAddress)
@@ -197,7 +241,10 @@ export class AddressService {
     return updated ? this.decryptRow(updated) : null;
   }
 
-  async setDefaultBilling(userId: string, id: string): Promise<UserAddressRow | null> {
+  async setDefaultBilling(
+    userId: string,
+    id: string,
+  ): Promise<UserAddressRow | null> {
     const [addr] = await this.db
       .select()
       .from(userAddress)
@@ -207,7 +254,12 @@ export class AddressService {
     await this.db
       .update(userAddress)
       .set({ isDefaultBilling: false })
-      .where(and(eq(userAddress.userId, userId), eq(userAddress.isDefaultBilling, true)));
+      .where(
+        and(
+          eq(userAddress.userId, userId),
+          eq(userAddress.isDefaultBilling, true),
+        ),
+      );
 
     await this.db
       .update(userAddress)

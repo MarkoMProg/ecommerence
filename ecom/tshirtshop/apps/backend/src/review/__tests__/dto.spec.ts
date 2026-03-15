@@ -1,7 +1,4 @@
-import {
-  validateCreateReview,
-  validateUpdateReview,
-} from '../dto/review.dto';
+import { validateCreateReview, validateUpdateReview } from '../dto/review.dto';
 
 describe('Review DTO Validators', () => {
   // ─── validateCreateReview ───────────────────────────────────────────────
@@ -18,7 +15,10 @@ describe('Review DTO Validators', () => {
     });
 
     it('should return no errors for valid input (with title)', () => {
-      const errors = validateCreateReview({ ...validCreate, title: 'Love it!' });
+      const errors = validateCreateReview({
+        ...validCreate,
+        title: 'Love it!',
+      });
       expect(errors).toHaveLength(0);
     });
 
@@ -44,7 +44,10 @@ describe('Review DTO Validators', () => {
     });
 
     it('should error on string rating', () => {
-      const errors = validateCreateReview({ ...validCreate, rating: '4' as unknown as number });
+      const errors = validateCreateReview({
+        ...validCreate,
+        rating: '4' as unknown as number,
+      });
       expect(errors.some((e) => e.field === 'rating')).toBe(true);
     });
 
@@ -60,17 +63,26 @@ describe('Review DTO Validators', () => {
 
     // title (optional)
     it('should error on title exceeding 255 characters', () => {
-      const errors = validateCreateReview({ ...validCreate, title: 'x'.repeat(256) });
+      const errors = validateCreateReview({
+        ...validCreate,
+        title: 'x'.repeat(256),
+      });
       expect(errors.some((e) => e.field === 'title')).toBe(true);
     });
 
     it('should accept title of exactly 255 characters', () => {
-      const errors = validateCreateReview({ ...validCreate, title: 'x'.repeat(255) });
+      const errors = validateCreateReview({
+        ...validCreate,
+        title: 'x'.repeat(255),
+      });
       expect(errors).toHaveLength(0);
     });
 
     it('should error when title is not a string', () => {
-      const errors = validateCreateReview({ ...validCreate, title: 123 as unknown as string });
+      const errors = validateCreateReview({
+        ...validCreate,
+        title: 123 as unknown as string,
+      });
       expect(errors.some((e) => e.field === 'title')).toBe(true);
     });
 
@@ -86,17 +98,26 @@ describe('Review DTO Validators', () => {
     });
 
     it('should error on body exceeding 5000 characters', () => {
-      const errors = validateCreateReview({ ...validCreate, body: 'x'.repeat(5001) });
+      const errors = validateCreateReview({
+        ...validCreate,
+        body: 'x'.repeat(5001),
+      });
       expect(errors.some((e) => e.field === 'body')).toBe(true);
     });
 
     it('should accept body of exactly 5000 characters', () => {
-      const errors = validateCreateReview({ ...validCreate, body: 'x'.repeat(5000) });
+      const errors = validateCreateReview({
+        ...validCreate,
+        body: 'x'.repeat(5000),
+      });
       expect(errors).toHaveLength(0);
     });
 
     it('should error when body is not a string', () => {
-      const errors = validateCreateReview({ ...validCreate, body: 42 as unknown as string });
+      const errors = validateCreateReview({
+        ...validCreate,
+        body: 42 as unknown as string,
+      });
       expect(errors.some((e) => e.field === 'body')).toBe(true);
     });
 

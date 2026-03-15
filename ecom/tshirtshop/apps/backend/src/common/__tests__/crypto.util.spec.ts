@@ -11,7 +11,12 @@
  *  7. Edge cases        — empty string, Unicode, long strings
  */
 
-import { encrypt, decrypt, encryptNullable, decryptNullable } from '../crypto.util';
+import {
+  encrypt,
+  decrypt,
+  encryptNullable,
+  decryptNullable,
+} from '../crypto.util';
 
 /** 64-character hex string = 32 bytes, required for AES-256 */
 const VALID_KEY = 'a'.repeat(64);
@@ -107,15 +112,16 @@ describe('crypto.util — AES-256-GCM field encryption', () => {
         ':' +
         parts[1] +
         ':' +
-        parts[2]!.slice(0, -1) +
-        (parts[2]!.slice(-1) === 'f' ? '0' : 'f');
+        parts[2].slice(0, -1) +
+        (parts[2].slice(-1) === 'f' ? '0' : 'f');
       expect(() => decrypt(corrupted)).toThrow();
     });
 
     it('throws when the IV has been tampered with', () => {
       const ct = encrypt('sensitive');
       const parts = ct.split(':');
-      const tamperedIv = parts[0]!.slice(0, -1) + (parts[0]!.slice(-1) === 'f' ? '0' : 'f');
+      const tamperedIv =
+        parts[0].slice(0, -1) + (parts[0].slice(-1) === 'f' ? '0' : 'f');
       const corrupted = tamperedIv + ':' + parts[1] + ':' + parts[2];
       expect(() => decrypt(corrupted)).toThrow();
     });

@@ -10,7 +10,6 @@ import * as orderSchema from '../order/schema';
 import * as reviewSchema from '../review/schema';
 import * as addressSchema from '../address/schema';
 
-
 @Module({
   imports: [ConfigModule],
   providers: [

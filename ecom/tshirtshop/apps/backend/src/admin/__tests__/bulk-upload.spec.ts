@@ -83,7 +83,8 @@ describe('BulkUploadService', () => {
     });
 
     it('should handle \\r\\n line endings', () => {
-      const csv = 'name,description,priceCents,categoryId,brand\r\nTee,Desc,999,c,B\r\n';
+      const csv =
+        'name,description,priceCents,categoryId,brand\r\nTee,Desc,999,c,B\r\n';
       const entries = service.parseCSV(csv);
       expect(entries).toHaveLength(1);
       expect(entries[0].name).toBe('Tee');

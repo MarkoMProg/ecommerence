@@ -7,11 +7,15 @@ import { AuthService } from './auth.service';
 import { BetterAuthGuard } from './guards/jwt-auth.guard';
 import { OptionalAuthGuard } from './guards/optional-auth.guard';
 
-
 @Module({
   imports: [BetterAuthCoreModule, DatabaseModule, ConfigModule],
   controllers: [AuthController],
   providers: [AuthService, BetterAuthGuard, OptionalAuthGuard],
-  exports: [AuthService, BetterAuthGuard, OptionalAuthGuard, BetterAuthCoreModule],
+  exports: [
+    AuthService,
+    BetterAuthGuard,
+    OptionalAuthGuard,
+    BetterAuthCoreModule,
+  ],
 })
 export class AuthExtModule {}

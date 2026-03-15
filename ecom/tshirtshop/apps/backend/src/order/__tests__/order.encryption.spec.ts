@@ -10,12 +10,18 @@
 import { decrypt, encrypt, encryptNullable } from '../../common/crypto.util';
 
 const TEST_KEY = 'd'.repeat(64);
-beforeAll(() => { process.env['ENCRYPTION_KEY'] = TEST_KEY; });
-afterAll(() => { delete process.env['ENCRYPTION_KEY']; });
+beforeAll(() => {
+  process.env['ENCRYPTION_KEY'] = TEST_KEY;
+});
+afterAll(() => {
+  delete process.env['ENCRYPTION_KEY'];
+});
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function buildEncryptedOrder(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function buildEncryptedOrder(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     id: 'order-1',
     userId: 'user-1',
@@ -60,12 +66,18 @@ describe('OrderService.getOrderById() — decrypts shipping fields (SEC-003)', (
       status: o['status'],
       shippingFullName: decrypt(o['shippingFullName'] as string),
       shippingLine1: decrypt(o['shippingLine1'] as string),
-      shippingLine2: o['shippingLine2'] != null ? decrypt(o['shippingLine2'] as string) : null,
+      shippingLine2:
+        o['shippingLine2'] != null
+          ? decrypt(o['shippingLine2'] as string)
+          : null,
       shippingCity: decrypt(o['shippingCity'] as string),
       shippingStateOrProvince: decrypt(o['shippingStateOrProvince'] as string),
       shippingPostalCode: decrypt(o['shippingPostalCode'] as string),
       shippingCountry: decrypt(o['shippingCountry'] as string),
-      shippingPhone: o['shippingPhone'] != null ? decrypt(o['shippingPhone'] as string) : null,
+      shippingPhone:
+        o['shippingPhone'] != null
+          ? decrypt(o['shippingPhone'] as string)
+          : null,
       subtotalCents: o['subtotalCents'],
       shippingCents: o['shippingCents'],
       totalCents: o['totalCents'],
@@ -168,12 +180,14 @@ describe('Checkout write path — shipping fields are encrypted before DB insert
     return {
       shippingFullName: encrypt(address.fullName.trim()),
       shippingLine1: encrypt(address.line1.trim()),
-      shippingLine2: address.line2 != null ? encrypt(address.line2.trim()) : null,
+      shippingLine2:
+        address.line2 != null ? encrypt(address.line2.trim()) : null,
       shippingCity: encrypt(address.city.trim()),
       shippingStateOrProvince: encrypt(address.stateOrProvince.trim()),
       shippingPostalCode: encrypt(address.postalCode.trim()),
       shippingCountry: encrypt(address.country.trim()),
-      shippingPhone: address.phone != null ? encrypt(address.phone.trim()) : null,
+      shippingPhone:
+        address.phone != null ? encrypt(address.phone.trim()) : null,
     };
   }
 
@@ -209,9 +223,9 @@ describe('Checkout write path — shipping fields are encrypted before DB insert
 
     for (const [field, plain] of expected) {
       const raw = stored[field] as string;
-      expect(raw).not.toBe(plain);             // not plaintext
-      expect(raw.split(':').length).toBe(3);   // ciphertext format
-      expect(decrypt(raw)).toBe(plain);        // round-trips correctly
+      expect(raw).not.toBe(plain); // not plaintext
+      expect(raw.split(':').length).toBe(3); // ciphertext format
+      expect(decrypt(raw)).toBe(plain); // round-trips correctly
     }
   });
 

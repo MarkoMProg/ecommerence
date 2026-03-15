@@ -38,7 +38,10 @@ export class ReviewService {
    * Check whether a user has purchased a given product.
    * A purchase counts when the order status is paid, shipped, or completed.
    */
-  private async hasPurchasedProduct(userId: string, productId: string): Promise<boolean> {
+  private async hasPurchasedProduct(
+    userId: string,
+    productId: string,
+  ): Promise<boolean> {
     const validStatuses = ['paid', 'shipped', 'completed'];
 
     const rows = await this.db
@@ -139,7 +142,8 @@ export class ReviewService {
         success: false,
         error: {
           code: 'REVIEW_EXISTS',
-          message: 'You have already reviewed this product. You can update your existing review.',
+          message:
+            'You have already reviewed this product. You can update your existing review.',
         },
       });
     }
@@ -163,7 +167,10 @@ export class ReviewService {
       body: data.body.trim(),
     });
 
-    const [created] = await this.db.select().from(review).where(eq(review.id, id));
+    const [created] = await this.db
+      .select()
+      .from(review)
+      .where(eq(review.id, id));
     return {
       id: created.id,
       productId: created.productId,
@@ -201,7 +208,10 @@ export class ReviewService {
     if (existing.userId !== userId) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'FORBIDDEN', message: 'You can only edit your own reviews' },
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You can only edit your own reviews',
+        },
       });
     }
 
@@ -211,10 +221,16 @@ export class ReviewService {
     if (data.body != null) updateData.body = data.body.trim();
 
     if (Object.keys(updateData).length > 0) {
-      await this.db.update(review).set(updateData).where(eq(review.id, reviewId));
+      await this.db
+        .update(review)
+        .set(updateData)
+        .where(eq(review.id, reviewId));
     }
 
-    const [updated] = await this.db.select().from(review).where(eq(review.id, reviewId));
+    const [updated] = await this.db
+      .select()
+      .from(review)
+      .where(eq(review.id, reviewId));
     return {
       id: updated.id,
       productId: updated.productId,
@@ -248,7 +264,10 @@ export class ReviewService {
     if (existing.userId !== userId) {
       throw new ForbiddenException({
         success: false,
-        error: { code: 'FORBIDDEN', message: 'You can only delete your own reviews' },
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You can only delete your own reviews',
+        },
       });
     }
 
@@ -281,7 +300,10 @@ export class ReviewService {
     if (existing.userId === userId) {
       throw new BadRequestException({
         success: false,
-        error: { code: 'SELF_VOTE', message: 'You cannot vote on your own review' },
+        error: {
+          code: 'SELF_VOTE',
+          message: 'You cannot vote on your own review',
+        },
       });
     }
 
@@ -339,7 +361,9 @@ export class ReviewService {
     const safeLimit = Math.min(100, Math.max(1, opts.limit ?? 50));
     const offset = (safePage - 1) * safeLimit;
 
-    const where = opts.productId ? eq(review.productId, opts.productId) : undefined;
+    const where = opts.productId
+      ? eq(review.productId, opts.productId)
+      : undefined;
 
     const [data, countResult] = await Promise.all([
       this.db
@@ -419,9 +443,9 @@ export class ReviewService {
    * Get aggregate rating stats for multiple products in one query.
    * Returns a map of productId → { averageRating, reviewCount }.
    */
-  async getProductsRatingStats(productIds: string[]): Promise<
-    Map<string, { averageRating: number; reviewCount: number }>
-  > {
+  async getProductsRatingStats(
+    productIds: string[],
+  ): Promise<Map<string, { averageRating: number; reviewCount: number }>> {
     if (productIds.length === 0) return new Map();
 
     const rows = await this.db
@@ -434,7 +458,10 @@ export class ReviewService {
       .where(inArray(review.productId, productIds))
       .groupBy(review.productId);
 
-    const map = new Map<string, { averageRating: number; reviewCount: number }>();
+    const map = new Map<
+      string,
+      { averageRating: number; reviewCount: number }
+    >();
     for (const row of rows) {
       map.set(row.productId, {
         averageRating: row.avg,

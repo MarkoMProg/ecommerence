@@ -12,8 +12,12 @@ export class StripeService {
   private readonly uiUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY')?.trim();
-    this.uiUrl = this.configService.get<string>('UI_URL')?.trim() ?? 'http://localhost:3001';
+    const secretKey = this.configService
+      .get<string>('STRIPE_SECRET_KEY')
+      ?.trim();
+    this.uiUrl =
+      this.configService.get<string>('UI_URL')?.trim() ??
+      'http://localhost:3001';
     if (secretKey?.startsWith('sk_')) {
       this.stripe = new Stripe(secretKey);
     }
@@ -78,16 +82,28 @@ export class StripeService {
   ): { orderId: string; sessionId: string } | null {
     if (!this.stripe) return null;
 
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET')?.trim();
+    const webhookSecret = this.configService
+      .get<string>('STRIPE_WEBHOOK_SECRET')
+      ?.trim();
     if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is required for webhook verification');
+      throw new Error(
+        'STRIPE_WEBHOOK_SECRET is required for webhook verification',
+      );
     }
 
-    const event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    const event = this.stripe.webhooks.constructEvent(
+      rawBody,
+      signature,
+      webhookSecret,
+    );
 
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      if (session.payment_status === 'paid' && session.metadata?.orderId && session.id) {
+      const session = event.data.object;
+      if (
+        session.payment_status === 'paid' &&
+        session.metadata?.orderId &&
+        session.id
+      ) {
         return {
           orderId: session.metadata.orderId.trim(),
           sessionId: session.id,
@@ -126,7 +142,7 @@ export class StripeService {
       throw new Error('Session has no PaymentIntent');
     }
 
-    const pi = paymentIntent as Stripe.PaymentIntent;
+    const pi = paymentIntent;
     if (pi.status !== 'succeeded') {
       throw new Error(`Payment not captured: ${pi.status}`);
     }
@@ -166,7 +182,10 @@ export class StripeService {
       throw new Error('Session orderId does not match');
     }
 
-    if (expectedTotalCents != null && session.amount_total !== expectedTotalCents) {
+    if (
+      expectedTotalCents != null &&
+      session.amount_total !== expectedTotalCents
+    ) {
       throw new Error(
         `Payment amount mismatch: expected ${expectedTotalCents} cents, got ${session.amount_total ?? 'null'}`,
       );

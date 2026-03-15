@@ -46,7 +46,11 @@ describe('token-bucket-rate-limit', () => {
 
   it('allows requests until capacity, then returns 429', () => {
     const middleware = createTokenBucketRateLimitMiddleware([
-      { path: '/api/v1/auth/login', capacity: 3, refillTokensPerSecond: 3 / 60 },
+      {
+        path: '/api/v1/auth/login',
+        capacity: 3,
+        refillTokensPerSecond: 3 / 60,
+      },
     ]);
 
     const req = createReq('/api/v1/auth/login');
@@ -69,7 +73,9 @@ describe('token-bucket-rate-limit', () => {
 
     expect(next4).not.toHaveBeenCalled();
     expect(status).toHaveBeenCalledWith(429);
-    expect(json).toHaveBeenCalledWith({ message: 'Too many requests. Please try again later.' });
+    expect(json).toHaveBeenCalledWith({
+      message: 'Too many requests. Please try again later.',
+    });
     expect(setHeader).toHaveBeenCalledWith('X-Retry-After', expect.any(String));
   });
 

@@ -4,7 +4,14 @@ import { CatalogService } from '../catalog.service';
 import { ReviewService } from '../../review/review.service';
 
 /** Creates a thenable chain for drizzle-style mocks */
-function thenable<T>(value: T): { then: (fn: (v: T) => void) => void; from: () => any; where: () => any; orderBy: () => any; limit: () => any; offset: () => any } {
+function thenable<T>(value: T): {
+  then: (fn: (v: T) => void) => void;
+  from: () => any;
+  where: () => any;
+  orderBy: () => any;
+  limit: () => any;
+  offset: () => any;
+} {
   const chain: any = {
     from: () => chain,
     where: () => chain,
@@ -12,7 +19,9 @@ function thenable<T>(value: T): { then: (fn: (v: T) => void) => void; from: () =
     limit: () => chain,
     offset: () => chain,
     values: () => ({ then: (fn: any) => fn(), catch: () => {} }),
-    set: () => ({ where: () => ({ then: (fn: any) => fn(), catch: () => {} }) }),
+    set: () => ({
+      where: () => ({ then: (fn: any) => fn(), catch: () => {} }),
+    }),
     then: (resolve: (v: T) => void) => resolve(value),
     catch: () => {},
   };
@@ -58,9 +67,17 @@ describe('CatalogService', () => {
     mockDb = {
       select: jest.fn(() => thenable([])),
       selectDistinct: jest.fn(() => thenable([])),
-      insert: jest.fn(() => ({ values: jest.fn(() => ({ then: (fn: any) => fn(), catch: () => {} })) })),
-      update: jest.fn(() => ({ set: jest.fn(() => ({ where: jest.fn(() => ({ then: (fn: any) => fn(), catch: () => {} })) })) })),
-      delete: jest.fn(() => ({ where: jest.fn(() => ({ then: (fn: any) => fn(), catch: () => {} })) })),
+      insert: jest.fn(() => ({
+        values: jest.fn(() => ({ then: (fn: any) => fn(), catch: () => {} })),
+      })),
+      update: jest.fn(() => ({
+        set: jest.fn(() => ({
+          where: jest.fn(() => ({ then: (fn: any) => fn(), catch: () => {} })),
+        })),
+      })),
+      delete: jest.fn(() => ({
+        where: jest.fn(() => ({ then: (fn: any) => fn(), catch: () => {} })),
+      })),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -74,7 +91,9 @@ describe('CatalogService', () => {
           provide: ReviewService,
           useValue: {
             getProductsRatingStats: jest.fn().mockResolvedValue({}),
-            getProductRatingStats: jest.fn().mockResolvedValue({ average: 0, count: 0 }),
+            getProductRatingStats: jest
+              .fn()
+              .mockResolvedValue({ average: 0, count: 0 }),
           },
         },
       ],
@@ -85,9 +104,7 @@ describe('CatalogService', () => {
 
   describe('listCategories', () => {
     it('should return categories from db', async () => {
-      (mockDb.select as jest.Mock).mockReturnValue(
-        thenable([mockCategory]),
-      );
+      (mockDb.select as jest.Mock).mockReturnValue(thenable([mockCategory]));
       const result = await service.listCategories();
       expect(result).toEqual([mockCategory]);
       expect(mockDb.select).toHaveBeenCalled();
@@ -131,7 +148,9 @@ describe('CatalogService', () => {
 
       const result = await service.getSearchSuggestions('drag', 10);
       expect(result.products).toContain('Dragon Tee');
-      expect(result.categories).toEqual([{ name: 'T-Shirts', slug: 't-shirts' }]);
+      expect(result.categories).toEqual([
+        { name: 'T-Shirts', slug: 't-shirts' },
+      ]);
       expect(result.brands).toContain('Darkloom');
     });
   });
@@ -148,9 +167,7 @@ describe('CatalogService', () => {
 
   describe('getCategoryBySlug', () => {
     it('should return category when found', async () => {
-      (mockDb.select as jest.Mock).mockReturnValue(
-        thenable([mockCategory]),
-      );
+      (mockDb.select as jest.Mock).mockReturnValue(thenable([mockCategory]));
       const result = await service.getCategoryBySlug('t-shirts');
       expect(result).toEqual(mockCategory);
     });

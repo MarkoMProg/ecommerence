@@ -1,5 +1,11 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, integer, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  integer,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { user } from '../auth/schema';
 import { product } from '../catalog/schema';
 
@@ -56,7 +62,10 @@ export const reviewHelpfulVote = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex('review_helpful_vote_review_user_idx').on(table.reviewId, table.userId),
+    uniqueIndex('review_helpful_vote_review_user_idx').on(
+      table.reviewId,
+      table.userId,
+    ),
   ],
 );
 
@@ -74,13 +83,16 @@ export const reviewRelations = relations(review, ({ one, many }) => ({
   helpfulVotes: many(reviewHelpfulVote),
 }));
 
-export const reviewHelpfulVoteRelations = relations(reviewHelpfulVote, ({ one }) => ({
-  review: one(review, {
-    fields: [reviewHelpfulVote.reviewId],
-    references: [review.id],
+export const reviewHelpfulVoteRelations = relations(
+  reviewHelpfulVote,
+  ({ one }) => ({
+    review: one(review, {
+      fields: [reviewHelpfulVote.reviewId],
+      references: [review.id],
+    }),
+    user: one(user, {
+      fields: [reviewHelpfulVote.userId],
+      references: [user.id],
+    }),
   }),
-  user: one(user, {
-    fields: [reviewHelpfulVote.userId],
-    references: [user.id],
-  }),
-}));
+);

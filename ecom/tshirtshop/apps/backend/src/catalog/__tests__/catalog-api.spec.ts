@@ -25,11 +25,25 @@ describe('Catalog API (Controller Integration)', () => {
     stockQuantity: 10,
     categoryId: 'cat-1',
     brand: 'TestBrand',
-    images: [{ id: 'img-1', productId: 'prod-1', imageUrl: 'https://example.com/1.jpg', altText: null, isPrimary: true }],
+    images: [
+      {
+        id: 'img-1',
+        productId: 'prod-1',
+        imageUrl: 'https://example.com/1.jpg',
+        altText: null,
+        isPrimary: true,
+      },
+    ],
     category: { id: 'cat-1', name: 'T-Shirts', slug: 't-shirts' },
   };
 
-  const mockCategory = { id: 'cat-1', name: 'T-Shirts', slug: 't-shirts', parentCategoryId: null, createdAt: new Date() };
+  const mockCategory = {
+    id: 'cat-1',
+    name: 'T-Shirts',
+    slug: 't-shirts',
+    parentCategoryId: null,
+    createdAt: new Date(),
+  };
 
   beforeEach(async () => {
     const mockCatalogService = {
@@ -65,8 +79,10 @@ describe('Catalog API (Controller Integration)', () => {
       .useValue(mockBetterAuthGuard)
       .compile();
 
-    productsController = moduleFixture.get<ProductsController>(ProductsController);
-    categoriesController = moduleFixture.get<CategoriesController>(CategoriesController);
+    productsController =
+      moduleFixture.get<ProductsController>(ProductsController);
+    categoriesController =
+      moduleFixture.get<CategoriesController>(CategoriesController);
     catalogService = moduleFixture.get<CatalogService>(CatalogService);
   });
 
@@ -129,28 +145,38 @@ describe('Catalog API (Controller Integration)', () => {
     it('should return product by slug when found', async () => {
       const result = await productsController.getById('test-tee-prod-1');
       expect(result.success).toBe(true);
-      expect(result.data!.id).toBe('prod-1');
-      expect(result.data!.name).toBe('Test Tee');
+      expect(result.data.id).toBe('prod-1');
+      expect(result.data.name).toBe('Test Tee');
     });
 
     it('should return product by UUID when found', async () => {
-      const result = await productsController.getById('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const result = await productsController.getById(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      );
       expect(result.success).toBe(true);
-      expect(result.data!.id).toBe('prod-1');
+      expect(result.data.id).toBe('prod-1');
     });
 
     it('should throw NotFoundException when slug not found', async () => {
       // Controller tries getProductById first, then getProductBySlug - both must return null
       (catalogService.getProductById as jest.Mock).mockResolvedValueOnce(null);
-      (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(null);
-      await expect(productsController.getById('nonexistent')).rejects.toThrow(NotFoundException);
+      (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+      await expect(productsController.getById('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException when UUID not found', async () => {
       // Controller tries getProductById first, then getProductBySlug - both must return null
       (catalogService.getProductById as jest.Mock).mockResolvedValueOnce(null);
-      (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(null);
-      await expect(productsController.getById('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).rejects.toThrow(NotFoundException);
+      (catalogService.getProductBySlug as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+      await expect(
+        productsController.getById('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -167,12 +193,14 @@ describe('Catalog API (Controller Integration)', () => {
     it('should return category when found', async () => {
       const result = await categoriesController.getById('cat-1');
       expect(result.success).toBe(true);
-      expect(result.data!.slug).toBe('t-shirts');
+      expect(result.data.slug).toBe('t-shirts');
     });
 
     it('should throw NotFoundException when category not found', async () => {
       (catalogService.getCategoryById as jest.Mock).mockResolvedValueOnce(null);
-      await expect(categoriesController.getById('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(categoriesController.getById('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -250,23 +278,23 @@ describe('Catalog API (Controller Integration)', () => {
 
     it('throws BadRequestException when name is missing', async () => {
       const { name: _n, ...body } = validBody;
-      await expect(
-        productsController.create(body as any),
-      ).rejects.toThrow(BadRequestException);
+      await expect(productsController.create(body as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when description is missing', async () => {
       const { description: _d, ...body } = validBody;
-      await expect(
-        productsController.create(body as any),
-      ).rejects.toThrow(BadRequestException);
+      await expect(productsController.create(body as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when priceCents is missing', async () => {
       const { priceCents: _p, ...body } = validBody;
-      await expect(
-        productsController.create(body as any),
-      ).rejects.toThrow(BadRequestException);
+      await expect(productsController.create(body as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when priceCents is negative', async () => {
@@ -277,22 +305,20 @@ describe('Catalog API (Controller Integration)', () => {
 
     it('throws BadRequestException when categoryId is missing', async () => {
       const { categoryId: _c, ...body } = validBody;
-      await expect(
-        productsController.create(body as any),
-      ).rejects.toThrow(BadRequestException);
+      await expect(productsController.create(body as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when brand is missing', async () => {
       const { brand: _b, ...body } = validBody;
-      await expect(
-        productsController.create(body as any),
-      ).rejects.toThrow(BadRequestException);
+      await expect(productsController.create(body as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException with VALIDATION_ERROR code', async () => {
-      await expect(
-        productsController.create({} as any),
-      ).rejects.toMatchObject({
+      await expect(productsController.create({} as any)).rejects.toMatchObject({
         response: expect.objectContaining({
           error: expect.objectContaining({ code: 'VALIDATION_ERROR' }),
         }),
@@ -301,7 +327,10 @@ describe('Catalog API (Controller Integration)', () => {
 
     it('throws BadRequestException when images entry has no url', async () => {
       await expect(
-        productsController.create({ ...validBody, images: [{ altText: 'hi' }] as any }),
+        productsController.create({
+          ...validBody,
+          images: [{ altText: 'hi' }] as any,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -318,7 +347,10 @@ describe('Catalog API (Controller Integration)', () => {
     });
 
     it('updates product and returns success:true', async () => {
-      const result = await productsController.update('prod-1', { name: 'Updated Tee', priceCents: 5000 });
+      const result = await productsController.update('prod-1', {
+        name: 'Updated Tee',
+        priceCents: 5000,
+      });
       expect(result.success).toBe(true);
       expect(result.data.name).toBe('Updated Tee');
       expect(result.message).toBe('Product updated successfully');
@@ -368,8 +400,9 @@ describe('Catalog API (Controller Integration)', () => {
 
     it('throws NotFoundException when product does not exist', async () => {
       (catalogService.deleteProduct as jest.Mock).mockResolvedValueOnce(false);
-      await expect(productsController.delete('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(productsController.delete('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
-

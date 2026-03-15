@@ -1,9 +1,19 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
-import { encrypt, encryptNullable, decrypt, decryptNullable } from '../common/crypto.util';
+import {
+  encrypt,
+  encryptNullable,
+  decrypt,
+  decryptNullable,
+} from '../common/crypto.util';
 import { order, orderItem } from './schema';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -64,14 +74,18 @@ export class CheckoutService {
   /**
    * Get order summary for cart (CHK-003). Applies shipping rules and optional coupon; no order created.
    */
-  async getOrderSummary(cartId: string, couponCode?: string | null): Promise<OrderSummaryDto | null> {
+  async getOrderSummary(
+    cartId: string,
+    couponCode?: string | null,
+  ): Promise<OrderSummaryDto | null> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData || !cartData.items.length) return null;
 
     const coupon = couponCode ? applyCoupon(couponCode) : null;
     const freeShippingByCoupon = coupon?.freeShipping ?? false;
     const shippingCents =
-      freeShippingByCoupon || cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+      freeShippingByCoupon ||
+      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
         ? 0
         : DEFAULT_SHIPPING_CENTS;
 
@@ -98,7 +112,10 @@ export class CheckoutService {
   ): Promise<OrderDto> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData) {
-      throw new NotFoundException({ code: 'CART_NOT_FOUND', message: 'Cart not found or expired' });
+      throw new NotFoundException({
+        code: 'CART_NOT_FOUND',
+        message: 'Cart not found or expired',
+      });
     }
     if (!cartData.items.length) {
       throw new BadRequestException({
@@ -110,14 +127,18 @@ export class CheckoutService {
     // Optimistic stock pre-check (no row lock). The authoritative atomic decrement
     // happens in order.service.ts when payment is confirmed.
     const stockCheck = await this.inventoryService.validateStockForItems(
-      cartData.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      cartData.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+      })),
     );
     if (!stockCheck.ok) {
       throw new BadRequestException({
         success: false,
         error: {
           code: 'INSUFFICIENT_STOCK',
-          message: 'Some items in your cart are no longer available in the requested quantity',
+          message:
+            'Some items in your cart are no longer available in the requested quantity',
           details: stockCheck.failures,
         },
       });
@@ -129,7 +150,8 @@ export class CheckoutService {
     const coupon = couponCode ? applyCoupon(couponCode) : null;
     const freeShippingByCoupon = coupon?.freeShipping ?? false;
     const shippingCents =
-      freeShippingByCoupon || cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+      freeShippingByCoupon ||
+      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
         ? 0
         : DEFAULT_SHIPPING_CENTS;
     const totalCents = cartData.totalCents + shippingCents;
@@ -140,12 +162,24 @@ export class CheckoutService {
       status: 'pending',
       shippingFullName: encrypt(String(shippingAddress.fullName ?? '').trim()),
       shippingLine1: encrypt(String(shippingAddress.line1 ?? '').trim()),
-      shippingLine2: encryptNullable(shippingAddress.line2 != null ? String(shippingAddress.line2).trim() : null),
+      shippingLine2: encryptNullable(
+        shippingAddress.line2 != null
+          ? String(shippingAddress.line2).trim()
+          : null,
+      ),
       shippingCity: encrypt(String(shippingAddress.city ?? '').trim()),
-      shippingStateOrProvince: encrypt(String(shippingAddress.stateOrProvince ?? '').trim()),
-      shippingPostalCode: encrypt(String(shippingAddress.postalCode ?? '').trim()),
+      shippingStateOrProvince: encrypt(
+        String(shippingAddress.stateOrProvince ?? '').trim(),
+      ),
+      shippingPostalCode: encrypt(
+        String(shippingAddress.postalCode ?? '').trim(),
+      ),
       shippingCountry: encrypt(String(shippingAddress.country ?? '').trim()),
-      shippingPhone: encryptNullable(shippingAddress.phone != null ? String(shippingAddress.phone).trim() : null),
+      shippingPhone: encryptNullable(
+        shippingAddress.phone != null
+          ? String(shippingAddress.phone).trim()
+          : null,
+      ),
       subtotalCents: cartData.totalCents,
       shippingCents,
       totalCents,

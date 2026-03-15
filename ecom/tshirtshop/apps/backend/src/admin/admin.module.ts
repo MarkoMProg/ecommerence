@@ -8,9 +8,14 @@ import { AdminController } from './admin.controller';
 import { AdminGuard } from './guards/admin.guard';
 import { BulkUploadService } from '../catalog/bulk-upload.service';
 
-
 @Module({
-  imports: [BetterAuthCoreModule, DatabaseModule, OrderModule, CatalogModule, ReviewModule],
+  imports: [
+    BetterAuthCoreModule,
+    DatabaseModule,
+    OrderModule,
+    CatalogModule,
+    ReviewModule,
+  ],
   controllers: [AdminController],
   providers: [AdminGuard, BulkUploadService],
   exports: [AdminGuard],

@@ -41,9 +41,16 @@ export function encrypt(plaintext: string): string {
   const key = getKey();
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv(ALGORITHM, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
-  return [iv.toString('hex'), tag.toString('hex'), encrypted.toString('hex')].join(':');
+  return [
+    iv.toString('hex'),
+    tag.toString('hex'),
+    encrypted.toString('hex'),
+  ].join(':');
 }
 
 /**
@@ -55,7 +62,7 @@ function isEncrypted(value: string): boolean {
   if (parts.length !== 3) return false;
   const [iv, tag] = parts;
   // IV = 12 bytes = 24 hex chars, authTag = 16 bytes = 32 hex chars
-  return iv!.length === 24 && tag!.length === 32 && /^[0-9a-f:]+$/i.test(value);
+  return iv.length === 24 && tag.length === 32 && /^[0-9a-f:]+$/i.test(value);
 }
 
 /**
@@ -75,17 +82,23 @@ export function decrypt(ciphertext: string): string {
   const enc = Buffer.from(encHex, 'hex');
   const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+  return Buffer.concat([decipher.update(enc), decipher.final()]).toString(
+    'utf8',
+  );
 }
 
 /** Encrypts a non-null string; passes null through unchanged. */
-export function encryptNullable(value: string | null | undefined): string | null {
+export function encryptNullable(
+  value: string | null | undefined,
+): string | null {
   if (value == null) return null;
   return encrypt(value);
 }
 
 /** Decrypts a non-null ciphertext; passes null through unchanged. */
-export function decryptNullable(value: string | null | undefined): string | null {
+export function decryptNullable(
+  value: string | null | undefined,
+): string | null {
   if (value == null) return null;
   return decrypt(value);
 }

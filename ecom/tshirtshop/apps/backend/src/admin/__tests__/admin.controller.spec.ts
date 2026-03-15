@@ -49,8 +49,12 @@ describe('AdminController', () => {
   beforeEach(async () => {
     orderService = {
       getAllOrders: jest.fn().mockResolvedValue([makeOrder()]),
-      updateOrderStatus: jest.fn().mockResolvedValue(makeOrder({ status: 'paid' })),
-      refundOrder: jest.fn().mockResolvedValue(makeOrder({ status: 'refunded' })),
+      updateOrderStatus: jest
+        .fn()
+        .mockResolvedValue(makeOrder({ status: 'paid' })),
+      refundOrder: jest
+        .fn()
+        .mockResolvedValue(makeOrder({ status: 'refunded' })),
     };
 
     /** Override AdminGuard so it never runs the Better Auth session check */
@@ -65,7 +69,9 @@ describe('AdminController', () => {
         {
           provide: ReviewService,
           useValue: {
-            listAllForAdmin: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+            listAllForAdmin: jest
+              .fn()
+              .mockResolvedValue({ data: [], total: 0 }),
             adminDelete: jest.fn().mockResolvedValue(undefined),
           },
         },
@@ -114,21 +120,31 @@ describe('AdminController', () => {
 
   describe('PATCH /api/v1/admin/orders/:orderId/status', () => {
     it('updates order status and returns updated order', async () => {
-      const result = await controller.updateOrderStatus('order-1', { status: 'paid' });
+      const result = await controller.updateOrderStatus('order-1', {
+        status: 'paid',
+      });
       expect(result.success).toBe(true);
       expect(result.data.status).toBe('paid');
-      expect(orderService.updateOrderStatus).toHaveBeenCalledWith('order-1', 'paid');
+      expect(orderService.updateOrderStatus).toHaveBeenCalledWith(
+        'order-1',
+        'paid',
+      );
     });
 
     it('trims whitespace from orderId and status', async () => {
-      await controller.updateOrderStatus('  order-1  ', { status: '  shipped  ' });
-      expect(orderService.updateOrderStatus).toHaveBeenCalledWith('order-1', 'shipped');
+      await controller.updateOrderStatus('  order-1  ', {
+        status: '  shipped  ',
+      });
+      expect(orderService.updateOrderStatus).toHaveBeenCalledWith(
+        'order-1',
+        'shipped',
+      );
     });
 
     it('throws BadRequestException when status is missing', async () => {
-      await expect(
-        controller.updateOrderStatus('order-1', {}),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.updateOrderStatus('order-1', {})).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when status is empty string', async () => {
@@ -148,14 +164,18 @@ describe('AdminController', () => {
     });
 
     it('throws NotFoundException when order does not exist', async () => {
-      (orderService.updateOrderStatus as jest.Mock).mockResolvedValue( null as any);
+      (orderService.updateOrderStatus as jest.Mock).mockResolvedValue(
+        null as any,
+      );
       await expect(
         controller.updateOrderStatus('nonexistent', { status: 'paid' }),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('throws NotFoundException with ORDER_NOT_FOUND code', async () => {
-      (orderService.updateOrderStatus as jest.Mock).mockResolvedValue(null as any);
+      (orderService.updateOrderStatus as jest.Mock).mockResolvedValue(
+        null as any,
+      );
       await expect(
         controller.updateOrderStatus('nonexistent', { status: 'paid' }),
       ).rejects.toMatchObject({
@@ -183,16 +203,20 @@ describe('AdminController', () => {
 
     it('throws NotFoundException when order does not exist', async () => {
       (orderService.refundOrder as jest.Mock).mockResolvedValue(null as any);
-      await expect(controller.refundOrder('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.refundOrder('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException with ORDER_NOT_FOUND code', async () => {
       (orderService.refundOrder as jest.Mock).mockResolvedValue(null as any);
-      await expect(controller.refundOrder('nonexistent')).rejects.toMatchObject({
-        response: expect.objectContaining({
-          error: expect.objectContaining({ code: 'ORDER_NOT_FOUND' }),
-        }),
-      });
+      await expect(controller.refundOrder('nonexistent')).rejects.toMatchObject(
+        {
+          response: expect.objectContaining({
+            error: expect.objectContaining({ code: 'ORDER_NOT_FOUND' }),
+          }),
+        },
+      );
     });
 
     it('returns message "Order refunded"', async () => {
@@ -207,11 +231,16 @@ describe('AdminController', () => {
     let catalogService: { createProduct: jest.Mock };
 
     beforeEach(() => {
-      catalogService = controller['catalogService'] as unknown as { createProduct: jest.Mock };
+      catalogService = controller['catalogService'] as unknown as {
+        createProduct: jest.Mock;
+      };
       catalogService.createProduct = jest.fn();
     });
 
-    const makeMockFile = (content: string, name = 'products.json'): MulterFile => ({
+    const makeMockFile = (
+      content: string,
+      name = 'products.json',
+    ): MulterFile => ({
       buffer: Buffer.from(content),
       originalname: name,
       fieldname: 'file',
@@ -234,20 +263,26 @@ describe('AdminController', () => {
 
     it('converts foreign key violation to user-friendly category message', async () => {
       catalogService.createProduct.mockRejectedValue(
-        new Error('insert or update on table "product" violates foreign key constraint "product_category_id_category_id_fk" - Key (category_id)=(BAD_ID) is not present in table "category"'),
+        new Error(
+          'insert or update on table "product" violates foreign key constraint "product_category_id_category_id_fk" - Key (category_id)=(BAD_ID) is not present in table "category"',
+        ),
       );
 
       const file = makeMockFile(JSON.stringify([validEntry]));
       const result = await controller.bulkUploadProducts(file);
 
-      expect(result.data.results[0].error).toContain('does not match any existing category');
+      expect(result.data.results[0].error).toContain(
+        'does not match any existing category',
+      );
       expect(result.data.results[0].error).not.toContain('insert');
       expect(result.data.results[0].error).not.toContain('query');
     });
 
     it('converts duplicate key error to friendly message', async () => {
       catalogService.createProduct.mockRejectedValue(
-        new Error('duplicate key value violates unique constraint "product_pkey"'),
+        new Error(
+          'duplicate key value violates unique constraint "product_pkey"',
+        ),
       );
 
       const file = makeMockFile(JSON.stringify([validEntry]));
@@ -258,7 +293,9 @@ describe('AdminController', () => {
 
     it('converts not-null constraint error to friendly message', async () => {
       catalogService.createProduct.mockRejectedValue(
-        new Error('null value in column "brand" of relation "product" violates not-null constraint'),
+        new Error(
+          'null value in column "brand" of relation "product" violates not-null constraint',
+        ),
       );
 
       const file = makeMockFile(JSON.stringify([validEntry]));
@@ -293,7 +330,9 @@ describe('AdminController', () => {
 
     it('never leaks SQL query text in error messages', async () => {
       catalogService.createProduct.mockRejectedValue(
-        new Error('Failed query: insert into "product" ("id") values ($1) params: abc-123'),
+        new Error(
+          'Failed query: insert into "product" ("id") values ($1) params: abc-123',
+        ),
       );
 
       const file = makeMockFile(JSON.stringify([validEntry]));

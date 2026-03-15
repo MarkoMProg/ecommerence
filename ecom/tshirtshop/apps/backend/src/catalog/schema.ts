@@ -79,4 +79,3 @@ export const productImageRelations = relations(productImage, ({ one }) => ({
     references: [product.id],
   }),
 }));
-

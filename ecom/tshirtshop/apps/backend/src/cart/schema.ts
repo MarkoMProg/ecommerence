@@ -1,5 +1,11 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, integer, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  integer,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { user } from '../auth/schema';
 import { product } from '../catalog/schema';
 
@@ -44,7 +50,11 @@ export const cartItem = pgTable(
   },
   (table) => [
     // NOTE: Actual DB index uses COALESCE for NULL handling — see migration 0008.
-    uniqueIndex('cart_item_cart_product_option_idx').on(table.cartId, table.productId, table.selectedOption),
+    uniqueIndex('cart_item_cart_product_option_idx').on(
+      table.cartId,
+      table.productId,
+      table.selectedOption,
+    ),
   ],
 );
 
