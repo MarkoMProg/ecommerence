@@ -7,6 +7,8 @@ import {
   setCartIdClient,
   clearCartIdClient,
 } from "../cart-cookie";
+import { mapProduct } from "./catalog";
+import type { ProductDisplay } from "./catalog";
 
 function apiBase(): string {
   if (typeof window !== "undefined") {
@@ -167,6 +169,28 @@ export async function removeFromCart(itemId: string): Promise<Cart> {
   }
   const json = (await res.json()) as { success: boolean; data: Cart };
   return json.data;
+}
+
+/** Fetch product recommendations based on cart items (CART-REC). Call from client only. */
+export async function fetchCartRecommendations(
+  limit = 6
+): Promise<ProductDisplay[]> {
+  const cartId = getCartIdClient();
+  const params = new URLSearchParams();
+  if (limit > 0) params.set("limit", String(limit));
+  const qs = params.toString();
+  const res = await fetch(
+    `${apiBase()}/api/v1/cart/recommendations${qs ? `?${qs}` : ""}`,
+    {
+      headers: cartHeaders(cartId),
+      credentials: "include",
+      cache: "no-store",
+    }
+  );
+  if (!res.ok) return [];
+  const json = (await res.json()) as { success: boolean; data: unknown[] };
+  if (!json.success || !Array.isArray(json.data)) return [];
+  return json.data.map((p) => mapProduct(p as Parameters<typeof mapProduct>[0]));
 }
 
 /** Update item quantity by cart item ID. Quantity 0 removes. Uses session when logged in. Call from client only. */

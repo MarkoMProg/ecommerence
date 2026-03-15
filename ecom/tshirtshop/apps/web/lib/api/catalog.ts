@@ -112,7 +112,8 @@ function parseSizeOptions(raw: string | null | undefined): string[] | null {
   return parts.length > 0 ? parts : null;
 }
 
-function mapProduct(p: ApiProduct): ProductDisplay {
+/** Maps API product shape to ProductDisplay. Exported for reuse (e.g. cart recommendations). */
+export function mapProduct(p: ApiProduct): ProductDisplay {
   const primaryImage = p.images.find((i) => i.isPrimary) ?? p.images[0];
   return {
     id: p.id,

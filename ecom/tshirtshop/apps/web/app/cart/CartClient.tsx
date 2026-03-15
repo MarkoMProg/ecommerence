@@ -11,6 +11,7 @@ import {
 import { clearCartIdClient, getCartIdClient } from "@/lib/cart-cookie";
 import { useCart } from "@/lib/cart-count-context";
 import { CART_UPDATED_EVENT } from "@/lib/cart-drawer-context";
+import { CartRecommendations } from "@/components/cart-recommendations";
 
 interface CartClientProps {
   initialCart: Cart | null;
@@ -215,6 +216,8 @@ export function CartClient({ initialCart }: CartClientProps) {
           </Link>
         </div>
       </div>
+
+      <CartRecommendations variant="full" />
     </div>
   );
 }

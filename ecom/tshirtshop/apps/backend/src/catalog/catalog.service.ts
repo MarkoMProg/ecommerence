@@ -1,5 +1,18 @@
 import { Injectable, Inject, ConflictException } from '@nestjs/common';
-import { eq, desc, asc, sql, and, or, ilike, gte, lte, inArray, type SQL } from 'drizzle-orm';
+import {
+  eq,
+  desc,
+  asc,
+  sql,
+  and,
+  or,
+  ilike,
+  gte,
+  lte,
+  inArray,
+  not,
+  type SQL,
+} from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -167,17 +180,28 @@ export class CatalogService {
   }
 
   async getCategoryById(id: string): Promise<Category | null> {
-    const [row] = await this.db.select().from(category).where(eq(category.id, id));
+    const [row] = await this.db
+      .select()
+      .from(category)
+      .where(eq(category.id, id));
     return row ?? null;
   }
 
   async getCategoryBySlug(slug: string): Promise<Category | null> {
-    const [row] = await this.db.select().from(category).where(eq(category.slug, slug));
+    const [row] = await this.db
+      .select()
+      .from(category)
+      .where(eq(category.slug, slug));
     return row ?? null;
   }
 
   async listProducts(query: ListProductsQuery = {}): Promise<{
-    data: (Product & { images: ProductImage[]; category: Category | null; averageRating?: number; reviewCount?: number })[];
+    data: (Product & {
+      images: ProductImage[];
+      category: Category | null;
+      averageRating?: number;
+      reviewCount?: number;
+    })[];
     pagination: { page: number; limit: number; total: number };
   }> {
     const page = Math.max(1, query.page ?? 1);
@@ -205,10 +229,14 @@ export class CatalogService {
       conditions.push(eq(product.brand, query.brand.trim()));
     }
     if (query.minPrice != null && query.minPrice >= 0) {
-      conditions.push(gte(product.priceCents, Math.round(query.minPrice * 100)));
+      conditions.push(
+        gte(product.priceCents, Math.round(query.minPrice * 100)),
+      );
     }
     if (query.maxPrice != null && query.maxPrice >= 0) {
-      conditions.push(lte(product.priceCents, Math.round(query.maxPrice * 100)));
+      conditions.push(
+        lte(product.priceCents, Math.round(query.maxPrice * 100)),
+      );
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -245,11 +273,18 @@ export class CatalogService {
     const [images, categoryRows] =
       productIds.length > 0
         ? await Promise.all([
-            this.db.select().from(productImage).where(inArray(productImage.productId, productIds)),
+            this.db
+              .select()
+              .from(productImage)
+              .where(inArray(productImage.productId, productIds)),
             this.db
               .select()
               .from(category)
-              .where(inArray(category.id, [...new Set(data.map((p) => p.categoryId))])),
+              .where(
+                inArray(category.id, [
+                  ...new Set(data.map((p) => p.categoryId)),
+                ]),
+              ),
           ])
         : [[], []];
 
@@ -268,7 +303,8 @@ export class CatalogService {
     }));
 
     // Enrich with rating stats
-    const ratingsMap = await this.reviewService.getProductsRatingStats(productIds);
+    const ratingsMap =
+      await this.reviewService.getProductsRatingStats(productIds);
     const withRatings = enriched.map((p) => {
       const stats = ratingsMap.get(p.id);
       return {
@@ -280,13 +316,109 @@ export class CatalogService {
 
     // If sorting by rating, sort in-memory after enrichment
     if (sortOption === 'rating-desc') {
-      withRatings.sort((a, b) => b.averageRating - a.averageRating || b.reviewCount - a.reviewCount);
+      withRatings.sort(
+        (a, b) =>
+          b.averageRating - a.averageRating || b.reviewCount - a.reviewCount,
+      );
     }
 
     return {
       data: withRatings,
       pagination: { page, limit, total },
     };
+  }
+
+  /**
+   * Get product recommendations based on product IDs (e.g. cart items).
+   * Returns products from the same categories, excluding the given products.
+   * Used for cart recommendations (CART-REC).
+   */
+  async getRecommendationsForProductIds(
+    productIds: string[],
+    limit = 6,
+  ): Promise<
+    (Product & {
+      images: ProductImage[];
+      category: Category | null;
+      averageRating?: number;
+      reviewCount?: number;
+    })[]
+  > {
+    const ids = [...new Set(productIds)].filter(Boolean);
+    if (ids.length === 0) return [];
+
+    const categoryIdRows = await this.db
+      .selectDistinct({ categoryId: product.categoryId })
+      .from(product)
+      .where(inArray(product.id, ids));
+    const categoryIds = categoryIdRows
+      .map((r) => r.categoryId)
+      .filter((id): id is string => !!id);
+    if (categoryIds.length === 0) return [];
+
+    const conditions: SQL[] = [
+      inArray(product.categoryId, categoryIds),
+      not(inArray(product.id, ids)),
+      eq(product.isArchived, false),
+    ];
+    const whereClause = and(...conditions);
+
+    const data = await this.db
+      .select()
+      .from(product)
+      .where(whereClause)
+      .orderBy(desc(product.createdAt))
+      .limit(limit * 2);
+
+    const resultProductIds = data.map((p) => p.id);
+    const [images, categoryRows] =
+      resultProductIds.length > 0
+        ? await Promise.all([
+            this.db
+              .select()
+              .from(productImage)
+              .where(inArray(productImage.productId, resultProductIds)),
+            this.db
+              .select()
+              .from(category)
+              .where(
+                inArray(category.id, [
+                  ...new Set(data.map((p) => p.categoryId)),
+                ]),
+              ),
+          ])
+        : [[], []];
+
+    const categoryMap = new Map(categoryRows.map((c) => [c.id, c]));
+    const imagesByProduct = new Map<string, ProductImage[]>();
+    for (const img of images) {
+      const list = imagesByProduct.get(img.productId) ?? [];
+      list.push(img);
+      imagesByProduct.set(img.productId, list);
+    }
+
+    const enriched = data.map((p) => ({
+      ...p,
+      images: imagesByProduct.get(p.id) ?? [],
+      category: categoryMap.get(p.categoryId) ?? null,
+    }));
+
+    const ratingsMap =
+      await this.reviewService.getProductsRatingStats(resultProductIds);
+    const withRatings = enriched.map((p) => {
+      const stats = ratingsMap.get(p.id);
+      return {
+        ...p,
+        averageRating: stats?.averageRating ?? 0,
+        reviewCount: stats?.reviewCount ?? 0,
+      };
+    });
+
+    withRatings.sort(
+      (a, b) =>
+        b.averageRating - a.averageRating || b.reviewCount - a.reviewCount,
+    );
+    return withRatings.slice(0, limit);
   }
 
   async getProductById(id: string): Promise<
@@ -326,11 +458,17 @@ export class CatalogService {
       })
     | null
   > {
-    const [p] = await this.db.select().from(product).where(eq(product.slug, slug));
+    const [p] = await this.db
+      .select()
+      .from(product)
+      .where(eq(product.slug, slug));
     if (!p) return null;
 
     const [images, categories, ratingStats] = await Promise.all([
-      this.db.select().from(productImage).where(eq(productImage.productId, p.id)),
+      this.db
+        .select()
+        .from(productImage)
+        .where(eq(productImage.productId, p.id)),
       this.db.select().from(category).where(eq(category.id, p.categoryId)),
       this.reviewService.getProductRatingStats(p.id),
     ]);
@@ -344,7 +482,9 @@ export class CatalogService {
     };
   }
 
-  async createProduct(dto: CreateProductDto): Promise<Product & { images: ProductImage[] }> {
+  async createProduct(
+    dto: CreateProductDto,
+  ): Promise<Product & { images: ProductImage[] }> {
     const id = randomUUID();
     const slug = generateSlug(dto.name);
     await this.db.insert(product).values({
@@ -379,13 +519,25 @@ export class CatalogService {
       });
     }
 
-    const [created] = await this.db.select().from(product).where(eq(product.id, id));
-    const images = await this.db.select().from(productImage).where(eq(productImage.productId, id));
+    const [created] = await this.db
+      .select()
+      .from(product)
+      .where(eq(product.id, id));
+    const images = await this.db
+      .select()
+      .from(productImage)
+      .where(eq(productImage.productId, id));
     return { ...created, images };
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto): Promise<(Product & { images: ProductImage[] }) | null> {
-    const [existing] = await this.db.select().from(product).where(eq(product.id, id));
+  async updateProduct(
+    id: string,
+    dto: UpdateProductDto,
+  ): Promise<(Product & { images: ProductImage[] }) | null> {
+    const [existing] = await this.db
+      .select()
+      .from(product)
+      .where(eq(product.id, id));
     if (!existing) return null;
 
     const updateData: Partial<typeof product.$inferInsert> = {};
@@ -399,13 +551,17 @@ export class CatalogService {
     if (dto.categoryId != null) updateData.categoryId = dto.categoryId;
     if (dto.brand != null) updateData.brand = dto.brand;
     if (dto.weightMetric != null) updateData.weightMetric = dto.weightMetric;
-    if (dto.weightImperial != null) updateData.weightImperial = dto.weightImperial;
-    if (dto.dimensionMetric != null) updateData.dimensionMetric = dto.dimensionMetric;
-    if (dto.dimensionImperial != null) updateData.dimensionImperial = dto.dimensionImperial;
+    if (dto.weightImperial != null)
+      updateData.weightImperial = dto.weightImperial;
+    if (dto.dimensionMetric != null)
+      updateData.dimensionMetric = dto.dimensionMetric;
+    if (dto.dimensionImperial != null)
+      updateData.dimensionImperial = dto.dimensionImperial;
     if (dto.sizeOptions != null) updateData.sizeOptions = dto.sizeOptions;
     if (dto.material != null) updateData.material = dto.material;
     if (dto.fit != null) updateData.fit = dto.fit;
-    if (dto.careInstructions != null) updateData.careInstructions = dto.careInstructions;
+    if (dto.careInstructions != null)
+      updateData.careInstructions = dto.careInstructions;
     if (dto.orientation != null) updateData.orientation = dto.orientation;
     if (dto.framingInfo != null) updateData.framingInfo = dto.framingInfo;
     if (dto.isArchived != null) updateData.isArchived = dto.isArchived;
@@ -427,14 +583,23 @@ export class CatalogService {
       }
     }
 
-    const [updated] = await this.db.select().from(product).where(eq(product.id, id));
+    const [updated] = await this.db
+      .select()
+      .from(product)
+      .where(eq(product.id, id));
     if (!updated) return null;
-    const updatedImages = await this.db.select().from(productImage).where(eq(productImage.productId, id));
+    const updatedImages = await this.db
+      .select()
+      .from(productImage)
+      .where(eq(productImage.productId, id));
     return { ...updated, images: updatedImages };
   }
 
   async deleteProduct(id: string): Promise<boolean> {
-    const [existing] = await this.db.select().from(product).where(eq(product.id, id));
+    const [existing] = await this.db
+      .select()
+      .from(product)
+      .where(eq(product.id, id));
     if (!existing) return false;
     try {
       await this.db.delete(product).where(eq(product.id, id));
@@ -445,7 +610,8 @@ export class CatalogService {
           success: false,
           error: {
             code: 'PRODUCT_IN_USE',
-            message: 'This product cannot be deleted because it is part of existing orders. Consider keeping it and marking it out of stock instead.',
+            message:
+              'This product cannot be deleted because it is part of existing orders. Consider keeping it and marking it out of stock instead.',
           },
         });
       }
@@ -454,7 +620,11 @@ export class CatalogService {
     return true;
   }
 
-  async createCategory(name: string, slug: string, parentCategoryId?: string): Promise<Category> {
+  async createCategory(
+    name: string,
+    slug: string,
+    parentCategoryId?: string,
+  ): Promise<Category> {
     const id = randomUUID();
     await this.db.insert(category).values({
       id,
@@ -462,7 +632,10 @@ export class CatalogService {
       slug,
       parentCategoryId: parentCategoryId ?? null,
     });
-    const [created] = await this.db.select().from(category).where(eq(category.id, id));
+    const [created] = await this.db
+      .select()
+      .from(category)
+      .where(eq(category.id, id));
     if (!created) throw new Error('Failed to create category');
     return created;
   }

@@ -6,6 +6,7 @@ import { DATABASE_CONNECTION } from '../database/database-connection';
 import { cart, cartItem } from './schema';
 import { product, productImage } from '../catalog/schema';
 import { InventoryService } from '../inventory/inventory.service';
+import { CatalogService } from '../catalog/catalog.service';
 
 export interface CartItemWithProduct {
   id: string;
@@ -35,12 +36,32 @@ export class CartService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
     private readonly inventoryService: InventoryService,
+    private readonly catalogService: CatalogService,
   ) {}
 
   async getCartById(cartId: string): Promise<CartWithItems | null> {
     const [c] = await this.db.select().from(cart).where(eq(cart.id, cartId));
     if (!c) return null;
     return this.enrichCartWithItems(c);
+  }
+
+  /**
+   * Get product recommendations based on items in the cart (CART-REC).
+   * Returns products from the same categories as cart items, excluding cart items.
+   */
+  async getCartRecommendations(
+    cartId: string,
+    limit = 6,
+  ): Promise<
+    Awaited<ReturnType<CatalogService['getRecommendationsForProductIds']>>
+  > {
+    const cartData = await this.getCartById(cartId);
+    if (!cartData || cartData.items.length === 0) return [];
+    const productIds = cartData.items.map((i) => i.productId);
+    return this.catalogService.getRecommendationsForProductIds(
+      productIds,
+      limit,
+    );
   }
 
   async createGuestCart(): Promise<CartWithItems> {

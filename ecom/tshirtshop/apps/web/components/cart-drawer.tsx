@@ -13,6 +13,7 @@ import {
 import { useCartDrawer, useCartDrawerInitialCart } from "@/lib/cart-drawer-context";
 import { useCart } from "@/lib/cart-count-context";
 import { CART_UPDATED_EVENT } from "@/lib/cart-drawer-context";
+import { CartRecommendations } from "@/components/cart-recommendations";
 
 function CartDrawerItem({
   item,
@@ -308,21 +309,24 @@ export function CartDrawer() {
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y divide-white/10">
-                {cart.items.map((item) => (
-                  <CartDrawerItem
-                    key={item.id}
-                    item={item}
-                    onUpdate={handleUpdate}
-                    onRemove={handleRemove}
-                    loading={loading === item.id}
-                    isJustAdded={
-                      lastAddedProductId === item.productId &&
-                      lastAddedSelectedOption === (item.selectedOption ?? null)
-                    }
-                  />
-                ))}
-              </ul>
+              <>
+                <ul className="divide-y divide-white/10">
+                  {cart.items.map((item) => (
+                    <CartDrawerItem
+                      key={item.id}
+                      item={item}
+                      onUpdate={handleUpdate}
+                      onRemove={handleRemove}
+                      loading={loading === item.id}
+                      isJustAdded={
+                        lastAddedProductId === item.productId &&
+                        lastAddedSelectedOption === (item.selectedOption ?? null)
+                      }
+                    />
+                  ))}
+                </ul>
+                <CartRecommendations variant="compact" />
+              </>
             )}
           </div>
 

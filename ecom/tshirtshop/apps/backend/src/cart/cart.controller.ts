@@ -7,6 +7,7 @@ import {
   Body,
   Headers,
   Param,
+  Query,
   Req,
   HttpCode,
   HttpStatus,
@@ -24,6 +25,47 @@ import { validateAddCartItem, validateUpdateQuantity } from './dto/cart.dto';
 @UseGuards(OptionalAuthGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
+
+  /** Get product recommendations based on cart items (CART-REC). Same auth as getCart. */
+  @Get('recommendations')
+  async getRecommendations(
+    @Req() req: Request,
+    @Headers('x-cart-id') cartIdHeader?: string,
+    @Query('limit') limitParam?: string,
+  ) {
+    const user = req.user;
+    const guestCartId = cartIdHeader?.trim();
+    const limit = limitParam
+      ? Math.min(12, Math.max(1, parseInt(limitParam, 10) || 6))
+      : 6;
+
+    let cartId: string | null = null;
+    if (user) {
+      const userCart = await this.cartService.getOrCreateUserCart(user.id);
+      cartId = userCart.id;
+    } else if (guestCartId) {
+      const cart = await this.cartService.getCartById(guestCartId);
+      if (cart) cartId = cart.id;
+    }
+
+    if (!cartId) {
+      return {
+        success: true,
+        data: [],
+        message: 'No cart. Add items to see recommendations.',
+      };
+    }
+
+    const recommendations = await this.cartService.getCartRecommendations(
+      cartId,
+      limit,
+    );
+    return {
+      success: true,
+      data: recommendations,
+      message: 'Recommendations retrieved successfully',
+    };
+  }
 
   /** Get cart. Uses user cart when authenticated; merges guest cart on first request after login. */
   @Get()
