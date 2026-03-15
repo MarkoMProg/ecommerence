@@ -1,14 +1,14 @@
 # Project Status Audit — tshirtshop
 
-**Generated:** 2026-03-13 (full audit)  
-**Previous:** 2026-03-11  
+**Generated:** 2026-03-15 (full audit)  
+**Previous:** 2026-03-13  
 **Purpose:** Correlate implementation with documentation and provide recommended next steps.
 
 ---
 
 ## 1. Executive Summary
 
-The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)** complete, **Phase 2 (Commerce)** largely complete, and **Phase 3 (Experience)** substantially implemented. Authentication, catalog, cart, checkout, Stripe payment, and order lifecycle are done. **PAY-001 to PAY-004** (Stripe integration) are implemented. Order confirmation page offers **Complete payment** (redirect to Stripe for pending orders) and **Cancel order** (with Yes/No confirmation). Coupons (e.g. FRESHP100 free shipping) supported at checkout. Cart is cleared when order is created. Product URLs use slugs (`/shop/[slug]`).
+The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)** complete, **Phase 2 (Commerce)** largely complete, and **Phase 3 (Experience)** substantially implemented. Authentication, catalog, cart (with **related/recommended products**), checkout, Stripe payment, and order lifecycle are done. **PAY-001 to PAY-004** (Stripe integration) are implemented. Order confirmation page offers **Complete payment** (redirect to Stripe for pending orders) and **Cancel order** (with Yes/No confirmation). Coupons (e.g. FRESHP100 free shipping) supported at checkout. Cart is cleared when order is created. Product URLs use slugs (`/shop/[slug]`). **343 tests pass**, **ESLint 0 warnings**.
 
 | Phase                | Status      | Completion |
 | -------------------- | ----------- | ---------- |
@@ -18,9 +18,22 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ---
 
-## 2. Documentation vs Implementation
+## 2. task.md Correlation
 
-### 2.1 Docs Structure (Reference)
+| task.md Area | Status | Notes |
+| ------------ | ------ | ----- |
+| **Project 1 — Foundation** | ~98% | Auth (email/password, OAuth Google/Facebook, CAPTCHA, 2FA, password reset), PostgreSQL + Drizzle, product catalog (faceted search, suggestions, sorting) |
+| **Project 2 — Commerce** | ~90% | Cart (guest + persistent, **recommendations**), checkout, Stripe, order lifecycle, refunds. **Missing:** message queue (RabbitMQ/Kafka), order confirmation email |
+| **Project 3 — Experience** | ~70% | Reviews, admin (CRUD, bulk upload, review moderation, 2FA required), main UI pages, cart drawer, search modal. **Missing:** Terms/FAQ pages, self-signed TLS, performance report |
+| **Extra — Docker** | 0% | No Dockerfiles; required for review |
+| **Integrator — CI/CD** | 0% | No pipeline |
+| **Observability** | 0% | No metrics, logs, traces, dashboards |
+
+---
+
+## 3. Documentation vs Implementation
+
+### 3.1 Docs Structure (Reference)
 
 | Doc                                              | Purpose                                          |
 | ------------------------------------------------ | ------------------------------------------------ |
@@ -32,7 +45,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | `07-DEVOPS/environment-setup.md`                 | Local setup, env vars                            |
 | `DESIGN-SPEC.md`                                 | Premium DnD Apparel visual design, brand, layout |
 
-### 2.2 Alignment
+### 3.2 Alignment
 
 - **Architecture:** Implementation follows modular monolith (NestJS modules, Drizzle, better-auth).
 - **Auth:** Matches auth architecture (better-auth, JWT, 2FA, password reset).
@@ -41,9 +54,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ---
 
-## 3. Current Implementation Status
+## 4. Current Implementation Status
 
-### 3.1 Infrastructure (FND-001 to FND-006)
+### 4.1 Infrastructure (FND-001 to FND-006)
 
 | Task    | Doc Status  | Actual Status | Notes                                                                  |
 | ------- | ----------- | ------------- | ---------------------------------------------------------------------- |
@@ -54,7 +67,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | FND-005 | DONE        | DONE          | Drizzle ORM; schema in `auth/`, `catalog/`, `cart/`, `order/schema.ts` |
 | FND-006 | NOT STARTED | NOT STARTED   | No Dockerfiles                                                         |
 
-### 3.2 Authentication (AUTH-001 to AUTH-010)
+### 4.2 Authentication (AUTH-001 to AUTH-010)
 
 | Task     | Doc Status  | Actual Status | Notes                                                                               |
 | -------- | ----------- | ------------- | ----------------------------------------------------------------------------------- |
@@ -76,7 +89,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 **2026-02-18:** Auth forms moved from homepage to `/auth/login`. Homepage now serves e-commerce content. OAuth providers (Google/Facebook) only registered when credentials are set — avoids CLIENT_ID_AND_SECRET_REQUIRED in dev. Middleware route updated to `api/v1/*path` (path-to-regexp v7).
 
-### 3.3 Database Design (DB-001 to DB-007)
+### 4.3 Database Design (DB-001 to DB-007)
 
 | Task   | Doc Status  | Actual Status | Notes                                                                        |
 | ------ | ----------- | ------------- | ---------------------------------------------------------------------------- |
@@ -90,7 +103,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 **Current schema:** `auth/schema.ts` (user, session, account, verification, two_factor) + `catalog/schema.ts` (category, product, product_image) + `cart/schema.ts` (cart, cart_item) + `order/schema.ts` (order, order_item). Drizzle config and DatabaseModule include all four. **Run `npm run db:push` from apps/backend** to apply schema changes.
 
-### 3.4 Product Catalog (CAT-001 to CAT-006)
+### 4.4 Product Catalog (CAT-001 to CAT-006)
 
 | Task    | Status   | Notes                                                                                                                          |
 | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -103,7 +116,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 **Implementation:** `apps/backend/src/catalog/` — CatalogModule, ProductsController, CategoriesController, CatalogService, DTOs. `GET /api/v1/products/brands`, `GET /api/v1/products/suggestions`. Product schema has `isArchived` (soft-delete; archived hidden from storefront). Catalog routes use `@AllowAnonymous()` (public). Seed: `npm run db:seed` from apps/backend. **Frontend** uses `lib/api/catalog.ts` (fetchProducts, fetchCategories, fetchProduct, fetchBrands, fetchSearchSuggestions). Shop page has `ShopSearchInput` (autocomplete) and `ShopFiltersForm` (client component for sort onChange). **Performance:** `listProducts` fetches only images and categories for the current page's product IDs (no full-table reads).
 
-### 3.5 Frontend Pages
+### 4.5 Frontend Pages
 
 | Page               | Status         | Location                                     | Notes                                                                                                                                                                                                                            |
 | ------------------ | -------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -119,7 +132,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 **Layout components:** `Header`, `Footer`, `SiteLayout` — responsive, mobile hamburger menu. **Cart Drawer:** Slide-out cart drawer (`CartDrawer`, `CartDrawerProvider`) — open from header or product detail; syncs with cart page via `CART_UPDATED_EVENT`. **Branding:** Darkloom. **API clients:** `lib/api/catalog.ts`, `cart.ts`, `checkout.ts`, `orders.ts` — use `API_URL` (default `http://127.0.0.1:3000`); Next.js rewrites `/api/v1/*` for client. **API unreachable:** Home and Shop pages gracefully degrade with user message when backend is down.
 
-### 3.6 Design & UX (New)
+### 4.6 Design & UX (New)
 
 | Item              | Status | Notes                                                                             |
 | ----------------- | ------ | --------------------------------------------------------------------------------- |
@@ -128,19 +141,19 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | Responsive layout | DONE   | Mobile-first, hamburger nav, touch targets (min 44px), small-screen optimizations |
 | Dark mode         | DONE   | Default; design spec compliant                                                    |
 
-### 3.7 Commerce & Experience
+### 4.7 Commerce & Experience
 
-- **Cart (CART-001–CART-006):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`. Guest carts via X-Cart-Id header. **UI-004 DONE**: cart page, Add to Cart, cart ID cookie (`darkloom_cart_id`). CART-005 (guest cart cookie) done via cookie; CART-006 (user cart persistence) done — merge on login, OptionalAuthGuard on cart/checkout.
+- **Cart (CART-001–CART-006, CART-REC):** **DONE** — Schema (cart, cart_item), CartService, CartController. Endpoints: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH /api/v1/cart/items/:productId`, `DELETE /api/v1/cart/items/:productId`, `GET /api/v1/cart/recommendations?limit=6`. Guest carts via X-Cart-Id header. **UI-004 DONE**: cart page, Add to Cart, cart ID cookie (`darkloom_cart_id`). CART-005 (guest cart cookie) done via cookie; CART-006 (user cart persistence) done — merge on login, OptionalAuthGuard on cart/checkout. **CART-REC DONE**: Related/recommended products based on cart items (same categories, sorted by rating); `CartRecommendations` component on cart page and in cart drawer.
 - **Checkout:** **UI-005, CHK-001 to CHK-004, ORD-001, ORD-002 DONE** — Checkout page with order summary, shipping address form, coupon code (FRESHP100 free shipping), Place Order wired to `POST /api/v1/checkout`. Order schema (order, order_item), CheckoutService creates order from cart (status: pending); **cart cleared on order creation**. **CHK-002**: address validation (European countries supported). **CHK-003**: `GET /api/v1/checkout/summary` (subtotal, shipping, total from cart; coupon support). **CHK-004**: `GET /api/v1/orders/:id`, confirmation page fetches and displays full order details. **ORD-003 DONE**: `PATCH /api/v1/orders/:id/status`. **ORD-004 DONE**: `POST /api/v1/orders/:id/cancel`; Cancel button with Yes/No confirmation dialog. **ORD-005 DONE**: `POST /api/v1/admin/orders/:id/refund`. **PAY-001 to PAY-004 DONE**: Stripe Checkout Session, verify-payment, webhook, payment status (stripeSessionId, paidAt). **Complete payment** for pending orders: `POST /api/v1/checkout/:orderId/payment-url` returns Stripe checkout URL.
-- **Tests:** Auth + catalog API + order DTO + review + admin + bulk-upload tests. **339 pass**, **0 fail**. No cart or checkout integration tests yet.
+- **Tests:** Auth + catalog API + order DTO + review + admin + bulk-upload tests. **343 pass**, **0 fail**. No cart or checkout integration tests yet.
 - **Build:** Production build passes.
 - **Performance:** Product listing (`GET /api/v1/products`) — scoped image/category fetches (no full-table reads). Order listing (`getAllOrders`, `getOrdersByUserId`) — batch fetch orders + items to avoid N+1 queries.
 
 ---
 
-## 4. Environment & Configuration
+## 5. Environment & Configuration
 
-### 4.1 Required for Full Auth (Production)
+### 5.1 Required for Full Auth (Production)
 
 | Variable                                        | Required                                                                  | Default (Dev)           |
 | ----------------------------------------------- | ------------------------------------------------------------------------- | ----------------------- |
@@ -155,7 +168,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`   | For Stripe payment                                                        | —                       |
 | `ADMIN_EMAILS`                                  | Comma-separated admin emails; run `npm run db:bootstrap-admin` to promote | Not in .env.example     |
 
-### 4.2 Minimal Dev Setup
+### 5.2 Minimal Dev Setup
 
 - `DATABASE_URL` and `BETTER_AUTH_SECRET` are required.
 - Backend and frontend can run without Resend, reCAPTCHA, or OAuth.
@@ -164,9 +177,9 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ---
 
-## 5. Recommended Next Steps
+## 6. Recommended Next Steps
 
-### 5.1 Immediate (Unblock Phase 1 Completion)
+### 6.1 Immediate (Unblock Phase 1 Completion)
 
 1. ~~**Fix auth-provider type error**~~ **DONE** — `twoFactorEnabled?: boolean | null`; Suspense for useSearchParams pages; API error types.
 
@@ -174,7 +187,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 3. ~~**Optional: Remove `lib/mock-data.ts`**~~ **DONE** — Deleted; homepage, shop, product detail use API.
 
-### 5.2 Short-Term (Complete Phase 1)
+### 6.2 Short-Term (Complete Phase 1)
 
 4. ~~**CAT-004, CAT-005, CAT-006**~~ **DONE** — Faceted filtering, sorting, and search suggestions (autocomplete dropdown).
 
@@ -184,7 +197,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 7. **FND-006:** Docker setup (per project-overview DevOps requirements).
 
-### 5.3 Medium-Term (Phase 2)
+### 6.3 Medium-Term (Phase 2)
 
 8. ~~**CART-001 to CART-006**~~ **DONE** — Cart schema, add/remove/update item APIs. CART-005 (guest cookie) done via `darkloom_cart_id`. CART-006 (user cart persistence) done — merge on login.
 9. ~~**UI-004**~~ **DONE** — Cart page, Add to Cart on product detail, quantity controls, remove.
@@ -192,7 +205,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 11. ~~**CHK-001 to CHK-004**~~ **DONE** — Checkout API, address validation, order summary endpoint, order confirmation.
 12. ~~**PAY-001 to PAY-004**~~ **DONE** — Stripe Checkout, verify-payment, webhook, payment status. Complete payment for existing pending orders via `POST /api/v1/checkout/:orderId/payment-url`.
 
-### 5.4 Long-Term (Phase 3)
+### 6.4 Long-Term (Phase 3)
 
 13. ~~**UI-005**~~ **DONE** — Checkout page. ~~**UI-006**~~ **DONE** — User account page. ~~**UI-007**~~ **DONE** — Admin dashboard.
 
@@ -204,21 +217,22 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ---
 
-## 6. Risk & Compliance Notes
+## 7. Risk & Compliance Notes
 
 | Area     | Status                                                                                                                          | Action                                                                                                   |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Security | Auth follows best practices; **input validation hardened** (sanitization, HTML injection checks, semantic bounds, whitelisting) | Add rate limiting (SEC-002) when needed                                                                  |
 | Data     | No card storage                                                                                                                 | Maintain as-is                                                                                           |
-| Tests    | 339 pass, 0 fail                                                                                                                | Add cart/checkout integration tests; no E2E yet; run tests to verify validation changes                  |
+| Tests    | 343 pass, 0 fail                                                                                                                | Add cart/checkout integration tests; no E2E yet                                                           |
 | Docker   | Not implemented                                                                                                                 | Required for final deliverable                                                                           |
 | Build    | Fixed                                                                                                                           | Auth-provider type, Suspense, API types, AccountShell exact, cart-cookie match — production build passes |
 | OAuth    | Conditional registration                                                                                                        | Providers only added when credentials set; no CLIENT_ID_AND_SECRET_REQUIRED in dev                       |
 
 ---
 
-## 7. Document References
+## 8. Document References
 
+- [task.md](./task.md) — Primary requirements (Projects 1–3, Integrator, Observability)
 - [START-HERE.md](./START-HERE.md) — Entry point
 - [project-overview.md](./01-REQUIREMENTS/project-overview.md) — Requirements
 - [master-task-board.md](./04-TASKS/master-task-board.md) — Task tracking
@@ -231,15 +245,15 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 
 ---
 
-## 8. Summary
+## 9. Summary
 
 **Current state:** Phase 1 complete. Phase 2: Catalog, Cart, Checkout (with coupons), Orders, **Stripe payment** (PAY-001–004) implemented. Full flow: add to cart → checkout (address, coupon) → place order → Stripe → confirmation (or return without paying → Complete payment / Cancel order from order history). Phase 3: Home, Shop, Product detail (slug URLs), Cart, Checkout, User account, Admin done.
 
-**Recommended next steps:** Add **ADMIN_EMAILS** to `.env.example`, **FND-006** (Docker), **SEC-002** (rate limiting). ESLint: 39 warnings (no errors) — mostly `@next/next/no-img-element`, `no-explicit-any`, `turbo/no-undeclared-env-vars`, `react-hooks/exhaustive-deps`.
+**Recommended next steps:** Add **ADMIN_EMAILS** to `.env.example`, **FND-006** (Docker), **SEC-002** (rate limiting). ESLint: **0 warnings** (backend and web pass).
 
 ---
 
-## 9. Changelog (Audit Updates)
+## 10. Changelog (Audit Updates)
 
 | Date                      | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -260,6 +274,7 @@ The **Darkloom** (tshirtshop) B2C e-commerce platform has **Phase 1 (Foundation)
 | 2026-03-07 (audit)        | Full project audit. Product archive/unarchive (isArchived), bulk upload (CSV/JSON), delete protection (archive if in orders). AdminGuard: role + 2FA required; admin pages: products, orders, users, reviews. CART-006 DONE. Sort: rating-desc added. 289 tests pass, 2 fail (catalog-api.spec.ts getById NotFound mock). No admin categories CRUD page. FND-006 (Docker) still NOT STARTED.                                                                                                                           |
 | 2026-03-11 (audit)        | Full project audit. **339 tests pass, 0 fail** (catalog-api.spec.ts fixed). Build fixes: AccountShell `exact` optional property type, cart-cookie `match[2]` undefined guard. Cart Drawer: slide-out drawer (CartDrawer, CartDrawerProvider) from header/product detail. ESLint fixes: unused orderId (CancelOrderInline), `<a>`→`<Link>` (verify-email), no-useless-catch (adminBulkUploadProducts). 37 ESLint warnings remain (no-img-element, no-explicit-any, turbo env vars). FND-006 (Docker) still NOT STARTED. |
 | 2026-03-13 (audit)        | **Performance optimizations.** Catalog `listProducts`: replaced full-table reads of `product_image` and `category` with scoped queries (`WHERE product_id IN (...)`, `WHERE id IN (...)` for current page only). Order `getAllOrders` and `getOrdersByUserId`: batch fetch orders + items in 2 queries instead of N+1 `getOrderById` calls; added `toOrderDto` helper. 339 tests pass, build passes. ESLint: 39 warnings. |
+| 2026-03-15 (audit)        | **Cart recommendations (CART-REC) DONE.** `CatalogService.getRecommendationsForProductIds`, `CartService.getCartRecommendations`, `GET /api/v1/cart/recommendations`. `CartRecommendations` component on cart page and cart drawer. **ESLint: 0 warnings** (backend and web). **343 tests pass.** task.md correlation: Project 1–3 core done; still missing: Docker, message queue (RabbitMQ/Kafka), order confirmation email, CI/CD (Integrator), Observability, Terms/FAQ, performance report. |
 | 2026-02-14                | Initial audit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | (input-validation)        | **Comprehensive input validation overhaul.** Created `common/sanitize.ts` (shared backend utility: sanitization, syntactic validators, semantic bounds, whitelists). Enhanced all 6 backend DTOs (auth, catalog, review, cart, checkout, address) with: control char stripping, HTML injection detection, email normalization, country-specific postal code validation, phone format validation, price/stock/quantity semantic bounds, image URL whitelisting. Created `lib/validation.ts` (shared frontend utility mirroring backend rules). Enhanced checkout form (per-field errors: postal code format, phone format, HTML checks). Enhanced review form (title/body length limits, HTML warning, character counter). Enhanced admin product forms (price/stock bounds, description length, image URL validation, HTML checks). |
 
