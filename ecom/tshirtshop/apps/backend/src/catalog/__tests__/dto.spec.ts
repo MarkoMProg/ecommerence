@@ -130,6 +130,14 @@ describe('Catalog DTO Validators', () => {
       });
       expect(errors).toHaveLength(0);
     });
+
+    it('should accept relative uploads image URLs', () => {
+      const errors = validateCreateProduct({
+        ...validCreateBody,
+        images: [{ url: '/uploads/sample-image.png' }],
+      });
+      expect(errors).toHaveLength(0);
+    });
   });
 
   describe('validateUpdateProduct', () => {

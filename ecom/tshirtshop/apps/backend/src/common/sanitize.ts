@@ -215,6 +215,21 @@ export const ALLOWED_IMAGE_EXTENSIONS = [
 ] as const;
 
 export function isValidImageUrl(url: string): boolean {
+  if (url.startsWith('/uploads/')) {
+    const lowerPath = url.toLowerCase().split('?')[0];
+    const ext = lowerPath.slice(lowerPath.lastIndexOf('.'));
+    if (
+      ext &&
+      ext.length > 1 &&
+      !ALLOWED_IMAGE_EXTENSIONS.includes(
+        ext as (typeof ALLOWED_IMAGE_EXTENSIONS)[number],
+      )
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   try {
     const parsed = new URL(url);
     if (

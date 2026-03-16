@@ -147,7 +147,7 @@ function validateImages(
       errors.push({
         field: 'images',
         message:
-          'Each image url must be a valid HTTP/HTTPS URL with an allowed image format',
+          'Each image url must be a valid HTTP/HTTPS URL or /uploads/... path with an allowed image format',
       });
       break;
     }
