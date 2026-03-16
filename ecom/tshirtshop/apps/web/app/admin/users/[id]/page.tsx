@@ -552,7 +552,7 @@ export default function AdminUserDetailPage() {
                 <tr key={o.id} className="bg-[#1A1A1A]/50">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/checkout/confirmation?orderId=${encodeURIComponent(o.id)}`}
+                      href={`/admin/orders/${encodeURIComponent(o.id)}`}
                       className="font-mono text-[#FF4D00] hover:underline"
                     >
                       {o.id.slice(0, 8)}…
