@@ -200,9 +200,20 @@ function parseSizeOptions(raw: string | null | undefined): string[] | null {
 
 function normalizeImageUrl(url: string | undefined): string {
   if (!url) return '';
-  return url
-    .replace('http://localhost:3000/', 'https://localhost:3000/')
-    .replace('http://127.0.0.1:3000/', 'https://127.0.0.1:3000/');
+
+  if (url.startsWith('/uploads/')) return url;
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if ((host === 'localhost' || host === '127.0.0.1') && parsed.pathname.startsWith('/uploads/')) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
 }
 
 /** Maps API product shape to ProductDisplay. Exported for reuse (e.g. cart recommendations). */

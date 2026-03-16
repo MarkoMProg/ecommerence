@@ -26,6 +26,33 @@ const adminFetch = async (path: string, init?: RequestInit): Promise<Response> =
   });
 };
 
+function normalizeAdminImageUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("/uploads/")) return url;
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if ((host === "localhost" || host === "127.0.0.1") && parsed.pathname.startsWith("/uploads/")) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
+}
+
+function normalizeAdminProduct(product: AdminProduct): AdminProduct {
+  return {
+    ...product,
+    images: (product.images ?? []).map((img) => ({
+      ...img,
+      imageUrl: normalizeAdminImageUrl(img.imageUrl),
+    })),
+  };
+}
+
 export interface AdminOrder {
   id: string;
   userId: string | null;
@@ -82,7 +109,7 @@ export async function fetchAdminProducts(): Promise<AdminProduct[] | null> {
     const res = await adminFetch("/api/v1/products?limit=500&includeArchived=true");
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: AdminProduct[] };
-    return json.success ? json.data : null;
+    return json.success ? json.data.map(normalizeAdminProduct) : null;
   } catch {
     return null;
   }
@@ -94,7 +121,7 @@ export async function fetchAdminProduct(id: string): Promise<AdminProduct | null
     const res = await adminFetch(`/api/v1/products/${encodeURIComponent(id)}`);
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: AdminProduct };
-    return json.success ? json.data : null;
+    return json.success ? normalizeAdminProduct(json.data) : null;
   } catch {
     return null;
   }
@@ -143,7 +170,7 @@ export async function adminUploadImage(file: File): Promise<string | null> {
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { success: boolean; data: { url: string } };
-    return json.success ? json.data.url : null;
+    return json.success ? normalizeAdminImageUrl(json.data.url) : null;
   } catch {
     return null;
   }

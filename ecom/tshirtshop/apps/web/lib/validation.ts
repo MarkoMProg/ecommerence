@@ -125,6 +125,13 @@ export const SUPPORTED_COUNTRIES = [
 export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.svg'] as const;
 
 export function isValidImageUrl(url: string): boolean {
+  if (url.startsWith('/uploads/')) {
+    const lowerPath = url.toLowerCase().split('?')[0];
+    const ext = lowerPath.slice(lowerPath.lastIndexOf('.'));
+    if (ext && ext.length > 1 && !(ALLOWED_IMAGE_EXTENSIONS as readonly string[]).includes(ext)) return false;
+    return true;
+  }
+
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;

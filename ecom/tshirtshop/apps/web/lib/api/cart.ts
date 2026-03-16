@@ -10,6 +10,34 @@ import {
 import { mapProduct } from "./catalog";
 import type { ProductDisplay } from "./catalog";
 
+function normalizeCartImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("/uploads/")) return url;
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if ((host === "localhost" || host === "127.0.0.1") && parsed.pathname.startsWith("/uploads/")) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
+}
+
+function normalizeCart(cart: Cart | null): Cart | null {
+  if (!cart) return null;
+  return {
+    ...cart,
+    items: cart.items.map((item) => ({
+      ...item,
+      imageUrl: normalizeCartImageUrl(item.imageUrl),
+    })),
+  };
+}
+
 function apiBase(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
@@ -139,7 +167,7 @@ export async function fetchCart(
       data: Cart | null;
       merged?: boolean;
     };
-    return json.success ? json.data : null;
+    return json.success ? normalizeCart(json.data) : null;
   } catch {
     return null;
   }
@@ -161,7 +189,7 @@ export async function fetchCartClient(): Promise<Cart | null> {
       merged?: boolean;
     };
     if (json.merged) clearCartIdClient();
-    return json.success ? json.data : null;
+    return json.success ? normalizeCart(json.data) : null;
   } catch {
     return null;
   }
@@ -208,7 +236,7 @@ export async function addToCart(
   };
   if (json.cartId) setCartIdClient(json.cartId);
   return {
-    cart: json.data,
+    cart: normalizeCart(json.data) ?? json.data,
     cartId: json.cartId,
     created: !!json.cartId,
   };
@@ -230,7 +258,7 @@ export async function removeFromCart(itemId: string): Promise<Cart> {
     throw new Error(err?.message ?? "Failed to remove item");
   }
   const json = (await res.json()) as { success: boolean; data: Cart };
-  return json.data;
+  return normalizeCart(json.data) ?? json.data;
 }
 
 /** Fetch product recommendations based on cart items (CART-REC). Call from client only. */
@@ -275,5 +303,5 @@ export async function updateCartItemQuantity(
     throw new Error(err?.message ?? "Failed to update quantity");
   }
   const json = (await res.json()) as { success: boolean; data: Cart };
-  return json.data;
+  return normalizeCart(json.data) ?? json.data;
 }
