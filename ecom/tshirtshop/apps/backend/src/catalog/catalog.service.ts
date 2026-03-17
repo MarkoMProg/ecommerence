@@ -86,6 +86,7 @@ export interface UpdateProductDto {
 
 export type ProductSortOption =
   | 'newest'
+  | 'relevance'
   | 'price-asc'
   | 'price-desc'
   | 'name-asc'
@@ -102,7 +103,7 @@ export interface ListProductsQuery {
   brand?: string;
   minPrice?: number;
   maxPrice?: number;
-  /** Sort: newest (default), price-asc, price-desc, name-asc, name-desc */
+  /** Sort: newest (default), relevance, price-asc, price-desc, name-asc, name-desc, rating-desc */
   sort?: ProductSortOption;
   /** When true, include archived products (admin-only usage). Default: false */
   includeArchived?: boolean;
@@ -241,23 +242,33 @@ export class CatalogService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const sortOption = query.sort ?? 'newest';
-    const orderByClause =
+    const searchTerm = query.q?.trim();
+    const orderByClauses: SQL[] =
       sortOption === 'price-asc'
-        ? asc(product.priceCents)
+        ? [asc(product.priceCents)]
         : sortOption === 'price-desc'
-          ? desc(product.priceCents)
+          ? [desc(product.priceCents)]
           : sortOption === 'name-asc'
-            ? asc(product.name)
+            ? [asc(product.name)]
             : sortOption === 'name-desc'
-              ? desc(product.name)
-              : desc(product.createdAt);
+              ? [desc(product.name)]
+              : sortOption === 'relevance' && searchTerm
+                ? [
+                    sql`CASE
+                      WHEN LOWER(${product.name}) = LOWER(${searchTerm}) THEN 0
+                      WHEN ${product.name} ILIKE ${`%${escapeIlikePattern(searchTerm)}%`} THEN 1
+                      ELSE 2
+                    END`,
+                    desc(product.createdAt),
+                  ]
+                : [desc(product.createdAt)];
 
     const [data, countResult] = await Promise.all([
       this.db
         .select()
         .from(product)
         .where(whereClause)
-        .orderBy(orderByClause)
+        .orderBy(...orderByClauses)
         .limit(limit)
         .offset(offset),
       this.db

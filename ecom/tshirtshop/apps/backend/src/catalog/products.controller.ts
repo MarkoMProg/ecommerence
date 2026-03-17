@@ -49,6 +49,7 @@ export class ProductsController {
       minPrice: minPrice != null ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice != null ? parseFloat(maxPrice) : undefined,
       sort:
+        sort === 'relevance' ||
         sort === 'price-asc' ||
         sort === 'price-desc' ||
         sort === 'name-asc' ||
