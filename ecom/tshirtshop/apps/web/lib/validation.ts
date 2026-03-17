@@ -126,7 +126,7 @@ export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avi
 
 export function isValidImageUrl(url: string): boolean {
   if (url.startsWith('/uploads/')) {
-    const lowerPath = url.toLowerCase().split('?')[0];
+    const lowerPath = url.toLowerCase().split('?')[0] ?? url.toLowerCase();
     const ext = lowerPath.slice(lowerPath.lastIndexOf('.'));
     if (ext && ext.length > 1 && !(ALLOWED_IMAGE_EXTENSIONS as readonly string[]).includes(ext)) return false;
     return true;

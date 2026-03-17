@@ -239,7 +239,7 @@ export default function ProductDetailClient({
             <div className="relative h-16 w-16 min-w-[64px] shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-20 sm:w-20">
               <Image
                 src={product.imageUrl}
-                alt=""
+                alt={product.name}
                 fill
                 sizes="80px"
                 className="object-cover"

@@ -6,6 +6,7 @@ import {
   containsHtml,
   sanitizeString,
 } from "@/lib/validation";
+import { submitContactForm } from "@/lib/api/contact";
 
 const MAX_SUBJECT = 200;
 const MAX_MESSAGE = 2000;
@@ -63,17 +64,22 @@ export function ContactForm() {
     setErrors({});
 
     try {
-      // WARNING: No backend contact endpoint yet. Form shows success for demo.
-      // To persist: add POST /api/v1/contact and wire here.
-      await new Promise((r) => setTimeout(r, 600));
+      await submitContactForm({
+        name: sanitizeString(name),
+        email: email.trim(),
+        subject: subject ? sanitizeString(subject) : undefined,
+        message: sanitizeString(message),
+      });
       setStatus("success");
       setName("");
       setEmail("");
       setSubject("");
       setMessage("");
-    } catch {
+    } catch (err) {
       setStatus("error");
-      setErrors({ form: "Something went wrong. Please try again." });
+      setErrors({
+        form: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+      });
     }
   }
 

@@ -268,7 +268,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
 
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
-    if (!canPlace || placeStatus === "loading") return;
+    if (!canPlace || placeStatus === "loading" || !effectiveCart) return;
     setPlaceStatus("loading");
     setPlaceError(null);
     setStockError(null);

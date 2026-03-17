@@ -64,7 +64,8 @@ export class EmailService {
     if (!this.resend) return;
 
     const uiUrl =
-      this.configService.get<string>('UI_URL')?.trim() ?? 'http://localhost:3001';
+      this.configService.get<string>('UI_URL')?.trim() ??
+      'http://localhost:3001';
     const orderId = order.id.slice(0, 8).toUpperCase();
     const subject = `Payment not completed – Order #${orderId}`;
 
@@ -79,6 +80,49 @@ export class EmailService {
     } catch (err) {
       console.error('[EmailService] Failed to send payment failed email', {
         orderId: order.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  /**
+   * Send contact form submission to configured CONTACT_EMAIL.
+   * Fire-and-forget safe: catches and logs errors, never throws.
+   * If Resend not configured, logs only (form still returns success for demo).
+   */
+  async sendContactEmail(
+    name: string,
+    email: string,
+    subject: string,
+    message: string,
+  ): Promise<void> {
+    const recipient =
+      this.configService.get<string>('CONTACT_EMAIL')?.trim() ??
+      this.configService.get<string>('EMAIL_FROM')?.trim();
+    if (!this.resend || !recipient) {
+      console.log('[EmailService] Contact form submission (no email sent):', {
+        name,
+        email,
+        subject: subject || '(no subject)',
+      });
+      return;
+    }
+    const subj = subject?.trim() || 'Contact form submission';
+    const emailSubject = `[Darkloom Contact] ${subj}`;
+    const html = buildContactHtml(name, email, subject, message);
+    const text = buildContactText(name, email, subject, message);
+    try {
+      await this.resend.emails.send({
+        from: this.from,
+        to: recipient,
+        replyTo: email,
+        subject: emailSubject,
+        html,
+        text,
+      });
+    } catch (err) {
+      console.error('[EmailService] Failed to send contact email', {
+        fromEmail: email,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -359,6 +403,53 @@ function buildPaymentFailedText(
     'If you have questions, please contact support.',
   ];
   return lines.join('\n');
+}
+
+function buildContactHtml(
+  name: string,
+  email: string,
+  subject: string,
+  message: string,
+): string {
+  const subj = subject?.trim() || '(no subject)';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Contact</title></head>
+<body style="margin:0;padding:0;background:#111;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:24px;">
+    <h2 style="color:#fff;margin:0 0 16px;">Contact Form Submission</h2>
+    <p style="color:#888;font-size:12px;margin:0 0 24px;">From Darkloom website</p>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="padding:8px 0;color:#888;width:100px;">Name</td><td style="padding:8px 0;color:#fff;">${escapeHtml(name)}</td></tr>
+      <tr><td style="padding:8px 0;color:#888;">Email</td><td style="padding:8px 0;color:#fff;">${escapeHtml(email)}</td></tr>
+      <tr><td style="padding:8px 0;color:#888;">Subject</td><td style="padding:8px 0;color:#fff;">${escapeHtml(subj)}</td></tr>
+    </table>
+    <h3 style="color:#fff;font-size:14px;margin:24px 0 8px;">Message</h3>
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:16px;color:#ccc;white-space:pre-wrap;">${escapeHtml(message)}</div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildContactText(
+  name: string,
+  email: string,
+  subject: string,
+  message: string,
+): string {
+  const subj = subject?.trim() || '(no subject)';
+  return [
+    'Contact Form Submission',
+    '=======================',
+    '',
+    `Name: ${name}`,
+    `Email: ${email}`,
+    `Subject: ${subj}`,
+    '',
+    'Message',
+    '-------',
+    message,
+  ].join('\n');
 }
 
 /** Minimal HTML escaping for user-supplied content placed inside HTML. */

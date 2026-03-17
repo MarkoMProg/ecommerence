@@ -49,6 +49,8 @@ npm run dev
 - **Frontend:** http://localhost:3001  
 - **Backend:** http://localhost:3000  
 
+For HTTPS locally, see [Local HTTPS Setup](docs/LOCAL-HTTPS-SETUP.md). Set `USE_HTTPS=1` and generate certs with `node scripts/generate-tls-cert.mjs` (or use mkcert for trusted certs).  
+
 ### Seed Database
 
 ```bash
@@ -87,6 +89,9 @@ npm run build
 |----------|---------|
 | [START-HERE.md](docs/START-HERE.md) | Developer entry point, rules, architecture |
 | [PROJECT-STATUS-AUDIT.md](docs/PROJECT-STATUS-AUDIT.md) | Current implementation status |
+| [ERD.md](docs/ERD.md) | Entity relationship diagram (entities, attributes, relationships, PKs, FKs) |
+| [Performance Analysis Report](docs/07-DEVOPS/performance-analysis-report.md) | Load test results, throughput, bottlenecks |
+| [Local HTTPS Setup](docs/LOCAL-HTTPS-SETUP.md) | Self-signed TLS for local development |
 | [docs/README.md](docs/README.md) | Documentation structure |
 
 ## Status

@@ -1,6 +1,25 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { fetchProduct, fetchProducts } from "@/lib/api/catalog";
 import ProductDetailClient from "./ProductDetailClient";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await fetchProduct(slug);
+  if (!product) return { title: "Product Not Found | Darkloom" };
+  const title =
+    product.name.length > 40
+      ? `${product.name.slice(0, 37)}… | Darkloom`
+      : `${product.name} | Darkloom`;
+  return {
+    title,
+    description: product.description?.slice(0, 155) ?? `Shop ${product.name} at Darkloom.`,
+  };
+}
 
 export default async function ProductPage({
   params,

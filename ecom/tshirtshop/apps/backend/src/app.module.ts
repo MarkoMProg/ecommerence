@@ -20,6 +20,7 @@ import { UploadModule } from './upload/upload.module';
 import { ReviewModule } from './review/review.module';
 import { AddressModule } from './address/address.module';
 import { BillingModule } from './billing/billing.module';
+import { ContactModule } from './contact/contact.module';
 import { betterAuth } from 'better-auth';
 import * as express from 'express';
 import {
@@ -46,7 +47,9 @@ const checkoutTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        connection: { url: config.get<string>('REDIS_URL') ?? 'redis://localhost:6379' },
+        connection: {
+          url: config.get<string>('REDIS_URL') ?? 'redis://localhost:6379',
+        },
       }),
     }),
     BullBoardModule.forRoot({
@@ -74,6 +77,7 @@ const checkoutTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
     ReviewModule,
     AddressModule,
     BillingModule,
+    ContactModule,
   ],
   controllers: [],
   providers: [],

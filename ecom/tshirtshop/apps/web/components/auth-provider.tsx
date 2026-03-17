@@ -11,7 +11,8 @@ export interface AuthUser {
   image?: string | null;
   /** better-auth may return null when 2FA not configured */
   twoFactorEnabled?: boolean | null;
-  role?: string;
+  /** better-auth may return null when role not set */
+  role?: string | null;
 }
 
 interface AuthContextType {

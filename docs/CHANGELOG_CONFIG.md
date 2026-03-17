@@ -4,6 +4,22 @@ Documents configuration additions and changes. Do not modify .env files directly
 
 ---
 
+## 2026-03-17 — Contact Form & CAPTCHA (Option A)
+
+**Added:** `CONTACT_EMAIL` (backend), `RECAPTCHA_REQUIRED` (documented)
+
+**CONTACT_EMAIL:**
+- **Purpose:** Where contact form submissions are emailed. Used when Resend is configured.
+- **Format:** `CONTACT_EMAIL=support@example.com`
+- **Default:** Falls back to `EMAIL_FROM` when unset. If neither Resend nor recipient configured, form logs to console only.
+
+**RECAPTCHA_REQUIRED:**
+- **Purpose:** Document production requirement for CAPTCHA on sign-up (AUTH-008).
+- **Format:** `RECAPTCHA_REQUIRED=1` (when implemented)
+- **Note:** Currently CAPTCHA is optional; works when `RECAPTCHA_SECRET_KEY` and `NEXT_PUBLIC_RECAPTCHA_SITEKEY` are set. For production, require these env vars.
+
+---
+
 ## 2026-03-14 — USE_HTTPS (SEC-001)
 
 **Added:** `USE_HTTPS` (backend)

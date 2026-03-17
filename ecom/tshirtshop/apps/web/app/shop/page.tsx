@@ -6,6 +6,11 @@ import { fetchProducts, fetchCategories, fetchBrands } from "@/lib/api/catalog";
 import { ShopSearchInput } from "@/components/shop-search-input";
 import { ShopFiltersForm } from "@/components/shop-filters-form";
 
+export const metadata = {
+  title: "Shop | Darkloom",
+  description: "Browse premium DnD apparel — tees, hoodies, and accessories for tabletop adventurers.",
+};
+
 export default async function ShopPage({
   searchParams,
 }: {

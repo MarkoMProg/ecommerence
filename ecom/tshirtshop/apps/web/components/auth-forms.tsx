@@ -197,10 +197,11 @@ export function LoginForm({
 
       if (result?.error) {
         const msg = result.error.message || "Login failed";
-        if (
+        const data = result?.data;
+        const needs2fa =
           msg.toLowerCase().includes("two factor") ||
-          (result?.data as SignInContextData)?.twoFactorRedirect
-        ) {
+          (data != null && (data as SignInContextData).twoFactorRedirect);
+        if (needs2fa) {
           router.push(`/auth/two-factor/verify?redirect=${encodeURIComponent(redirectTo)}`);
           return;
         }
