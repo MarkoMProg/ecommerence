@@ -26,6 +26,7 @@ import { validateShippingAddress } from './dto/checkout.dto';
 import { CartService } from '../cart/cart.service';
 import { StripeService } from './stripe.service';
 import { OrderService } from './order.service';
+import { mapStripeError } from './stripe-error.util';
 
 @Controller('api/v1/checkout')
 @AllowAnonymous()
@@ -141,12 +142,23 @@ export class CheckoutController {
 
     let checkoutUrl: string | null = null;
     if (this.stripeService.isConfigured() && order.status === 'pending') {
-      checkoutUrl = await this.stripeService.createCheckoutSession(
-        order.id,
-        order.totalCents,
-        'usd',
-        stripeCustomerId,
-      );
+      try {
+        checkoutUrl = await this.stripeService.createCheckoutSession(
+          order.id,
+          order.totalCents,
+          'usd',
+          stripeCustomerId,
+        );
+      } catch (err) {
+        const mapped = mapStripeError(err);
+        if (mapped) {
+          throw new BadRequestException({
+            success: false,
+            error: { code: mapped.code, message: mapped.userMessage },
+          });
+        }
+        throw err;
+      }
     }
 
     return {
@@ -208,12 +220,24 @@ export class CheckoutController {
       orderCustomerId = u?.stripeCustomerId ?? null;
     }
 
-    const checkoutUrl = await this.stripeService.createCheckoutSession(
-      order.id,
-      order.totalCents,
-      'usd',
-      orderCustomerId,
-    );
+    let checkoutUrl: string | null;
+    try {
+      checkoutUrl = await this.stripeService.createCheckoutSession(
+        order.id,
+        order.totalCents,
+        'usd',
+        orderCustomerId,
+      );
+    } catch (err) {
+      const mapped = mapStripeError(err);
+      if (mapped) {
+        throw new BadRequestException({
+          success: false,
+          error: { code: mapped.code, message: mapped.userMessage },
+        });
+      }
+      throw err;
+    }
     if (!checkoutUrl) {
       throw new BadRequestException({
         success: false,
@@ -262,6 +286,13 @@ export class CheckoutController {
         expectedTotalCents,
       );
     } catch (err) {
+      const mapped = mapStripeError(err);
+      if (mapped) {
+        throw new BadRequestException({
+          success: false,
+          error: { code: mapped.code, message: mapped.userMessage },
+        });
+      }
       const msg =
         err instanceof Error ? err.message : 'Payment verification failed';
       let code = 'PAYMENT_VERIFICATION_FAILED';

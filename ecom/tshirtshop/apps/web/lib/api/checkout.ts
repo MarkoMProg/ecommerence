@@ -85,6 +85,10 @@ export async function createOrder(
     if (err?.code === "INSUFFICIENT_STOCK" && Array.isArray(err?.details)) {
       throw new InsufficientStockError(msg, err.details as StockFailureDetail[]);
     }
+    const code = err?.code as VerifyPaymentErrorCode | undefined;
+    if (code && PAYMENT_ERROR_CODES.includes(code)) {
+      throw new VerifyPaymentError(msg, code);
+    }
     const details = err?.details;
     throw new Error(details?.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
@@ -112,7 +116,23 @@ export class InsufficientStockError extends Error {
   }
 }
 
-/** Error codes from verify-payment (PAY-003). */
+/** Payment/checkout error codes that map to user-facing messages. */
+const PAYMENT_ERROR_CODES: readonly string[] = [
+  "CARD_DECLINED",
+  "INSUFFICIENT_FUNDS",
+  "EXPIRED_CARD",
+  "INVALID_CVC",
+  "INVALID_CARD",
+  "GATEWAY_ERROR",
+  "GATEWAY_TIMEOUT",
+  "INVALID_REQUEST",
+  "SESSION_NOT_FOUND",
+  "PAYMENT_NOT_COMPLETE",
+  "INVALID_SESSION",
+  "AMOUNT_MISMATCH",
+];
+
+/** Error codes from verify-payment and checkout (PAY-003). */
 export type VerifyPaymentErrorCode =
   | "SESSION_ID_REQUIRED"
   | "PAYMENT_NOT_COMPLETE"
@@ -120,7 +140,15 @@ export type VerifyPaymentErrorCode =
   | "AMOUNT_MISMATCH"
   | "SESSION_NOT_FOUND"
   | "ORDER_NOT_FOUND"
-  | "PAYMENT_VERIFICATION_FAILED";
+  | "PAYMENT_VERIFICATION_FAILED"
+  | "CARD_DECLINED"
+  | "INSUFFICIENT_FUNDS"
+  | "EXPIRED_CARD"
+  | "INVALID_CVC"
+  | "INVALID_CARD"
+  | "GATEWAY_ERROR"
+  | "GATEWAY_TIMEOUT"
+  | "INVALID_REQUEST";
 
 export class VerifyPaymentError extends Error {
   constructor(
@@ -143,6 +171,10 @@ export async function getPaymentUrlForOrder(orderId: string): Promise<string> {
     const body = await res.json();
     const err = body?.error;
     const msg = err?.message ?? "Failed to get payment URL";
+    const code = err?.code as VerifyPaymentErrorCode | undefined;
+    if (code && PAYMENT_ERROR_CODES.includes(code)) {
+      throw new VerifyPaymentError(msg, code);
+    }
     throw new Error(msg);
   }
   const json = (await res.json()) as { success: boolean; data: { checkoutUrl: string } };

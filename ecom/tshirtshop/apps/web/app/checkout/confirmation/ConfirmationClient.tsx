@@ -19,6 +19,21 @@ function paymentErrorMessage(e: unknown): string {
         return "Payment amount does not match the order. Please place your order again.";
       case "ORDER_NOT_FOUND":
         return "Order not found. Please check your order and try again.";
+      case "CARD_DECLINED":
+        return "Your card was declined. Please try another card or contact your bank.";
+      case "INSUFFICIENT_FUNDS":
+        return "Insufficient funds. Please try another card or payment method.";
+      case "EXPIRED_CARD":
+        return "Your card has expired. Please use a different card.";
+      case "INVALID_CVC":
+        return "Invalid security code. Please check and try again.";
+      case "INVALID_CARD":
+        return "Invalid card number. Please check and try again.";
+      case "GATEWAY_TIMEOUT":
+      case "GATEWAY_ERROR":
+        return "Payment service is temporarily unavailable. Please try again in a few minutes.";
+      case "INVALID_REQUEST":
+        return e.message;
       default:
         return e.message;
     }
@@ -110,8 +125,8 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
     try {
       const url = await getPaymentUrlForOrder(orderId);
       window.location.href = url;
-    } catch {
-      setError("Could not start payment. Please try again.");
+    } catch (e) {
+      setError(paymentErrorMessage(e));
       setPaymentLoading(false);
     }
   }
