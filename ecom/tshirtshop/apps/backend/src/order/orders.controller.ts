@@ -4,6 +4,7 @@ import {
   Post,
   Patch,
   Param,
+  Query,
   Body,
   Req,
   HttpCode,
@@ -52,12 +53,20 @@ export class OrdersController {
 
   /**
    * List my orders (UI-006). Requires authentication.
+   * Optional query params: ?status=paid|shipped|... and ?sort=date-asc|date-desc
    */
   @Get()
   @UseGuards(BetterAuthGuard)
-  async getMyOrders(@Req() req: Request) {
+  async getMyOrders(
+    @Req() req: Request,
+    @Query('status') status?: string,
+    @Query('sort') sort?: string,
+  ) {
     const user = req.user!;
-    const orders = await this.orderService.getOrdersByUserId(user.id);
+    const orders = await this.orderService.getOrdersByUserId(user.id, {
+      status: status?.trim() || undefined,
+      sort: sort?.trim() || undefined,
+    });
     return {
       success: true,
       data: orders,

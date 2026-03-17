@@ -4,7 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
@@ -142,16 +142,35 @@ export class OrderService {
     return orders.map((o) => toOrderDto(o, itemsByOrder.get(o.id) ?? []));
   }
 
+  /** Validate sort option for user order history. */
+  private static resolveOrderSort(
+    sort?: string,
+  ): 'date-asc' | 'date-desc' {
+    return sort === 'date-asc' ? 'date-asc' : 'date-desc';
+  }
+
   /**
-   * Get orders for a user (UI-006). Returns most recent first.
+   * Get orders for a user (UI-006). Returns most recent first by default.
+   * Supports optional status filter and date sort direction.
    * Batch-fetches orders + items to avoid N+1 queries.
    */
-  async getOrdersByUserId(userId: string): Promise<OrderDto[]> {
+  async getOrdersByUserId(
+    userId: string,
+    query?: { status?: string; sort?: string },
+  ): Promise<OrderDto[]> {
+    const sortDir = OrderService.resolveOrderSort(query?.sort);
+    const conditions = [eq(order.userId, userId)];
+    if (query?.status && query.status !== 'all') {
+      conditions.push(eq(order.status, query.status));
+    }
+
     const orders = await this.db
       .select()
       .from(order)
-      .where(eq(order.userId, userId))
-      .orderBy(desc(order.createdAt));
+      .where(and(...conditions))
+      .orderBy(
+        sortDir === 'date-asc' ? asc(order.createdAt) : desc(order.createdAt),
+      );
 
     if (orders.length === 0) return [];
 
