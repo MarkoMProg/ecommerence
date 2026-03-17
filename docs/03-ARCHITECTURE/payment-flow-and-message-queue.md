@@ -1,76 +1,120 @@
 # Payment Flow and Message Queue — Architecture Note
 
 **Created:** 2026-03-14  
-**Purpose:** Document current payment flow vs task.md message queue requirement.
+**Updated:** 2026-03-17  
+**Purpose:** Document payment flow, message queue implementation, success email, and order filter/sort.
 
 ---
 
-## 1. task.md Requirement
+## 1. Queue Event Published After Successful Payment
 
-> Publish the payment status to a message queue. The Order Service consumes the message to update the order based on the payment status.
->
-> Use message queues (e.g., RabbitMQ, Apache Kafka) for order processing and updates.
+**Status:** ✅ Implemented (BullMQ)
 
----
-
-## 2. Current Implementation
-
-The platform uses a **direct webhook-to-service** flow:
+The Stripe webhook publishes payment success to a BullMQ queue before any order update. The processor consumes the message and marks the order paid.
 
 ```
 Stripe (checkout.session.completed)
     → POST /webhooks/stripe
     → StripeWebhookController.handleStripeWebhook()
+    → Verify signature via StripeService.handleWebhookEvent()
+    → paymentQueue.add('payment.success', { orderId, sessionId })
+    → Return 200 immediately
+    →
+    PaymentEventsProcessor (async)
     → OrderService.markOrderPaidIfPending()
     → DB update (order status, paidAt, stripeSessionId)
+    → paymentQueue.add('payment.notify', { orderId })  // email job
 ```
 
-**Location:** `apps/backend/src/order/stripe-webhook.controller.ts`
-
-- Stripe sends webhook with signature; we verify it.
-- On success, we call `orderService.markOrderPaidIfPending()` synchronously.
-- No message queue is involved.
-
----
-
-## 3. Gap
-
-| Requirement | Status | Notes |
-|-------------|--------|-------|
-| Publish payment status to message queue | ❌ Not implemented | Webhook updates order directly |
-| Order Service consumes message | ❌ N/A | No queue |
-| Dead letter queue for failures | ❌ Not implemented | Webhook returns 4xx/5xx on failure; Stripe retries |
+**Locations:**
+- `apps/backend/src/order/stripe-webhook.controller.ts` — webhook handler, queue publish
+- `apps/backend/src/order/payment-events.processor.ts` — BullMQ processor
+- `apps/backend/src/order/order.service.ts` — markOrderPaidIfPending, payment.notify enqueue
 
 ---
 
-## 4. Rationale for Current Approach
+## 2. Event Schema and Retry/Dead-Letter Handling
 
-- **Simplicity:** Single-process monolith; no extra infrastructure.
-- **Reliability:** Stripe retries failed webhooks; we return 200 only after DB update succeeds.
-- **ACID:** Order update is transactional; no eventual consistency.
-- **Scope:** Suitable for MVP and learning project.
+### Job: `payment.success`
+
+| Field    | Type   | Required | Description                    |
+|----------|--------|----------|--------------------------------|
+| orderId  | string | yes      | Order UUID                     |
+| sessionId| string | no       | Stripe Checkout Session ID     |
+
+**Retry config:**
+- `attempts: 5`
+- `backoff: { type: 'exponential', delay: 2000 }`
+- `removeOnComplete: { count: 1000 }`
+- `removeOnFail: false` — failed jobs kept for inspection (Bull Board at `/admin/queues`)
+
+### Job: `payment.notify`
+
+| Field   | Type   | Required | Description |
+|---------|--------|----------|-------------|
+| orderId | string | yes      | Order UUID  |
+
+Same retry config as `payment.success`. Sends order confirmation email to the order owner (registered users only; guest orders have no stored email).
 
 ---
 
-## 5. Path to Full Compliance
+## 3. Success Email After Payment
 
-To satisfy the message queue requirement:
+**Status:** ✅ Implemented
 
-1. Add RabbitMQ or Kafka to the stack (e.g. via Docker).
-2. In `StripeWebhookController`: verify webhook → publish `{ orderId, sessionId, status }` to queue → return 200.
-3. Create a consumer (NestJS microservice or Bull queue processor) that:
-   - Consumes messages
-   - Calls `OrderService.markOrderPaidIfPending()`
-   - Handles retries and dead-letter queue on failure.
-4. Configure dead-letter queue for failed messages.
+When an order is marked paid (`markOrderPaidIfPending`), the service enqueues a `payment.notify` job. The processor calls `OrderService.triggerOrderNotification()`, which:
+
+1. Fetches the order by ID
+2. Looks up the user's email (requires `userId` — guest orders are skipped)
+3. Calls `EmailService.sendOrderConfirmationEmail()` with order details
+
+**Locations:**
+- `order.service.ts` lines 268–281 — enqueue after marking paid
+- `payment-events.processor.ts` lines 33–40 — process payment.notify
+- `email.service.ts` — `sendOrderConfirmationEmail()` (HTML + text templates)
+
+Email failures are logged but do not affect the checkout flow. The queue provides retries.
+
+---
+
+## 4. Verify-Payment Path (Client-Side Redirect)
+
+When the user returns from Stripe with `session_id` in the URL, the frontend calls `POST /api/v1/checkout/verify-payment`. This path:
+
+1. Verifies the session via Stripe
+2. Calls `OrderService.markOrderPaidIfPending()` directly (no queue for the mark-paid step)
+3. `markOrderPaidIfPending` still enqueues `payment.notify` for the confirmation email
+
+So both webhook and verify-payment paths trigger the success email via the queue.
+
+---
+
+## 5. Order History Filter and Sort
+
+**Status:** ✅ Implemented
+
+**API:** `GET /api/v1/orders?status=paid&sort=date-desc`
+
+| Param  | Values                                      | Description                    |
+|--------|---------------------------------------------|--------------------------------|
+| status | `all`, `pending`, `paid`, `shipped`, `completed`, `cancelled`, `refunded` | Filter by order status |
+| sort   | `date-desc`, `date-asc`                     | Newest first (default) or oldest first |
+
+**Locations:**
+- `apps/backend/src/order/orders.controller.ts` — `getMyOrders()` accepts `status`, `sort`
+- `apps/backend/src/order/order.service.ts` — `getOrdersByUserId()` applies filter and sort
+- `apps/web/app/account/orders/page.tsx` — UI dropdowns for status filter and date sort
+- `apps/web/lib/api/orders.ts` — `fetchMyOrders({ status, sort })`
 
 ---
 
 ## 6. References
 
-- [task.md](../task.md) — Commerce, Payments, Order Management (lines 168–221)
+- [task.md](../task.md) — Commerce, Payments, Order Management
 - [stripe-webhook.controller.ts](../../ecom/tshirtshop/apps/backend/src/order/stripe-webhook.controller.ts)
+- [payment-events.processor.ts](../../ecom/tshirtshop/apps/backend/src/order/payment-events.processor.ts)
 - [order.service.ts](../../ecom/tshirtshop/apps/backend/src/order/order.service.ts)
+- [email.service.ts](../../ecom/tshirtshop/apps/backend/src/email/email.service.ts)
 
 ---
 
