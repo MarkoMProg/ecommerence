@@ -98,6 +98,7 @@ export function ShopFiltersForm({
           onChange={(e) => router.replace(buildSortUrl(e.target.value))}
         >
           <option value="">Newest</option>
+          <option value="relevance">Relevance</option>
           <option value="price-asc">Price: Low to High</option>
           <option value="price-desc">Price: High to Low</option>
           <option value="name-asc">Name: A–Z</option>
