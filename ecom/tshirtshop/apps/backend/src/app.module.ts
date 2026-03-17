@@ -1,6 +1,11 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { RequestMethod } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
+import { PAYMENT_EVENTS_QUEUE } from './order/payment-queue.constants';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { BETTER_AUTH_INSTANCE } from './auth/constants';
@@ -29,7 +34,6 @@ const authControllerTokenBucketMiddleware =
     { path: '/api/v1/auth/login', capacity: 5, refillTokensPerSecond: 5 / 60 },
   ]);
 
-/** SEC-002: Rate limit checkout and payment endpoints. */
 const checkoutTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
   { path: '/api/v1/checkout', capacity: 10, refillTokensPerSecond: 10 / 60 },
   { path: '/payment-url', capacity: 5, refillTokensPerSecond: 5 / 60 },
@@ -39,6 +43,20 @@ const checkoutTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: { url: config.get<string>('REDIS_URL') ?? 'redis://localhost:6379' },
+      }),
+    }),
+    BullBoardModule.forRoot({
+      route: '/admin/queues',
+      adapter: ExpressAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: PAYMENT_EVENTS_QUEUE,
+      adapter: BullMQAdapter,
+    }),
     DatabaseModule,
     BetterAuthCoreModule,
     AuthModule.forRootAsync({

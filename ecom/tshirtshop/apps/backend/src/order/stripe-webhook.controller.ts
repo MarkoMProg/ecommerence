@@ -6,20 +6,18 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import type { Request } from 'express';
+import { Queue } from 'bullmq';
 import { StripeService } from './stripe.service';
-import { OrderService } from './order.service';
+import { PAYMENT_EVENTS_QUEUE, type PaymentSuccessJobData } from './payment-events.processor';
 
-/**
- * Stripe webhook endpoint (PAY-002).
- * Receives checkout.session.completed and marks order as paid.
- * Requires raw body for signature verification — middleware applies express.raw() to this path.
- */
+
 @Controller('webhooks')
 export class StripeWebhookController {
   constructor(
     private readonly stripeService: StripeService,
-    private readonly orderService: OrderService,
+    @InjectQueue(PAYMENT_EVENTS_QUEUE) private readonly paymentQueue: Queue<PaymentSuccessJobData>,
   ) {}
 
   @Post('stripe')
@@ -53,9 +51,17 @@ export class StripeWebhookController {
 
     const result = this.stripeService.handleWebhookEvent(rawBody, signature);
     if (result) {
-      await this.orderService.markOrderPaidIfPending(result.orderId, {
-        stripeSessionId: result.sessionId,
-      });
+  
+      await this.paymentQueue.add(
+        'payment.success',
+        { orderId: result.orderId, sessionId: result.sessionId },
+        {
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: { count: 1000 },
+          removeOnFail: false, 
+        },
+      );
     }
 
     return { received: true };

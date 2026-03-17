@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
@@ -14,6 +16,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { StripeService } from './stripe.service';
 import { EmailService } from '../email/email.service';
 import { decrypt, decryptNullable } from '../common/crypto.util';
+import { PAYMENT_EVENTS_QUEUE } from './payment-queue.constants';
 
 /** Valid status transitions. ORD-003 */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -112,6 +115,7 @@ export class OrderService {
     private readonly inventoryService: InventoryService,
     private readonly stripeService: StripeService,
     private readonly emailService: EmailService,
+    @InjectQueue(PAYMENT_EVENTS_QUEUE) private readonly paymentQueue: Queue,
   ) {}
 
   /**
@@ -261,9 +265,19 @@ export class OrderService {
 
     const paidOrder = await this.getOrderById(orderId.trim());
 
-    // Send order confirmation email — fire and forget, must not block webhook response.
+    // Publish email notification to the queue so it has retries and is visible
+    // in the Bull dashboard. This replaces the previous fire-and-forget inline call.
     if (paidOrder) {
-      void this.notifyOrderPaid(paidOrder);
+      void this.paymentQueue.add(
+        'payment.notify',
+        { orderId: paidOrder.id },
+        {
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: { count: 1000 },
+          removeOnFail: false,
+        },
+      );
     }
 
     return paidOrder;
@@ -502,6 +516,18 @@ export class OrderService {
    */
   async refundOrder(orderId: string): Promise<OrderDto | null> {
     return this.updateOrderStatus(orderId.trim(), 'refunded');
+  }
+
+  /**
+   * Public entry point for the payment.notify queue job.
+   * Fetches the order by ID and fires the confirmation email.
+   * Called by PaymentEventsProcessor — keeps email sending in the queue with retries.
+   */
+  async triggerOrderNotification(orderId: string): Promise<void> {
+    const paidOrder = await this.getOrderById(orderId.trim());
+    if (paidOrder) {
+      await this.notifyOrderPaid(paidOrder);
+    }
   }
 
   /**

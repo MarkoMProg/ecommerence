@@ -31,6 +31,10 @@
     "db:add-product-archived": "node scripts/db-add-product-archived.mjs"
   },
   "dependencies": {
+    "@bull-board/api": "^6.20.5",
+    "@bull-board/express": "^6.20.5",
+    "@bull-board/nestjs": "^6.20.5",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -41,6 +45,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/speakeasy": "^2.0.10",
     "better-auth": "^1.4.17",
+    "bullmq": "^5.71.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
