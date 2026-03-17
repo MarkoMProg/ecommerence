@@ -44,7 +44,7 @@ import * as authSchema from './schema';
             '[BetterAuth] RESEND_API_KEY not set. Email verification and password reset will fail. Add it to .env for production.',
           );
         }
-        // AUTH-008: CAPTCHA required for sign-up when keys are set. In production, keys should be set.
+
         if (!configService.get('RECAPTCHA_SECRET_KEY')) {
           const isProd = configService.get('NODE_ENV') === 'production';
           console.warn(
@@ -122,8 +122,7 @@ import * as authSchema from './schema';
             return null;
           }
 
-          // Use the provided new session ID, or fallback to the existing session ID
-          // This ensures new tokens are always created, tied to the same session
+        
           const sessionIdForNewToken = newSessionId || existing.sessionId;
           if (!sessionIdForNewToken) {
             return null;
@@ -302,8 +301,6 @@ import * as authSchema from './schema';
                   return;
                 }
 
-                // Get the current session ID from the context
-                // This is the session that was just validated for this request
                 const currentSession = (ctx.context as any).session;
                 const currentSessionId = currentSession?.id;
 
@@ -384,7 +381,7 @@ import * as authSchema from './schema';
             updateAge: 60 * 60 * 24,
             cookieCache: {
               enabled: true,
-              maxAge: 30, 
+              maxAge: 60 * 5, 
               strategy: 'jwt',
             },
           },
