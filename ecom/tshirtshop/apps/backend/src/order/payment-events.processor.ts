@@ -39,6 +39,14 @@ export class PaymentEventsProcessor extends WorkerHost {
       this.logger.log(
         `[job:${job.id}] payment.notify completed — orderId=${job.data.orderId}`,
       );
+    } else if (job.name === 'payment.failed') {
+      this.logger.log(
+        `[job:${job.id}] payment.failed — sending failed payment email for orderId=${job.data.orderId}`,
+      );
+      await this.orderService.triggerPaymentFailedNotification(job.data.orderId);
+      this.logger.log(
+        `[job:${job.id}] payment.failed completed — orderId=${job.data.orderId}`,
+      );
     } else {
       this.logger.warn(`[job:${job.id}] Unknown job name: ${job.name}`);
     }

@@ -12,10 +12,11 @@ export const metadata = {
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ canceled?: string }>;
+  searchParams: Promise<{ canceled?: string; orderId?: string }>;
 }) {
   const params = await searchParams;
   const canceled = params.canceled === "1";
+  const orderId = params.orderId?.trim() || null;
 
   const cookieStore = await cookies();
   const cartId = getCartIdFromCookies(cookieStore);
@@ -52,7 +53,7 @@ export default async function CheckoutPage({
         Checkout
       </h1>
 
-      <CheckoutClient cart={cart} canceled={canceled} />
+      <CheckoutClient cart={cart} canceled={canceled} orderId={orderId} />
     </div>
   );
 }

@@ -531,6 +531,58 @@ export class OrderService {
   }
 
   /**
+   * Enqueue payment.failed job when user returns from Stripe without completing payment.
+   * Call from checkout controller when landing on cancel_url with orderId.
+   */
+  async enqueuePaymentFailedNotification(orderId: string): Promise<void> {
+    const id = orderId.trim();
+    const o = await this.getOrderById(id);
+    if (!o || o.status !== 'pending' || !o.userId) return;
+
+    void this.paymentQueue.add(
+      'payment.failed',
+      { orderId: id },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+        removeOnComplete: { count: 500 },
+        removeOnFail: false,
+      },
+    );
+  }
+
+  /**
+   * Public entry point for the payment.failed queue job.
+   * Sends failed payment email when user returns from Stripe without completing.
+   * Only sends for registered users (guest orders have no stored email).
+   */
+  async triggerPaymentFailedNotification(orderId: string): Promise<void> {
+    const pendingOrder = await this.getOrderById(orderId.trim());
+    if (!pendingOrder || pendingOrder.status !== 'pending') return;
+    if (!pendingOrder.userId) return; // guest checkout — no email
+
+    try {
+      const [userRow] = await this.db
+        .select({ email: user.email, name: user.name })
+        .from(user)
+        .where(eq(user.id, pendingOrder.userId));
+
+      if (userRow?.email && this.emailService.isConfigured()) {
+        await this.emailService.sendPaymentFailedEmail(
+          pendingOrder,
+          userRow.email,
+          userRow.name,
+        );
+      }
+    } catch (err) {
+      console.error('[OrderService] Failed to send payment failed email', {
+        orderId: pendingOrder.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  /**
    * Look up the owner's email and name, then fire the order confirmation email.
    * Only sends for registered users (guest orders have no stored email).
    * All errors are swallowed — email failure must never affect the checkout flow.

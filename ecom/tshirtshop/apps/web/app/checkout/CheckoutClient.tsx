@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
 import { fetchCartClient } from "@/lib/api/cart";
-import { createOrder, InsufficientStockError } from "@/lib/api/checkout";
+import { createOrder, InsufficientStockError, notifyPaymentCanceled } from "@/lib/api/checkout";
 import { fetchMyAddresses } from "@/lib/api/addresses";
 import type { SavedAddress } from "@/lib/api/addresses";
 import { fetchMyPaymentMethods } from "@/lib/api/billing";
@@ -24,6 +24,7 @@ import {
 interface CheckoutClientProps {
   cart: Cart | null;
   canceled?: boolean;
+  orderId?: string | null;
 }
 
 /** Shipping address form state */
@@ -123,7 +124,7 @@ function validateAddress(a: ShippingAddress): Partial<Record<keyof ShippingAddre
   return errors;
 }
 
-export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) {
+export function CheckoutClient({ cart, canceled = false, orderId = null }: CheckoutClientProps) {
   const router = useRouter();
   const { session } = useAuth();
   const [effectiveCart, setEffectiveCart] = useState<Cart | null>(cart);
@@ -139,6 +140,14 @@ export function CheckoutClient({ cart, canceled = false }: CheckoutClientProps) 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethod | null>(null);
+
+  useEffect(() => {
+    if (canceled && orderId) {
+      notifyPaymentCanceled(orderId).catch(() => {
+        // Fire-and-forget; don't block UI
+      });
+    }
+  }, [canceled, orderId]);
 
   useEffect(() => {
     let cancelled = false;

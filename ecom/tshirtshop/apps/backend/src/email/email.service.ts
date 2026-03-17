@@ -51,6 +51,38 @@ export class EmailService {
       });
     }
   }
+
+  /**
+   * Send failed payment notification when user returns from Stripe without completing payment.
+   * Fire-and-forget safe: catches and logs errors, never throws.
+   */
+  async sendPaymentFailedEmail(
+    order: OrderDto,
+    recipientEmail: string,
+    recipientName?: string,
+  ): Promise<void> {
+    if (!this.resend) return;
+
+    const uiUrl =
+      this.configService.get<string>('UI_URL')?.trim() ?? 'http://localhost:3001';
+    const orderId = order.id.slice(0, 8).toUpperCase();
+    const subject = `Payment not completed – Order #${orderId}`;
+
+    try {
+      await this.resend.emails.send({
+        from: this.from,
+        to: recipientEmail,
+        subject,
+        html: buildPaymentFailedHtml(order, recipientName, uiUrl),
+        text: buildPaymentFailedText(order, uiUrl),
+      });
+    } catch (err) {
+      console.error('[EmailService] Failed to send payment failed email', {
+        orderId: order.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 }
 
 // ─── Template helpers ───────────────────────────────────────────────────────
@@ -210,6 +242,121 @@ function buildOrderConfirmationText(order: OrderDto): string {
     order.shippingCountry,
     '',
     "We'll notify you once your order ships.",
+  ];
+  return lines.join('\n');
+}
+
+function buildPaymentFailedHtml(
+  order: OrderDto,
+  name?: string,
+  uiUrl: string = 'http://localhost:3001',
+): string {
+  const orderId = order.id.slice(0, 8).toUpperCase();
+  const greeting = name ? `Hi ${name},` : 'Hello,';
+  const checkoutUrl = `${uiUrl}/checkout`;
+
+  const itemRows = order.items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #2a2a2a;">
+          <span style="color:#ffffff;font-size:14px;">${escapeHtml(item.productNameAtOrder)}</span>
+          ${item.selectedOptionAtOrder ? `<span style="color:#888;font-size:12px;"> (${escapeHtml(item.selectedOptionAtOrder)})</span>` : ''}
+        </td>
+        <td style="padding:12px 0;border-bottom:1px solid #2a2a2a;text-align:center;color:#888;font-size:14px;">×${item.quantity}</td>
+        <td style="padding:12px 0;border-bottom:1px solid #2a2a2a;text-align:right;color:#E6C068;font-size:14px;white-space:nowrap;">
+          ${fmt(item.priceCentsAtOrder * item.quantity)}
+        </td>
+      </tr>`,
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Not Completed</title>
+</head>
+<body style="margin:0;padding:0;background-color:#111111;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#111111;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;width:100%;">
+        <tr>
+          <td style="background-color:#0D0D0D;padding:28px 40px;border-bottom:2px solid #FF4D00;text-align:center;">
+            <h1 style="margin:0;font-size:26px;font-weight:900;letter-spacing:6px;color:#ffffff;text-transform:uppercase;">DARKLOOM</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#1A1A1A;padding:40px;">
+            <p style="margin:0 0 6px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Payment Not Completed</p>
+            <h2 style="margin:0 0 20px;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;">Your payment was not completed</h2>
+            <p style="margin:0 0 28px;color:#cccccc;font-size:15px;line-height:1.7;">
+              ${greeting} Your order #${orderId} is still pending. The payment was not completed — you may have cancelled or encountered an issue.
+            </p>
+            <p style="margin:0 0 24px;color:#cccccc;font-size:15px;line-height:1.7;">
+              You can complete your purchase by returning to checkout. Your cart items are saved.
+            </p>
+            <div style="margin-bottom:32px;">
+              <a href="${checkoutUrl}" style="display:inline-block;background-color:#FF4D00;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 28px;border-radius:6px;">Complete your order</a>
+            </div>
+            <div style="background-color:#0D0D0D;border:1px solid #2a2a2a;border-left:3px solid #FF4D00;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 4px;color:#888;font-size:10px;text-transform:uppercase;letter-spacing:2px;">Order total</p>
+              <p style="margin:0;color:#E6C068;font-size:18px;font-weight:700;">${fmt(order.totalCents)}</p>
+            </div>
+            <h3 style="margin:0 0 12px;color:#ffffff;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Items in your order</h3>
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:24px;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;font-weight:normal;">Product</th>
+                  <th style="text-align:center;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;font-weight:normal;">Qty</th>
+                  <th style="text-align:right;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;font-weight:normal;">Price</th>
+                </tr>
+              </thead>
+              <tbody>${itemRows}</tbody>
+            </table>
+            <p style="margin:0;color:#888;font-size:13px;line-height:1.6;">
+              If you have questions, please reply to this email or contact support.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#0D0D0D;padding:24px 40px;text-align:center;border-top:1px solid #2a2a2a;">
+            <p style="margin:0;color:#444;font-size:12px;">&copy; ${new Date().getFullYear()} Darkloom. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildPaymentFailedText(
+  order: OrderDto,
+  uiUrl: string = 'http://localhost:3001',
+): string {
+  const orderId = order.id.slice(0, 8).toUpperCase();
+  const checkoutUrl = `${uiUrl}/checkout`;
+  const lines = [
+    'DARKLOOM — Payment Not Completed',
+    '=================================',
+    '',
+    `Your order #${orderId} is still pending. The payment was not completed.`,
+    '',
+    'You can complete your purchase by returning to checkout:',
+    checkoutUrl,
+    '',
+    `Order total: ${fmt(order.totalCents)}`,
+    '',
+    'ITEMS',
+    '─────',
+    ...order.items.map(
+      (i) =>
+        `${i.productNameAtOrder}${i.selectedOptionAtOrder ? ` (${i.selectedOptionAtOrder})` : ''} ×${i.quantity}  ${fmt(i.priceCentsAtOrder * i.quantity)}`,
+    ),
+    '',
+    'If you have questions, please contact support.',
   ];
   return lines.join('\n');
 }

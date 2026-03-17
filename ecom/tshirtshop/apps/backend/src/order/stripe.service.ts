@@ -57,7 +57,7 @@ export class StripeService {
       ],
       metadata: { orderId },
       success_url: `${this.uiUrl}/checkout/confirmation?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${this.uiUrl}/checkout?canceled=1`,
+      cancel_url: `${this.uiUrl}/checkout?canceled=1&orderId=${orderId}`,
     };
 
     // Attach Stripe customer to show saved payment methods and save new ones

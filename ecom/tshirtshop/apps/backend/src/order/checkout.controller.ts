@@ -171,6 +171,22 @@ export class CheckoutController {
   }
 
   /**
+   * Notify that user returned from Stripe without completing payment (cancel_url).
+   * Enqueues payment.failed job to send email to registered users.
+   * Call when landing on /checkout?canceled=1&orderId=xxx.
+   */
+  @Post('payment-canceled')
+  @HttpCode(HttpStatus.OK)
+  async paymentCanceled(@Body() body: { orderId?: string }) {
+    const orderId = body?.orderId?.trim();
+    if (!orderId) {
+      return { success: true, message: 'No orderId provided' };
+    }
+    await this.orderService.enqueuePaymentFailedNotification(orderId);
+    return { success: true, message: 'Notified' };
+  }
+
+  /**
    * Create Stripe Checkout URL for an existing pending order.
    * Used when user returns from Stripe without paying and wants to complete payment.
    */

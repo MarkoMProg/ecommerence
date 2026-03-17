@@ -182,6 +182,17 @@ export async function getPaymentUrlForOrder(orderId: string): Promise<string> {
   return json.data.checkoutUrl;
 }
 
+/** Notify backend that user returned from Stripe without completing payment (cancel_url). */
+export async function notifyPaymentCanceled(orderId: string): Promise<void> {
+  if (!orderId?.trim()) return;
+  await fetch(`${apiBase()}/api/v1/checkout/payment-canceled`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ orderId: orderId.trim() }),
+  });
+}
+
 /** Verify Stripe payment and mark order as paid. Call after user returns from Stripe Checkout. */
 export async function verifyPayment(
   sessionId: string,
