@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { betterAuth } from 'better-auth';
+import { openAPI } from 'better-auth/plugins'
+import { createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { twoFactor, bearer, captcha, admin } from 'better-auth/plugins';
+import { createHash, randomBytes, randomUUID } from 'crypto';
+import { and, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres/driver';
 import { Resend } from 'resend';
 import { DatabaseModule } from '../database/database.module';
@@ -16,6 +20,12 @@ import * as authSchema from './schema';
     {
       provide: BETTER_AUTH_INSTANCE,
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
+        const buildRefreshTokenValue = () =>
+          randomBytes(48).toString('base64url');
+        const buildTokenHash = (token: string) =>
+          createHash('sha256').update(token).digest('hex');
+        const refreshTokenTtlMs = 1000 * 60 * 60 * 24 * 14;
+
         const resendApiKey = configService.get<string>('RESEND_API_KEY');
         const resend = resendApiKey
           ? new Resend(resendApiKey)
@@ -54,6 +64,84 @@ import * as authSchema from './schema';
         const baseURL =
           configuredBaseUrl ?? `${protocol}://localhost:${port}/api/auth`;
 
+        const persistRefreshToken = async (userId: string, sessionId: string) => {
+          const token = buildRefreshTokenValue();
+          const now = new Date();
+          const expiresAt = new Date(now.getTime() + refreshTokenTtlMs);
+
+          await database.insert(authSchema.manualRefreshToken).values({
+            id: randomUUID(),
+            userId,
+            sessionId,
+            tokenHash: buildTokenHash(token),
+            expiresAt,
+            createdAt: now,
+          });
+
+          return { token, expiresAt };
+        };
+
+        const rotateRefreshToken = async (
+          oldRefreshToken: string | undefined,
+          newSessionId: string | undefined,
+        ) => {
+          const token = oldRefreshToken?.trim();
+          if (!token) {
+            return null;
+          }
+
+          const tokenHash = buildTokenHash(token);
+          const [existing] = await database
+            .select()
+            .from(authSchema.manualRefreshToken)
+            .where(eq(authSchema.manualRefreshToken.tokenHash, tokenHash))
+            .limit(1);
+
+          if (!existing || existing.usedAt) {
+            return null;
+          }
+
+          if (existing.expiresAt.getTime() <= Date.now()) {
+            return null;
+          }
+
+          const [consumed] = await database
+            .update(authSchema.manualRefreshToken)
+            .set({ usedAt: new Date() })
+            .where(
+              and(
+                eq(authSchema.manualRefreshToken.id, existing.id),
+                isNull(authSchema.manualRefreshToken.usedAt),
+              ),
+            )
+            .returning({
+              userId: authSchema.manualRefreshToken.userId,
+            });
+
+          if (!consumed) {
+            return null;
+          }
+
+          // Use the provided new session ID, or fallback to the existing session ID
+          // This ensures new tokens are always created, tied to the same session
+          const sessionIdForNewToken = newSessionId || existing.sessionId;
+          if (!sessionIdForNewToken) {
+            return null;
+          }
+
+            return persistRefreshToken(consumed.userId, sessionIdForNewToken);
+        };
+
+          const invalidateSession = async (sessionId: string | undefined) => {
+            if (!sessionId) {
+              return;
+            }
+
+            await database
+              .delete(authSchema.session)
+              .where(eq(authSchema.session.id, sessionId));
+          };
+
         return betterAuth({
           baseURL,
           basePath: '/api/auth',
@@ -63,32 +151,6 @@ import * as authSchema from './schema';
             provider: 'pg',
             schema: authSchema,
           }),
-
-          rateLimit: {
-            // Disabled because auth endpoints are enforced with explicit token-bucket middleware.
-            enabled: false,
-            storage: 'database',
-            window: 10,
-            max: 100,
-            customRules: {
-              '/sign-in/email': {
-                window: 60,
-                max: 5,
-              },
-              '/sign-up/email': {
-                window: 60,
-                max: 5,
-              },
-              '/request-password-reset': {
-                window: 60,
-                max: 3,
-              },
-              '/reset-password': {
-                window: 60,
-                max: 5,
-              },
-            },
-          },
 
           emailAndPassword: {
             enabled: true,
@@ -199,6 +261,7 @@ import * as authSchema from './schema';
           },
 
           plugins: [
+            openAPI(),
             twoFactor({
               issuer: 'Darkloom',
             }),
@@ -219,6 +282,101 @@ import * as authSchema from './schema';
               : []),
           ],
 
+          hooks: {
+            after: createAuthMiddleware(async (ctx) => {
+              const newSession = ctx.context.newSession;
+              if (!newSession?.session?.userId) {
+                if (ctx.path !== '/get-session') {
+                  return;
+                }
+
+                const sessionDataCookieName =
+                  ctx.context.authCookies.sessionData.name;
+                const setCookieHeader =
+                  ctx.context.responseHeaders?.get('set-cookie') ?? '';
+                const cacheCookieRefreshed = setCookieHeader
+                  .toLowerCase()
+                  .includes(`${sessionDataCookieName.toLowerCase()}=`);
+
+                if (!cacheCookieRefreshed) {
+                  return;
+                }
+
+                // Get the current session ID from the context
+                // This is the session that was just validated for this request
+                const currentSession = (ctx.context as any).session;
+                const currentSessionId = currentSession?.id;
+
+                const oldRefreshToken =
+                  ctx.getCookie('refresh_token') ?? undefined;
+                const rotated = await rotateRefreshToken(
+                  oldRefreshToken,
+                  currentSessionId,
+                );
+                if (!rotated) {
+                  const authCookies = ctx.context.authCookies as {
+                    sessionToken?: { name: string };
+                    sessionData?: { name: string };
+                  };
+
+                  await invalidateSession(currentSessionId);
+
+                  ctx.setCookie('refresh_token', '', {
+                    httpOnly: true,
+                    sameSite: 'lax',
+                    secure: useHttps,
+                    path: '/',
+                    maxAge: 0,
+                  });
+
+                  if (authCookies.sessionToken?.name) {
+                    ctx.setCookie(authCookies.sessionToken.name, '', {
+                      httpOnly: true,
+                      sameSite: 'lax',
+                      secure: useHttps,
+                      path: '/',
+                      maxAge: 0,
+                    });
+                  }
+
+                  if (authCookies.sessionData?.name) {
+                    ctx.setCookie(authCookies.sessionData.name, '', {
+                      httpOnly: true,
+                      sameSite: 'lax',
+                      secure: useHttps,
+                      path: '/',
+                      maxAge: 0,
+                    });
+                  }
+
+                  return;
+                }
+
+                ctx.setCookie('refresh_token', rotated.token, {
+                  httpOnly: true,
+                  sameSite: 'lax',
+                  secure: useHttps,
+                  path: '/',
+                  expires: rotated.expiresAt,
+                });
+                return;
+              }
+
+              const { token, expiresAt } = await persistRefreshToken(
+                newSession.session.userId,
+                newSession.session.id,
+              );
+
+              ctx.setCookie('refresh_token', token, {
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: useHttps,
+                path: '/',
+                expires: expiresAt,
+              });
+            }),
+          },
+
           trustedOrigins: [uiUrl],
 
           session: {
@@ -226,7 +384,7 @@ import * as authSchema from './schema';
             updateAge: 60 * 60 * 24,
             cookieCache: {
               enabled: true,
-              maxAge: 60 * 5,
+              maxAge: 30, 
               strategy: 'jwt',
             },
           },

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
 import { BETTER_AUTH_INSTANCE } from '../constants';
+import { DATABASE_CONNECTION } from '../../database/database-connection';
 
 interface MockAuthApi {
   signUpEmail: jest.Mock;
@@ -15,6 +16,11 @@ interface MockAuthApi {
 describe('AuthService', () => {
   let service: AuthService;
   let mockAuth: { api: MockAuthApi };
+  let mockDb: {
+    select: jest.Mock;
+    insert: jest.Mock;
+    update: jest.Mock;
+  };
 
   const mockUser = {
     id: 'user-1',
@@ -24,6 +30,12 @@ describe('AuthService', () => {
   const mockSession = { id: 'session-1', token: 'tok', userId: 'user-1' };
 
   beforeEach(async () => {
+    mockDb = {
+      select: jest.fn(),
+      insert: jest.fn(),
+      update: jest.fn(),
+    };
+
     mockAuth = {
       api: {
         signUpEmail: jest.fn(),
@@ -41,6 +53,10 @@ describe('AuthService', () => {
         {
           provide: BETTER_AUTH_INSTANCE,
           useValue: mockAuth,
+        },
+        {
+          provide: DATABASE_CONNECTION,
+          useValue: mockDb,
         },
       ],
     }).compile();
@@ -78,7 +94,10 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should authenticate and return user', async () => {
+    it('should authenticate and return user with auto-issued refresh token', async () => {
+      const values = jest.fn().mockResolvedValue(undefined);
+      mockDb.insert.mockReturnValue({ values });
+
       mockAuth.api.signInEmail.mockResolvedValue({
         user: mockUser,
         session: mockSession,
@@ -91,6 +110,7 @@ describe('AuthService', () => {
       });
 
       expect(result).toEqual({ user: mockUser });
+      expect(mockDb.insert).not.toHaveBeenCalled();
     });
 
     it('should return twoFactorRequired when 2FA is needed', async () => {
@@ -149,6 +169,184 @@ describe('AuthService', () => {
       const headers = new Headers({ cookie: 'session=tok' });
       await service.revokeAllSessions(headers);
       expect(mockAuth.api.revokeSessions).toHaveBeenCalledWith({ headers });
+    });
+  });
+
+  describe('refresh token rotation security', () => {
+    it('rotates a valid refresh token and returns new token or null', async () => {
+      const oldToken = 'old-refresh-token';
+      const existing = {
+        id: 'rt-1',
+        userId: mockUser.id,
+        tokenHash: 'hash',
+        expiresAt: new Date(Date.now() + 60_000),
+        usedAt: null,
+      };
+
+      mockDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([existing]),
+          }),
+        }),
+      });
+
+      mockDb.update.mockReturnValue({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            returning: jest
+              .fn()
+              .mockResolvedValue([{ id: existing.id, userId: existing.userId }]),
+          }),
+        }),
+      });
+
+      const values = jest.fn().mockResolvedValue(undefined);
+      mockDb.insert.mockReturnValue({ values });
+
+      const result = await service.rotateRefreshToken(oldToken);
+
+      expect(result).toBeDefined();
+      expect(result).not.toBe(oldToken);
+    });
+
+    it('silently returns null for already-used refresh tokens (non-throwing)', async () => {
+      const existing = {
+        id: 'rt-1',
+        userId: mockUser.id,
+        tokenHash: 'hash',
+        expiresAt: new Date(Date.now() + 60_000),
+        usedAt: new Date(),
+      };
+
+      mockDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([existing]),
+          }),
+        }),
+      });
+
+      const result = await service.rotateRefreshToken('already-used-token');
+
+      expect(result).toBeNull();
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
+
+    it('silently returns null if token not found or consumed (non-throwing)', async () => {
+      const existing = {
+        id: 'rt-1',
+        userId: mockUser.id,
+        tokenHash: 'hash',
+        expiresAt: new Date(Date.now() + 60_000),
+        usedAt: null,
+      };
+
+      mockDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([existing]),
+          }),
+        }),
+      });
+
+      // Simulate a race where the token has already been consumed by another request.
+      mockDb.update.mockReturnValue({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await service.rotateRefreshToken('old-token');
+
+      expect(result).toBeNull();
+    });
+
+    it('enforces single-use rotation and rejects replayed old tokens', async () => {
+      const freshTokenA = 'token-a';
+      const recordAUnused = {
+        id: 'rt-1',
+        userId: mockUser.id,
+        tokenHash: 'hash-a',
+        expiresAt: new Date(Date.now() + 60_000),
+        usedAt: null,
+      };
+      const recordAUsed = {
+        ...recordAUnused,
+        usedAt: new Date(),
+      };
+      const recordBUnused = {
+        id: 'rt-2',
+        userId: mockUser.id,
+        tokenHash: 'hash-b',
+        expiresAt: new Date(Date.now() + 60_000),
+        usedAt: null,
+      };
+      const recordBUsed = {
+        ...recordBUnused,
+        usedAt: new Date(),
+      };
+
+      const selectLimit = jest
+        .fn()
+
+        .mockResolvedValueOnce([recordAUnused])
+
+        .mockResolvedValueOnce([recordAUsed])
+
+        .mockResolvedValueOnce([recordBUnused])
+
+        .mockResolvedValueOnce([recordBUsed]);
+
+      mockDb.select.mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: selectLimit,
+          }),
+        }),
+      });
+
+      mockDb.update
+        // consume token A
+        .mockReturnValueOnce({
+          set: jest.fn().mockReturnValue({
+            where: jest.fn().mockReturnValue({
+              returning: jest
+                .fn()
+                .mockResolvedValue([{ id: recordAUnused.id, userId: mockUser.id }]),
+            }),
+          }),
+        })
+        // consume token B
+        .mockReturnValueOnce({
+          set: jest.fn().mockReturnValue({
+            where: jest.fn().mockReturnValue({
+              returning: jest
+                .fn()
+                .mockResolvedValue([{ id: recordBUnused.id, userId: mockUser.id }]),
+            }),
+          }),
+        });
+
+      const values = jest.fn().mockResolvedValue(undefined);
+      mockDb.insert.mockReturnValue({ values });
+
+      const freshTokenB = await service.rotateRefreshToken(freshTokenA);
+      const replayA = await service.rotateRefreshToken(freshTokenA);
+      const freshTokenC = await service.rotateRefreshToken(freshTokenB);
+      const replayB = await service.rotateRefreshToken(freshTokenB);
+
+      expect(freshTokenB).toBeDefined();
+      expect(freshTokenC).toBeDefined();
+      expect(freshTokenB).not.toBe(freshTokenA);
+      expect(freshTokenC).not.toBe(freshTokenB);
+      expect(replayA).toBeNull();
+      expect(replayB).toBeNull();
+      expect(mockDb.update).toHaveBeenCalledTimes(2);
+      expect(mockDb.insert).toHaveBeenCalledTimes(2);
+      expect(values).toHaveBeenCalledTimes(2);
     });
   });
 });

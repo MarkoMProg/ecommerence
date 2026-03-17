@@ -32,9 +32,7 @@ export interface ResetPasswordDto {
   token: string;
 }
 
-/** Refresh token comes from httpOnly cookie — no body required */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- marker type for no-body endpoint
-export interface RefreshTokenDto {}
+
 
 export interface ValidationError {
   field: string;
@@ -231,3 +229,5 @@ export function validateVerify2fa(body: unknown): ValidationError[] {
 
   return errors;
 }
+
+

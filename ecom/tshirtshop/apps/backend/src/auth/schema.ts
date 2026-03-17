@@ -98,9 +98,32 @@ export const rateLimit = pgTable('rate_limit', {
   lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
 });
 
+export const manualRefreshToken = pgTable(
+  'manual_refresh_token',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => session.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    usedAt: timestamp('used_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('manual_refresh_token_user_id_idx').on(table.userId),
+    index('manual_refresh_token_session_id_idx').on(table.sessionId),
+    index('manual_refresh_token_expires_at_idx').on(table.expiresAt),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  manualRefreshTokens: many(manualRefreshToken),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -136,3 +159,13 @@ export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const manualRefreshTokenRelations = relations(
+  manualRefreshToken,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [manualRefreshToken.userId],
+      references: [user.id],
+    }),
+  }),
+);

@@ -18,6 +18,9 @@ import * as addressSchema from '../address/schema';
       useFactory: (configService: ConfigService) => {
         const pool = new Pool({
           connectionString: configService.getOrThrow('DATABASE_URL'),
+          max: 5, // Limit connections to leave room for pgAdmin
+          idleTimeoutMillis: 10000, // Close idle connections promptly
+          connectionTimeoutMillis: 10000, // Error sooner on connection issues
         });
         return drizzle(pool, {
           schema: {
