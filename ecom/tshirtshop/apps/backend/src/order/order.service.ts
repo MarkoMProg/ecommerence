@@ -9,8 +9,10 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import type { OrderStatus } from './schema';
+import { user } from '../auth/schema';
 import { InventoryService } from '../inventory/inventory.service';
 import { StripeService } from './stripe.service';
+import { EmailService } from '../email/email.service';
 import { decrypt, decryptNullable } from '../common/crypto.util';
 
 /** Valid status transitions. ORD-003 */
@@ -109,6 +111,7 @@ export class OrderService {
     private readonly db: NodePgDatabase,
     private readonly inventoryService: InventoryService,
     private readonly stripeService: StripeService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -237,7 +240,14 @@ export class OrderService {
       );
     }
 
-    return this.getOrderById(orderId.trim());
+    const paidOrder = await this.getOrderById(orderId.trim());
+
+    // Send order confirmation email — fire and forget, must not block webhook response.
+    if (paidOrder) {
+      void this.notifyOrderPaid(paidOrder);
+    }
+
+    return paidOrder;
   }
 
   /**
@@ -473,5 +483,35 @@ export class OrderService {
    */
   async refundOrder(orderId: string): Promise<OrderDto | null> {
     return this.updateOrderStatus(orderId.trim(), 'refunded');
+  }
+
+  /**
+   * Look up the owner's email and name, then fire the order confirmation email.
+   * Only sends for registered users (guest orders have no stored email).
+   * All errors are swallowed — email failure must never affect the checkout flow.
+   */
+  private async notifyOrderPaid(order: OrderDto): Promise<void> {
+    if (!order.userId) return; // guest checkout — no email address available
+    if (!this.emailService.isConfigured()) return;
+
+    try {
+      const [userRow] = await this.db
+        .select({ email: user.email, name: user.name })
+        .from(user)
+        .where(eq(user.id, order.userId));
+
+      if (userRow?.email) {
+        await this.emailService.sendOrderConfirmationEmail(
+          order,
+          userRow.email,
+          userRow.name,
+        );
+      }
+    } catch (err) {
+      console.error('[OrderService] Failed to send order confirmation email', {
+        orderId: order.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }
