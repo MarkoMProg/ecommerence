@@ -225,10 +225,27 @@ function CancelOrderInline({
 
 // ── Orders page ───────────────────────────────────────────────────────────────
 
+const STATUS_OPTIONS = [
+  { value: "all", label: "All statuses" },
+  { value: "pending", label: "Pending" },
+  { value: "paid", label: "Paid" },
+  { value: "shipped", label: "Shipped" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "refunded", label: "Refunded" },
+] as const;
+
+const SORT_OPTIONS = [
+  { value: "date-desc", label: "Newest first" },
+  { value: "date-asc", label: "Oldest first" },
+] as const;
+
 export default function OrdersPage() {
   const { session } = useAuth();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"date-desc" | "date-asc">("date-desc");
   const [reorderStates, setReorderStates] = useState<
     Record<string, ReorderState>
   >({});
@@ -239,7 +256,11 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!session?.user) return;
     let cancelled = false;
-    fetchMyOrders().then((data) => {
+    setLoaded(false);
+    fetchMyOrders({
+      status: statusFilter === "all" ? undefined : statusFilter,
+      sort: sortOrder,
+    }).then((data) => {
       if (!cancelled) {
         setOrders(data ?? []);
         setLoaded(true);
@@ -248,7 +269,7 @@ export default function OrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user]);
+  }, [session?.user, statusFilter, sortOrder]);
 
   async function handleReorder(orderId: string) {
     setReorderStates((p) => ({ ...p, [orderId]: { status: "loading" } }));
@@ -325,6 +346,43 @@ export default function OrdersPage() {
         </p>
       </div>
 
+      {/* Filter / sort bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          aria-label="Filter by status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="min-h-[36px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-1.5 text-xs text-white focus:border-[#FF4D00] focus:outline-none [color-scheme:dark]"
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Sort orders"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as "date-desc" | "date-asc")}
+          className="min-h-[36px] rounded-md border border-white/20 bg-[#1A1A1A] px-3 py-1.5 text-xs text-white focus:border-[#FF4D00] focus:outline-none [color-scheme:dark]"
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        {(statusFilter !== "all") && (
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className="text-[10px] uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors"
+          >
+            Clear filter
+          </button>
+        )}
+      </div>
+
       {/* Content */}
       <div className="rounded-xl border border-white/10 bg-[#1A1A1A]">
         {!loaded ? (
@@ -347,17 +405,30 @@ export default function OrdersPage() {
           <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
             <Package className="size-10 text-white/10" />
             <div>
-              <p className="text-sm text-white/60">No orders yet.</p>
-              <p className="mt-1 text-xs text-white/30">
-                Your future orders will appear here.
-              </p>
+              {statusFilter !== "all" ? (
+                <>
+                  <p className="text-sm text-white/60">No {statusFilter} orders found.</p>
+                  <p className="mt-1 text-xs text-white/30">
+                    Try a different status filter.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-white/60">No orders yet.</p>
+                  <p className="mt-1 text-xs text-white/30">
+                    Your future orders will appear here.
+                  </p>
+                </>
+              )}
             </div>
-            <Link
-              href="/shop"
-              className="mt-1 rounded-md bg-[#FF4D00] px-5 py-2 text-[11px] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90 transition-colors"
-            >
-              Start Shopping
-            </Link>
+            {statusFilter === "all" && (
+              <Link
+                href="/shop"
+                className="mt-1 rounded-md bg-[#FF4D00] px-5 py-2 text-[11px] font-medium uppercase tracking-wider text-white hover:bg-[#FF4D00]/90 transition-colors"
+              >
+                Start Shopping
+              </Link>
+            )}
           </div>
         ) : (
           <ul className="divide-y divide-white/5">
