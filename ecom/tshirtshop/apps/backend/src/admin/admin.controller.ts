@@ -42,6 +42,82 @@ export class AdminController {
     return { success: true, data: { ok: true }, message: 'Admin access' };
   }
 
+  // ─── Categories CRUD ────────────────────────────────────────────────────
+
+  @Get('categories')
+  async getCategories() {
+    const categories = await this.catalogService.listCategories();
+    return {
+      success: true,
+      data: categories,
+      message: 'Categories retrieved',
+    };
+  }
+
+  @Post('categories')
+  async createCategory(
+    @Body() body: { name?: string; slug?: string; parentCategoryId?: string },
+  ) {
+    const name = body?.name?.trim();
+    if (!name) {
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'NAME_REQUIRED', message: 'Category name is required' },
+      });
+    }
+    const category = await this.catalogService.createCategory(
+      name,
+      body?.slug?.trim(),
+      body?.parentCategoryId?.trim(),
+    );
+    return {
+      success: true,
+      data: category,
+      message: 'Category created',
+    };
+  }
+
+  @Patch('categories/:id')
+  async updateCategory(
+    @Param('id') id: string,
+    @Body() body: { name?: string; slug?: string; parentCategoryId?: string | null },
+  ) {
+    const category = await this.catalogService.updateCategory(id.trim(), {
+      name: body?.name?.trim(),
+      slug: body?.slug?.trim(),
+      parentCategoryId: body?.parentCategoryId,
+    });
+    if (!category) {
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Category not found' },
+      });
+    }
+    return {
+      success: true,
+      data: category,
+      message: 'Category updated',
+    };
+  }
+
+  @Delete('categories/:id')
+  async deleteCategory(@Param('id') id: string) {
+    const result = await this.catalogService.deleteCategory(id.trim());
+    if (!result.deleted) {
+      if (result.conflict) {
+        throw new BadRequestException({
+          success: false,
+          error: { code: 'CATEGORY_IN_USE', message: result.conflict },
+        });
+      }
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Category not found' },
+      });
+    }
+    return { success: true, data: null, message: 'Category deleted' };
+  }
+
   @Get('orders')
   async getOrders() {
     const orders = await this.orderService.getAllOrders();

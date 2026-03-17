@@ -16,6 +16,14 @@ describe('AdminController', () => {
   let controller: AdminController;
   let orderService: jest.Mocked<Partial<OrderService>>;
 
+  const mockCategory = {
+    id: 'cat-1',
+    name: 'T-Shirts',
+    slug: 't-shirts',
+    parentCategoryId: null,
+    createdAt: new Date('2025-01-01'),
+  };
+
   const makeOrder = (overrides: Record<string, unknown> = {}) => ({
     id: 'order-1',
     userId: 'user-1',
@@ -64,7 +72,16 @@ describe('AdminController', () => {
       controllers: [AdminController],
       providers: [
         { provide: OrderService, useValue: orderService },
-        { provide: CatalogService, useValue: { createProduct: jest.fn() } },
+        {
+          provide: CatalogService,
+          useValue: {
+            createProduct: jest.fn(),
+            listCategories: jest.fn().mockResolvedValue([mockCategory]),
+            createCategory: jest.fn().mockResolvedValue(mockCategory),
+            updateCategory: jest.fn().mockResolvedValue(mockCategory),
+            deleteCategory: jest.fn().mockResolvedValue({ deleted: true }),
+          },
+        },
         { provide: BulkUploadService, useValue: new BulkUploadService() },
         {
           provide: ReviewService,
@@ -91,6 +108,104 @@ describe('AdminController', () => {
       const result = controller.getDashboard();
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ ok: true });
+    });
+  });
+
+  // ─── getCategories ─────────────────────────────────────────────────────────
+
+  describe('GET /api/v1/admin/categories', () => {
+    it('returns success with categories array', async () => {
+      const result = await controller.getCategories();
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].name).toBe('T-Shirts');
+      expect(result.data[0].slug).toBe('t-shirts');
+    });
+  });
+
+  // ─── createCategory ────────────────────────────────────────────────────────
+
+  describe('POST /api/v1/admin/categories', () => {
+    it('creates category and returns it', async () => {
+      const result = await controller.createCategory({
+        name: 'Hoodies',
+        slug: 'hoodies',
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.name).toBe('T-Shirts');
+      expect(controller['catalogService'].createCategory).toHaveBeenCalledWith(
+        'Hoodies',
+        'hoodies',
+        undefined,
+      );
+    });
+
+    it('throws BadRequestException when name is missing', async () => {
+      await expect(controller.createCategory({})).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws BadRequestException when name is empty', async () => {
+      await expect(
+        controller.createCategory({ name: '   ' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ─── updateCategory ────────────────────────────────────────────────────────
+
+  describe('PATCH /api/v1/admin/categories/:id', () => {
+    it('updates category and returns it', async () => {
+      const result = await controller.updateCategory('cat-1', {
+        name: 'Tees',
+        slug: 'tees',
+      });
+      expect(result.success).toBe(true);
+      expect(result.data.name).toBe('T-Shirts');
+      expect(controller['catalogService'].updateCategory).toHaveBeenCalledWith(
+        'cat-1',
+        expect.objectContaining({ name: 'Tees', slug: 'tees' }),
+      );
+    });
+
+    it('throws NotFoundException when category does not exist', async () => {
+      (controller['catalogService'].updateCategory as jest.Mock).mockResolvedValueOnce(null);
+      await expect(
+        controller.updateCategory('nonexistent', { name: 'X' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── deleteCategory ────────────────────────────────────────────────────────
+
+  describe('DELETE /api/v1/admin/categories/:id', () => {
+    it('deletes category and returns success', async () => {
+      const result = await controller.deleteCategory('cat-1');
+      expect(result.success).toBe(true);
+      expect(result.data).toBeNull();
+      expect(controller['catalogService'].deleteCategory).toHaveBeenCalledWith(
+        'cat-1',
+      );
+    });
+
+    it('throws BadRequestException when category has products', async () => {
+      (controller['catalogService'].deleteCategory as jest.Mock).mockResolvedValueOnce({
+        deleted: false,
+        conflict: 'Cannot delete — 5 product(s) use this category.',
+      });
+      await expect(controller.deleteCategory('cat-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws NotFoundException when category does not exist', async () => {
+      (controller['catalogService'].deleteCategory as jest.Mock).mockResolvedValueOnce({
+        deleted: false,
+      });
+      await expect(controller.deleteCategory('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

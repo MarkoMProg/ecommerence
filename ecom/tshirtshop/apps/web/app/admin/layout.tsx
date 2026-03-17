@@ -8,6 +8,7 @@ import {
   Users,
   ShoppingCart,
   Package,
+  FolderTree,
   Star,
   Lock,
   Menu,
@@ -23,6 +24,7 @@ const adminNavLinks = [
   { href: "/admin/users", label: "Users", Icon: Users },
   { href: "/admin/orders", label: "Orders", Icon: ShoppingCart },
   { href: "/admin/products", label: "Products", Icon: Package },
+  { href: "/admin/categories", label: "Categories", Icon: FolderTree },
   { href: "/admin/reviews", label: "Reviews", Icon: Star },
 ];
 

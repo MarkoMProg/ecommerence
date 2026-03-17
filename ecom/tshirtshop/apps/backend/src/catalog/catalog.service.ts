@@ -631,23 +631,126 @@ export class CatalogService {
     return true;
   }
 
+  /** Generate URL-safe slug from name. Appends short UUID for uniqueness. */
+  private generateCategorySlug(name: string): string {
+    const base = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const suffix = randomUUID().slice(0, 6);
+    return base ? `${base}-${suffix}` : `cat-${suffix}`;
+  }
+
   async createCategory(
     name: string,
-    slug: string,
+    slug?: string,
     parentCategoryId?: string,
   ): Promise<Category> {
+    const finalSlug = (slug?.trim() || this.generateCategorySlug(name)).toLowerCase();
     const id = randomUUID();
-    await this.db.insert(category).values({
-      id,
-      name,
-      slug,
-      parentCategoryId: parentCategoryId ?? null,
-    });
+    try {
+      await this.db.insert(category).values({
+        id,
+        name: name.trim(),
+        slug: finalSlug,
+        parentCategoryId: parentCategoryId?.trim() || null,
+      });
+    } catch (err: unknown) {
+      const raw = (err as Error).message ?? '';
+      if (raw.includes('unique') || raw.includes('duplicate')) {
+        throw new ConflictException({
+          success: false,
+          error: {
+            code: 'SLUG_EXISTS',
+            message: `A category with slug "${finalSlug}" already exists.`,
+          },
+        });
+      }
+      throw err;
+    }
     const [created] = await this.db
       .select()
       .from(category)
       .where(eq(category.id, id));
     if (!created) throw new Error('Failed to create category');
     return created;
+  }
+
+  async updateCategory(
+    id: string,
+    dto: { name?: string; slug?: string; parentCategoryId?: string | null },
+  ): Promise<Category | null> {
+    const [existing] = await this.db
+      .select()
+      .from(category)
+      .where(eq(category.id, id));
+    if (!existing) return null;
+
+    const updates: Partial<Category> = {};
+    if (dto.name != null) updates.name = dto.name.trim();
+    if (dto.slug != null) updates.slug = dto.slug.trim().toLowerCase();
+    if (dto.parentCategoryId !== undefined) {
+      updates.parentCategoryId = dto.parentCategoryId?.trim() || null;
+    }
+    if (Object.keys(updates).length === 0) return existing;
+
+    try {
+      await this.db
+        .update(category)
+        .set(updates)
+        .where(eq(category.id, id));
+    } catch (err: unknown) {
+      const raw = (err as Error).message ?? '';
+      if (raw.includes('unique') || raw.includes('duplicate')) {
+        throw new ConflictException({
+          success: false,
+          error: {
+            code: 'SLUG_EXISTS',
+            message: `A category with slug "${updates.slug}" already exists.`,
+          },
+        });
+      }
+      throw err;
+    }
+    const [updated] = await this.db
+      .select()
+      .from(category)
+      .where(eq(category.id, id));
+    return updated ?? null;
+  }
+
+  async deleteCategory(id: string): Promise<{ deleted: boolean; conflict?: string }> {
+    const [existing] = await this.db
+      .select()
+      .from(category)
+      .where(eq(category.id, id));
+    if (!existing) return { deleted: false };
+
+    const [countRow] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(product)
+      .where(eq(product.categoryId, id));
+    const productCount = countRow?.count ?? 0;
+    if (productCount > 0) {
+      return {
+        deleted: false,
+        conflict: `Cannot delete — ${productCount} product(s) use this category. Reassign or remove those products first.`,
+      };
+    }
+
+    try {
+      await this.db.delete(category).where(eq(category.id, id));
+      return { deleted: true };
+    } catch (err: unknown) {
+      const raw = (err as Error).message ?? '';
+      if (raw.includes('foreign key') || raw.includes('violates')) {
+        return {
+          deleted: false,
+          conflict: 'Cannot delete — products or subcategories reference this category.',
+        };
+      }
+      throw err;
+    }
   }
 }

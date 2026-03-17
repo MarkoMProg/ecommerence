@@ -322,6 +322,97 @@ export async function adminRefundOrder(orderId: string): Promise<AdminOrder | nu
   }
 }
 
+// ─── Categories (admin) ──────────────────────────────────────────────────────
+
+export interface AdminCategory {
+  id: string;
+  name: string;
+  slug: string;
+  parentCategoryId: string | null;
+  createdAt: string;
+}
+
+/** List all categories (admin). Returns null on error. */
+export async function fetchAdminCategories(): Promise<AdminCategory[] | null> {
+  try {
+    const res = await adminFetch("/api/v1/admin/categories");
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: AdminCategory[] };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Create category (admin). Returns created category or null on failure. */
+export async function adminCreateCategory(body: {
+  name: string;
+  slug?: string;
+  parentCategoryId?: string;
+}): Promise<AdminCategory | null> {
+  try {
+    const res = await adminFetch("/api/v1/admin/categories", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: AdminCategory };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Update category (admin). Returns updated category or null on failure. */
+export async function adminUpdateCategory(
+  id: string,
+  body: { name?: string; slug?: string; parentCategoryId?: string | null }
+): Promise<AdminCategory | null> {
+  try {
+    const res = await adminFetch(
+      `/api/v1/admin/categories/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: AdminCategory };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface DeleteCategoryResult {
+  success: boolean;
+  conflict?: string;
+  message: string;
+}
+
+/** Delete category (admin). Returns result with conflict detection. */
+export async function adminDeleteCategory(id: string): Promise<DeleteCategoryResult> {
+  try {
+    const res = await adminFetch(
+      `/api/v1/admin/categories/${encodeURIComponent(id)}`,
+      { method: "DELETE" }
+    );
+    if (res.ok) return { success: true, message: "Deleted." };
+    if (res.status === 400) {
+      try {
+        const json = (await res.json()) as { error?: { message?: string } };
+        return {
+          success: false,
+          conflict: json?.error?.message ?? "Category has products.",
+          message: json?.error?.message ?? "Category has products.",
+        };
+      } catch {
+        return { success: false, conflict: "Category has products.", message: "Category has products." };
+      }
+    }
+    return { success: false, message: `Delete failed (${res.status}).` };
+  } catch {
+    return { success: false, message: "Network error." };
+  }
+}
+
 // ─── Reviews (admin) ────────────────────────────────────────────────────────
 
 export interface AdminReview {
