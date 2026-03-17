@@ -15,6 +15,8 @@ export interface OrderItem {
   quantity: number;
   priceCentsAtOrder: number;
   productNameAtOrder: string;
+  /** Snapshot of selected option at order time (e.g. size "M"). */
+  selectedOptionAtOrder?: string | null;
 }
 
 export interface Order {

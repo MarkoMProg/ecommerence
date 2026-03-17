@@ -41,6 +41,21 @@ function paymentErrorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Failed to verify payment";
 }
 
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 interface ConfirmationClientProps {
   orderId: string;
   sessionId: string | null;
@@ -207,6 +222,11 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-white">
                       {item.productNameAtOrder}
+                      {item.selectedOptionAtOrder && (
+                        <span className="ml-1 font-normal text-white/60">
+                          ({item.selectedOptionAtOrder})
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-white/60">
                       Qty {item.quantity} × $
@@ -263,6 +283,48 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
               )}
             </p>
           </div>
+
+          {/* Status timeline */}
+          <div className="mt-6 border-t border-white/10 pt-6">
+            <p className="mb-3 text-xs uppercase tracking-widest text-white/60">
+              Order timeline
+            </p>
+            <ul className="space-y-2 text-sm text-white/80">
+              <li className="flex items-center gap-2">
+                <span className="size-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                Order placed — {formatDate(order.createdAt)}
+              </li>
+              {order.paidAt && (
+                <li className="flex items-center gap-2">
+                  <span className="size-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                  Payment received — {formatDate(order.paidAt)}
+                </li>
+              )}
+              {order.refundedAt && (
+                <li className="flex items-center gap-2">
+                  <span className="size-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  Refunded — {formatDate(order.refundedAt)}
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {/* Payment metadata */}
+          {order.paidAt && (
+            <div className="mt-6 border-t border-white/10 pt-6">
+              <p className="mb-1 text-xs uppercase tracking-widest text-white/60">
+                Payment
+              </p>
+              <p className="text-sm text-white/80">
+                Paid on {formatDate(order.paidAt)}
+                {order.stripeSessionId && (
+                  <span className="ml-1 text-white/50">
+                    (Stripe)
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
