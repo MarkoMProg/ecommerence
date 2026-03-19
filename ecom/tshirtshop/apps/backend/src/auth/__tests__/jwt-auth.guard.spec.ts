@@ -40,7 +40,7 @@ describe('BetterAuthGuard', () => {
           .mockResolvedValue({ user: mockUser, session: mockSession }),
       },
     };
-    guard = new BetterAuthGuard(mockAuth);
+    guard = new BetterAuthGuard(mockAuth as any);
   });
 
   function createMockContext(

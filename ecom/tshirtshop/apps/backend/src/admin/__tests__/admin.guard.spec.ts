@@ -50,7 +50,7 @@ describe('AdminGuard', () => {
           .mockResolvedValue({ user: makeUser(), session: mockSession }),
       },
     };
-    guard = new AdminGuard(mockAuth);
+    guard = new AdminGuard(mockAuth as any);
   });
 
   // ─── Happy path ───────────────────────────────────────────────────────────
