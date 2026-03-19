@@ -183,6 +183,9 @@ import * as authSchema from './schema';
                 const realEmail = u.emailEncrypted
                   ? decrypt(u.emailEncrypted)
                   : u.email;
+                if (!realEmail) {
+                  throw new Error('User email required for password reset');
+                }
                 console.log(
                   `[Resend] Attempting to send password reset email to ${realEmail} from ${from}`,
                 );
@@ -231,6 +234,9 @@ import * as authSchema from './schema';
                 const realEmail = u.emailEncrypted
                   ? decrypt(u.emailEncrypted)
                   : u.email;
+                if (!realEmail) {
+                  throw new Error('User email required for verification');
+                }
                 console.log(
                   `[Resend] Attempting to send verification email to ${realEmail} from ${from}`,
                 );
