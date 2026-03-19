@@ -11,6 +11,7 @@ import {
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { BetterAuthGuard } from './guards/jwt-auth.guard';
+import { decryptUser } from './user';
 import {
   validateRegister,
   validateLogin,
@@ -39,11 +40,12 @@ export class AuthController {
       headers,
     });
 
+    const u = decryptUser(result.user as any);
     return {
       user: {
-        id: result.user.id,
-        email: result.user.email,
-        name: result.user.name,
+        id: u.id,
+        email: u.email,
+        name: u.name,
       },
       message:
         'Account created. Please check your email to verify your address.',
@@ -66,11 +68,12 @@ export class AuthController {
       return { twoFactorRequired: true };
     }
 
+    const u = decryptUser(result.user as any);
     return {
       user: {
-        id: result.user.id,
-        email: result.user.email,
-        name: result.user.name,
+        id: u.id,
+        email: u.email,
+        name: u.name,
       },
     };
   }

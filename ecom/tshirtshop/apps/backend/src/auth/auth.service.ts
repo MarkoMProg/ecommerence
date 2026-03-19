@@ -11,6 +11,7 @@ import { betterAuth } from 'better-auth';
 import { BETTER_AUTH_INSTANCE } from './constants';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { manualRefreshToken } from './schema';
+import { blindIndex, blindEmail } from './crypto';
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
@@ -63,7 +64,8 @@ export class AuthService {
     try {
       const result = await this.auth.api.signInEmail({
         body: {
-          email: data.email,
+          // Better Auth stores the blind index as {hmac}@blind.index in the email column.
+          email: blindEmail(data.email),
           password: data.password,
         },
         headers: data.headers,

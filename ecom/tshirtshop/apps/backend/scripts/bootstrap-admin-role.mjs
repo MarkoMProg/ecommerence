@@ -28,7 +28,9 @@ const emails = ADMIN_EMAILS.split(',')
   .filter(Boolean);
 
 if (emails.length === 0) {
-  console.log('ADMIN_EMAILS is empty. No users to promote. Add emails to .env and run again.');
+  console.log(
+    'ADMIN_EMAILS is empty. No users to promote. Add emails to .env and run again.',
+  );
   process.exit(0);
 }
 
@@ -41,9 +43,14 @@ async function main() {
       [emails],
     );
     if (result.rowCount > 0) {
-      console.log(`Promoted ${result.rowCount} user(s) to admin:`, result.rows.map((r) => r.email).join(', '));
+      console.log(
+        `Promoted ${result.rowCount} user(s) to admin:`,
+        result.rows.map((r) => r.email).join(', '),
+      );
     } else {
-      console.log('No matching users found. Ensure users exist and emails match ADMIN_EMAILS.');
+      console.log(
+        'No matching users found. Ensure users exist and emails match ADMIN_EMAILS.',
+      );
     }
   } catch (err) {
     console.error('Error:', err.message);

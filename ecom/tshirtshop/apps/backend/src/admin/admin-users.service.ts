@@ -1,9 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, desc, ilike, sql, inArray, or } from 'drizzle-orm';
+import { eq, desc, sql, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { user } from '../auth/schema';
 import { order } from '../order/schema';
+import { decrypt, blindIndex } from '../auth/crypto';
 
 export interface AdminUserDto {
   id: string;
@@ -11,6 +12,8 @@ export interface AdminUserDto {
   email: string;
   emailVerified: boolean;
   twoFactorEnabled: boolean | null;
+  role: string | null;
+  banned: boolean | null;
   createdAt: Date;
   orderCount: number;
 }
@@ -18,6 +21,7 @@ export interface AdminUserDto {
 export interface AdminUserDetailDto extends AdminUserDto {
   image: string | null;
   updatedAt: Date;
+  banReason: string | null;
 }
 
 export interface ListUsersResult {
@@ -44,18 +48,21 @@ export class AdminUsersService {
     const safeLimit = Math.min(100, Math.max(1, limit));
 
     const searchTrimmed = search?.trim();
-    const pattern = searchTrimmed ? `%${searchTrimmed}%` : '';
+    // Email is stored as a blind index — exact HMAC match only.
+    // Name is AES-encrypted so SQL LIKE is not possible.
     const whereClause = searchTrimmed
-      ? or(ilike(user.email, pattern), ilike(user.name, pattern))
+      ? eq(user.emailIndex, blindIndex(searchTrimmed.toLowerCase()))
       : undefined;
 
-    const users = await this.db
+    const rows = await this.db
       .select({
         id: user.id,
         name: user.name,
-        email: user.email,
+        emailEncrypted: user.emailEncrypted,
         emailVerified: user.emailVerified,
         twoFactorEnabled: user.twoFactorEnabled,
+        role: user.role,
+        banned: user.banned,
         createdAt: user.createdAt,
       })
       .from(user)
@@ -63,6 +70,12 @@ export class AdminUsersService {
       .orderBy(desc(user.createdAt))
       .limit(safeLimit)
       .offset(offset);
+
+    const users = rows.map((r) => ({
+      ...r,
+      email: r.emailEncrypted ? decrypt(r.emailEncrypted) : '',
+      name: r.name ? decrypt(r.name) : '',
+    }));
 
     const [countResult] = await this.db
       .select({ count: sql<number>`count(*)::int` })
@@ -91,7 +104,9 @@ export class AdminUsersService {
       name: u.name,
       email: u.email,
       emailVerified: u.emailVerified,
-      twoFactorEnabled: u.twoFactorEnabled,
+      twoFactorEnabled: u.twoFactorEnabled ?? null,
+      role: u.role ?? null,
+      banned: u.banned ?? null,
       createdAt: u.createdAt,
       orderCount: orderCountMap.get(u.id) ?? 0,
     }));
@@ -116,10 +131,13 @@ export class AdminUsersService {
 
     return {
       id: u.id,
-      name: u.name,
-      email: u.email,
+      name: u.name ? decrypt(u.name) : '',
+      email: u.emailEncrypted ? decrypt(u.emailEncrypted) : '',
       emailVerified: u.emailVerified,
       twoFactorEnabled: u.twoFactorEnabled,
+      role: u.role ?? null,
+      banned: u.banned ?? null,
+      banReason: u.banReason ?? null,
       image: u.image,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,

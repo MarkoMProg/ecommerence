@@ -26,6 +26,7 @@ import {
   type BulkRowResult,
 } from '../catalog/bulk-upload.service';
 import { ReviewService } from '../review/review.service';
+import { AdminUsersService } from './admin-users.service';
 
 @Controller('api/v1/admin')
 @UseGuards(AdminGuard)
@@ -35,11 +36,40 @@ export class AdminController {
     private readonly catalogService: CatalogService,
     private readonly bulkUploadService: BulkUploadService,
     private readonly reviewService: ReviewService,
+    private readonly adminUsersService: AdminUsersService,
   ) {}
 
   @Get('dashboard')
   getDashboard() {
     return { success: true, data: { ok: true }, message: 'Admin access' };
+  }
+
+  // ─── Users (decrypted) ──────────────────────────────────────────────────
+
+  @Get('users')
+  async listUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const result = await this.adminUsersService.listUsers(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+      search,
+    );
+    return { success: true, data: result.data, pagination: result.pagination };
+  }
+
+  @Get('users/:id')
+  async getUserById(@Param('id') id: string) {
+    const u = await this.adminUsersService.getUserById(id);
+    if (!u) {
+      throw new NotFoundException({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'User not found' },
+      });
+    }
+    return { success: true, data: u };
   }
 
   // ─── Categories CRUD ────────────────────────────────────────────────────

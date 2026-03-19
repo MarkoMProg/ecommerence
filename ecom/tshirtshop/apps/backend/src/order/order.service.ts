@@ -16,6 +16,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { StripeService } from './stripe.service';
 import { EmailService } from '../email/email.service';
 import { decrypt, decryptNullable } from '../common/crypto.util';
+import { decrypt as decryptAuth } from '../auth/crypto';
 import { PAYMENT_EVENTS_QUEUE } from './payment-queue.constants';
 
 /** Valid status transitions. ORD-003 */
@@ -563,15 +564,17 @@ export class OrderService {
 
     try {
       const [userRow] = await this.db
-        .select({ email: user.email, name: user.name })
+        .select({ emailEncrypted: user.emailEncrypted, name: user.name })
         .from(user)
         .where(eq(user.id, pendingOrder.userId));
 
-      if (userRow?.email && this.emailService.isConfigured()) {
+      if (userRow?.emailEncrypted && this.emailService.isConfigured()) {
+        const realEmail = decryptAuth(userRow.emailEncrypted);
+        const realName = userRow.name ? decryptAuth(userRow.name) : undefined;
         await this.emailService.sendPaymentFailedEmail(
           pendingOrder,
-          userRow.email,
-          userRow.name,
+          realEmail,
+          realName,
         );
       }
     } catch (err) {
@@ -593,15 +596,17 @@ export class OrderService {
 
     try {
       const [userRow] = await this.db
-        .select({ email: user.email, name: user.name })
+        .select({ emailEncrypted: user.emailEncrypted, name: user.name })
         .from(user)
         .where(eq(user.id, order.userId));
 
-      if (userRow?.email) {
+      if (userRow?.emailEncrypted) {
+        const realEmail = decryptAuth(userRow.emailEncrypted);
+        const realName = userRow.name ? decryptAuth(userRow.name) : undefined;
         await this.emailService.sendOrderConfirmationEmail(
           order,
-          userRow.email,
-          userRow.name,
+          realEmail,
+          realName,
         );
       }
     } catch (err) {

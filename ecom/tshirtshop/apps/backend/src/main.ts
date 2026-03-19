@@ -2,8 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { readFileSync, existsSync } from 'fs';
+import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { createTokenBucketRateLimitMiddleware } from './auth/token-bucket-rate-limit';
+import { decrypt } from './auth/crypto';
 
 const authMountTokenBucketMiddleware = createTokenBucketRateLimitMiddleware(
   [
@@ -55,6 +57,69 @@ async function bootstrap() {
   });
 
   app.use('/api/auth', authMountTokenBucketMiddleware);
+
+  // Decrypt encrypted user fields (email, name) in Better Auth admin API responses.
+  // BA's adapter writes via res.end(), not res.json(), so we intercept end().
+  app.use(
+    '/api/auth/admin/',
+    (_req: Request, res: Response, next: NextFunction) => {
+      const originalEnd = res.end.bind(res);
+      res.end = ((...args: unknown[]) => {
+        try {
+          const chunk = args[0];
+          const contentType = res.getHeader('content-type');
+          if (
+            chunk &&
+            typeof contentType === 'string' &&
+            contentType.includes('application/json')
+          ) {
+            const raw =
+              typeof chunk === 'string'
+                ? chunk
+                : Buffer.isBuffer(chunk)
+                  ? chunk.toString('utf8')
+                  : null;
+            if (raw) {
+              const data = JSON.parse(raw);
+              let modified = false;
+              const decryptUser = (u: Record<string, unknown>) => {
+                const enc = u['emailEncrypted'] ?? u['email_encrypted'];
+                const name = u['name'];
+                return {
+                  ...u,
+                  email: enc
+                    ? decrypt(enc as string)
+                    : u['email'],
+                  name: name
+                    ? (() => {
+                        try { return decrypt(name as string); } catch { return name; }
+                      })()
+                    : name,
+                };
+              };
+              if (data.users && Array.isArray(data.users)) {
+                data.users = data.users.map(decryptUser);
+                modified = true;
+              }
+              if (data.user && typeof data.user === 'object') {
+                data.user = decryptUser(data.user);
+                modified = true;
+              }
+              if (modified) {
+                const body = JSON.stringify(data);
+                res.setHeader('content-length', Buffer.byteLength(body));
+                return originalEnd(body, args[1] as BufferEncoding);
+              }
+            }
+          }
+        } catch {
+          // never break admin functionality
+        }
+        return originalEnd(...(args as Parameters<typeof res.end>));
+      }) as typeof res.end;
+      next();
+    },
+  );
 
   // Serve uploaded product images: GET /uploads/<filename>
   app.useStaticAssets(join(process.cwd(), 'public', 'uploads'), {

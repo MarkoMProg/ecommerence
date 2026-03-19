@@ -12,6 +12,7 @@ import { Resend } from 'resend';
 import { DatabaseModule } from '../database/database.module';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { BETTER_AUTH_INSTANCE } from './constants';
+import { encrypt, decrypt, blindIndex, blindEmail } from './crypto';
 import * as authSchema from './schema';
 
 @Module({
@@ -159,8 +160,12 @@ import * as authSchema from './schema';
                 const from =
                   configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
+                // email field in DB is the blind index — decrypt the real address
+                const realEmail = (user as any).emailEncrypted
+                  ? decrypt((user as any).emailEncrypted as string)
+                  : user.email;
                 console.log(
-                  `[Resend] Attempting to send password reset email to ${user.email} from ${from}`,
+                  `[Resend] Attempting to send password reset email to ${realEmail} from ${from}`,
                 );
 
                 const urlObj = new URL(url);
@@ -172,7 +177,7 @@ import * as authSchema from './schema';
 
                 const result = await resend.emails.send({
                   from,
-                  to: user.email,
+                  to: realEmail,
                   subject:
                     'Reset your password for the DND store, we still have much to explore together!',
                   html: `
@@ -202,8 +207,12 @@ import * as authSchema from './schema';
                 const from =
                   configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
+                // email field in DB is the blind index — decrypt the real address
+                const realEmail = (user as any).emailEncrypted
+                  ? decrypt((user as any).emailEncrypted as string)
+                  : user.email;
                 console.log(
-                  `[Resend] Attempting to send verification email to ${user.email} from ${from}`,
+                  `[Resend] Attempting to send verification email to ${realEmail} from ${from}`,
                 );
 
                 const urlObj = new URL(url);
@@ -212,7 +221,7 @@ import * as authSchema from './schema';
 
                 const result = await resend.emails.send({
                   from,
-                  to: user.email,
+                  to: realEmail,
                   subject: 'Welcome to the DND store! Please verify your email',
                   html: `
                     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
@@ -259,6 +268,58 @@ import * as authSchema from './schema';
               : {}),
           },
 
+          user: {
+            additionalFields: {
+              emailEncrypted: {
+                type: 'string',
+                required: false,
+                input: false,
+                // returned:true is required for Better Auth's adapter to include
+                // the hook value in the INSERT. The guard strips it before sending to clients.
+                returned: true,
+              },
+              emailIndex: {
+                type: 'string',
+                required: false,
+                input: false,
+                // Same — must be true for the hook value to reach the DB column.
+                returned: true,
+              },
+            },
+          },
+
+          databaseHooks: {
+            user: {
+              create: {
+                before: async (user) => ({
+                  data: {
+                    ...user,
+                    emailEncrypted: encrypt(user.email),
+                    emailIndex: blindIndex(user.email),
+                    // Store the blind index as a valid email-shaped token so that
+                    // Better Auth's internal Zod email-format validation passes.
+                    // Format: {hmac-hex}@blind.index
+                    email: blindEmail(user.email),
+                    name: encrypt(user.name),
+                  },
+                }),
+              },
+              update: {
+                before: async (user) => ({
+                  data: {
+                    ...user,
+                    ...(user.email && {
+                      emailEncrypted: encrypt(user.email),
+                      emailIndex: blindIndex(user.email),
+                      email: blindEmail(user.email),
+                    }),
+                    ...(user.name && { name: encrypt(user.name) }),
+                  },
+                }),
+              },
+            },
+          },
+
           plugins: [
             openAPI(),
             twoFactor({
@@ -282,6 +343,29 @@ import * as authSchema from './schema';
           ],
 
           hooks: {
+            /**
+             * Blind-index the email on any Better Auth HTTP route that accepts
+             * an email as input for a DB lookup.  This covers direct client
+             * calls that bypass our custom /api/v1/auth/* endpoints.
+             * Note: sign-up is handled entirely via databaseHooks.user.create.before.
+             */
+            before: createAuthMiddleware(async (ctx) => {
+              const emailLookupPaths = [
+                '/sign-in/email',
+                '/forget-password',
+                '/request-password-reset',
+              ];
+              if (
+                emailLookupPaths.includes(ctx.path) &&
+                ctx.body &&
+                typeof (ctx.body as Record<string, unknown>).email === 'string'
+              ) {
+                (ctx.body as Record<string, unknown>).email = blindEmail(
+                  (ctx.body as Record<string, unknown>).email as string,
+                );
+              }
+            }),
+
             after: createAuthMiddleware(async (ctx) => {
               const newSession = ctx.context.newSession;
               if (!newSession?.session?.userId) {

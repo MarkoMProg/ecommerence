@@ -7,6 +7,7 @@ import { ReviewModule } from '../review/review.module';
 import { AdminController } from './admin.controller';
 import { AdminGuard } from './guards/admin.guard';
 import { BulkUploadService } from '../catalog/bulk-upload.service';
+import { AdminUsersService } from './admin-users.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { BulkUploadService } from '../catalog/bulk-upload.service';
     ReviewModule,
   ],
   controllers: [AdminController],
-  providers: [AdminGuard, BulkUploadService],
+  providers: [AdminGuard, BulkUploadService, AdminUsersService],
   exports: [AdminGuard],
 })
 export class AdminModule {}

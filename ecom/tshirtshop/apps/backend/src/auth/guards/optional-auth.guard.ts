@@ -8,6 +8,8 @@ import type { Request } from 'express';
 import { betterAuth } from 'better-auth';
 import type { AuthUser } from '../../common/auth.types';
 import { BETTER_AUTH_INSTANCE } from '../constants';
+import { decrypt } from '../crypto';
+import * as authSchema from '../schema';
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
@@ -36,11 +38,13 @@ export class OptionalAuthGuard implements CanActivate {
     const session = await this.auth.api.getSession({ headers: webHeaders });
 
     if (session?.user) {
-      const u = session.user as AuthUser;
+      const u = session.user as AuthUser & Partial<typeof authSchema.user.$inferSelect>;
+      const realEmail = u.emailEncrypted ? decrypt(u.emailEncrypted) : u.email;
+      const realName = u.name ? decrypt(u.name) : u.name;
       request.user = {
         id: u.id,
-        email: u.email,
-        name: u.name,
+        email: realEmail,
+        name: realName,
         image: u.image,
         emailVerified: u.emailVerified,
         twoFactorEnabled: u.twoFactorEnabled,

@@ -13,6 +13,8 @@ export const user = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
+  emailEncrypted: text('email_encrypted').notNull(),
+  emailIndex: text('email_index').notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
   image: text('image'),
   twoFactorEnabled: boolean('two_factor_enabled').default(false),
@@ -21,12 +23,11 @@ export const user = pgTable('user', {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  /** Better Auth admin plugin (ADM-001) */
+ 
   role: text('role'),
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires'),
-  /** Stripe Customer ID — set when user first saves a payment method (BILL-001) */
   stripeCustomerId: text('stripe_customer_id'),
 });
 
