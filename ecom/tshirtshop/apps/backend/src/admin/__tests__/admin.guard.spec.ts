@@ -5,6 +5,13 @@ import {
 } from '@nestjs/common';
 import { AdminGuard } from '../guards/admin.guard';
 
+jest.mock('../../auth/crypto', () => ({
+  decrypt: jest.fn((v: string) => v),
+  encrypt: jest.fn((v: string) => v),
+  blindIndex: jest.fn((v: string) => v),
+  blindEmail: jest.fn((v: string) => v),
+}));
+
 interface MockAuthApi {
   getSession: jest.Mock;
 }

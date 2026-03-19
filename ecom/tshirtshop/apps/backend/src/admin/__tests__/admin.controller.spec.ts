@@ -7,6 +7,7 @@ import { OrderService } from '../../order/order.service';
 import { CatalogService } from '../../catalog/catalog.service';
 import { BulkUploadService } from '../../catalog/bulk-upload.service';
 import { ReviewService } from '../../review/review.service';
+import { AdminUsersService } from '../admin-users.service';
 
 /**
  * AdminController integration tests.
@@ -90,6 +91,13 @@ describe('AdminController', () => {
               .fn()
               .mockResolvedValue({ data: [], total: 0 }),
             adminDelete: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: AdminUsersService,
+          useValue: {
+            listUsers: jest.fn().mockResolvedValue({ data: [], pagination: { page: 1, limit: 20, total: 0 } }),
+            getUserById: jest.fn().mockResolvedValue(null),
           },
         },
       ],

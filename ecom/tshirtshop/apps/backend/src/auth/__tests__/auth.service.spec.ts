@@ -4,6 +4,13 @@ import { AuthService } from '../auth.service';
 import { BETTER_AUTH_INSTANCE } from '../constants';
 import { DATABASE_CONNECTION } from '../../database/database-connection';
 
+jest.mock('../crypto', () => ({
+  decrypt: jest.fn((v: string) => v),
+  encrypt: jest.fn((v: string) => v),
+  blindIndex: jest.fn((v: string) => v),
+  blindEmail: jest.fn((v: string) => `${v}@blind.index`),
+}));
+
 interface MockAuthApi {
   signUpEmail: jest.Mock;
   signInEmail: jest.Mock;

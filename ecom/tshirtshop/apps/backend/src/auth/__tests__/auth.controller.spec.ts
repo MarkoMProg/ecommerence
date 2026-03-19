@@ -5,6 +5,17 @@ import { AuthService } from '../auth.service';
 import { BetterAuthGuard } from '../guards/jwt-auth.guard';
 import { BETTER_AUTH_INSTANCE } from '../constants';
 
+jest.mock('../crypto', () => ({
+  decrypt: jest.fn((v: string) => v),
+  encrypt: jest.fn((v: string) => v),
+  blindIndex: jest.fn((v: string) => v),
+  blindEmail: jest.fn((v: string) => v),
+}));
+
+jest.mock('../user', () => ({
+  decryptUser: jest.fn((user: any) => user),
+}));
+
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: AuthService;
