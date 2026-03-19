@@ -20,19 +20,126 @@ The platform is organized into three interconnected projects:
 
 ## Entity Relationship Diagram
 
-The database schema follows ACID properties and includes entities for users, sessions, products, categories, cart, orders, and reviews.
+The database schema follows ACID properties. Key components: **Entities**, **Attributes**, **Relationships**, **Primary Keys**, **Foreign Keys**, **Cardinality**, **Modality**.
 
-**Full ERD:** [docs/ERD.md](docs/ERD.md)
-
-### Entity Summary
+```mermaid
+erDiagram
+    user ||--o{ session : has
+    user ||--o{ account : has
+    user ||--o| two_factor : has
+    user ||--o{ user_address : has
+    category ||--o{ product : contains
+    product ||--o{ product_image : has
+    category ||--o{ category : "children"
+    cart ||--o{ cart_item : has
+    user ||--o{ cart : has
+    user ||--o{ order : has
+    order ||--o{ order_item : has
+    product ||--o{ order_item : referenced_by
+    product ||--o{ review : has
+    user ||--o{ review : writes
+    review ||--o{ review_helpful_vote : has
+    user {
+        text id PK
+        text name
+        text email UK
+        boolean emailVerified
+        timestamp createdAt
+        timestamp updatedAt
+    }
+    session {
+        text id PK
+        text token UK
+        text userId FK
+        timestamp expiresAt
+    }
+    account {
+        text id PK
+        text providerId
+        text userId FK
+        text password
+    }
+    category {
+        text id PK
+        text name
+        text slug UK
+        text parentCategoryId FK
+    }
+    product {
+        text id PK
+        text name
+        text slug UK
+        text description
+        integer priceCents
+        integer stockQuantity
+        text categoryId FK
+        text brand
+    }
+    product_image {
+        text id PK
+        text productId FK
+        text imageUrl
+        boolean isPrimary
+    }
+    user_address {
+        text id PK
+        text userId FK
+        text fullName
+        text line1
+        text city
+        text country
+    }
+    cart {
+        text id PK
+        text userId FK
+        timestamp createdAt
+    }
+    cart_item {
+        text id PK
+        text cartId FK
+        text productId FK
+        integer quantity
+    }
+    order {
+        text id PK
+        text userId FK
+        text status
+        integer totalCents
+        text stripeSessionId
+        timestamp paidAt
+    }
+    order_item {
+        text id PK
+        text orderId FK
+        text productId FK
+        integer quantity
+        integer priceCentsAtOrder
+    }
+    review {
+        text id PK
+        text productId FK
+        text userId FK
+        integer rating
+        text title
+        text body
+    }
+    review_helpful_vote {
+        text id PK
+        text reviewId FK
+        text userId FK
+    }
+```
 
 | Schema | Tables | Purpose |
 |--------|--------|---------|
-| **Auth** | user, session, account, verification, two_factor | User accounts, OAuth, email verification, 2FA |
+| **Auth** | user, session, account, verification, two_factor, rate_limit, manual_refresh_token | User accounts, OAuth, 2FA, rate limiting, refresh tokens |
 | **Catalog** | category, product, product_image | Categories, products, images |
+| **Address** | user_address | Saved shipping/billing addresses |
 | **Cart** | cart, cart_item | Guest and user carts |
 | **Order** | order, order_item | Orders, line items |
 | **Review** | review, review_helpful_vote | Product reviews, helpful votes |
+
+**Full ERD:** [docs/ERD.md](docs/ERD.md) — relationships, cardinality, modality, future tables.
 
 ---
 
@@ -189,5 +296,5 @@ ecommerence/
 - **Project 1 (Foundation):** ~98% complete  
 - **Project 2 (Commerce):** ~90% complete  
 - **Project 3 (Experience):** ~70% complete  
-- **Tests:** 339 pass  
+- **Tests:** 408 pass  
 - **Docker:** Not yet implemented

@@ -1,8 +1,10 @@
 # Entity Relationship Diagram — Darkloom
 
 **Created:** 2026-02-18 (DB-001)  
-**Source:** `apps/backend/src/auth/schema.ts`, `apps/backend/src/catalog/schema.ts`, `apps/backend/src/cart/schema.ts`, `apps/backend/src/order/schema.ts`  
+**Source:** `apps/backend/src/auth/schema.ts`, `apps/backend/src/address/schema.ts`, `apps/backend/src/catalog/schema.ts`, `apps/backend/src/cart/schema.ts`, `apps/backend/src/order/schema.ts`, `apps/backend/src/review/schema.ts`  
 **Database:** PostgreSQL via Drizzle ORM
+
+This ERD includes the key components required for task.md 1/3: **Entities**, **Attributes**, **Relationships**, **Primary Keys**, **Foreign Keys**, **Cardinality**, **Modality**.
 
 ---
 
@@ -22,6 +24,10 @@ erDiagram
     user ||--o{ order : has
     order ||--o{ order_item : has
     product ||--o{ order_item : referenced_by
+    user ||--o{ user_address : has
+    product ||--o{ review : has
+    user ||--o{ review : writes
+    review ||--o{ review_helpful_vote : has
     
     user {
         text id PK
@@ -152,6 +158,61 @@ erDiagram
         text productNameAtOrder
         timestamp createdAt
     }
+    
+    user_address {
+        text id PK
+        text userId FK
+        text label
+        text fullName
+        text phone
+        text line1
+        text line2
+        text city
+        text stateOrRegion
+        text postalCode
+        text country
+        boolean isDefaultShipping
+        boolean isDefaultBilling
+        timestamp createdAt
+        timestamp updatedAt
+    }
+    
+    review {
+        text id PK
+        text productId FK
+        text userId FK
+        text userName
+        integer rating
+        text title
+        text body
+        integer helpfulCount
+        timestamp createdAt
+        timestamp updatedAt
+    }
+    
+    review_helpful_vote {
+        text id PK
+        text reviewId FK
+        text userId FK
+        timestamp createdAt
+    }
+    
+    manual_refresh_token {
+        text id PK
+        text userId FK
+        text sessionId FK
+        text tokenHash UK
+        timestamp expiresAt
+        timestamp usedAt
+        timestamp createdAt
+    }
+    
+    rate_limit {
+        text id PK
+        text key UK
+        integer count
+        bigint lastRequest
+    }
 ```
 
 ---
@@ -165,6 +226,9 @@ erDiagram
 | | `account` | OAuth providers, password hash |
 | | `verification` | Email verification, password reset tokens |
 | | `two_factor` | TOTP secrets, backup codes |
+| | `manual_refresh_token` | Refresh token rotation, single-use validation |
+| | `rate_limit` | Rate limiting (Better Auth) |
+| **Address** | `user_address` | Saved shipping/billing addresses |
 | **Catalog** | `category` | Product categories (hierarchical via parentCategoryId) |
 | | `product` | Products with price, stock, brand |
 | | `product_image` | Product images (one primary per product) |
@@ -193,21 +257,62 @@ erDiagram
 | order.userId | user.id | many-to-one, optional | SET NULL |
 | order_item.orderId | order.id | many-to-one | CASCADE |
 | order_item.productId | product.id | many-to-one | RESTRICT |
+| user_address.userId | user.id | many-to-one | CASCADE |
+| review.productId | product.id | many-to-one | RESTRICT |
+| review.userId | user.id | many-to-one | CASCADE |
+| review_helpful_vote.reviewId | review.id | many-to-one | CASCADE |
+| review_helpful_vote.userId | user.id | many-to-one | CASCADE |
+| manual_refresh_token.userId | user.id | many-to-one | CASCADE |
+| manual_refresh_token.sessionId | session.id | many-to-one | CASCADE |
 
 ---
 
-## 4. Future Tables (Planned, Not Yet Implemented)
+## 4. Cardinality
+
+| Relationship | Cardinality | Description |
+|--------------|-------------|-------------|
+| user → session | 1:N | One user has many sessions |
+| user → account | 1:N | One user has many OAuth accounts |
+| user → two_factor | 1:0..1 | One user has zero or one 2FA record |
+| user → user_address | 1:N | One user has many saved addresses |
+| user → cart | 1:N | One user has many carts (typically one active) |
+| user → order | 1:N | One user has many orders |
+| user → review | 1:N | One user has many reviews |
+| category → product | 1:N | One category contains many products |
+| product → product_image | 1:N | One product has many images |
+| product → order_item | 1:N | One product referenced by many order items |
+| product → review | 1:N | One product has many reviews |
+| cart → cart_item | 1:N | One cart has many line items |
+| order → order_item | 1:N | One order has many line items |
+| review → review_helpful_vote | 1:N | One review has many helpful votes |
+| category → category | 1:N (self) | Hierarchical categories (parent/children) |
+
+---
+
+## 5. Modality
+
+| Relationship | Modality | Notes |
+|--------------|----------|-------|
+| cart.userId | Optional (0..1) | Null = guest cart |
+| order.userId | Optional (0..1) | Null = guest order |
+| category.parentCategoryId | Optional (0..1) | Null = top-level category |
+| session.userId | Mandatory (1) | Every session belongs to a user |
+| cart_item.cartId, productId | Mandatory (1) | Every line item belongs to cart and product |
+| order_item.orderId, productId | Mandatory (1) | Every order line belongs to order and product |
+
+---
+
+## 6. Future Tables (Planned, Not Yet Implemented)
 
 Per project-overview and master-task-board:
 
 | Table | Purpose |
 |-------|---------|
-| `address` | Dedicated shipping/billing addresses (currently embedded in order) |
-| `payment` | Payment records |
+| `payment` | Payment records (Stripe session/refund IDs currently on order) |
 
 ---
 
-## 5. Review Tables (REV-001, Implemented)
+## 7. Review Tables (REV-001, Implemented)
 
 | Table | Purpose |
 |-------|---------|
@@ -216,7 +321,7 @@ Per project-overview and master-task-board:
 
 ---
 
-## 6. Diagram Reference
+## 8. Diagram Reference
 
 - **PK** = Primary key  
 - **UK** = Unique key  
