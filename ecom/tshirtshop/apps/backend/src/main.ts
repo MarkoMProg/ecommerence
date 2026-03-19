@@ -63,7 +63,7 @@ async function bootstrap() {
   app.use(
     '/api/auth/admin/',
     (_req: Request, res: Response, next: NextFunction) => {
-      const originalEnd = res.end.bind(res);
+      const originalEnd = res.end.bind(res) as Response['end'];
       res.end = ((...args: unknown[]) => {
         try {
           const chunk = args[0];
@@ -80,29 +80,35 @@ async function bootstrap() {
                   ? chunk.toString('utf8')
                   : null;
             if (raw) {
-              const data = JSON.parse(raw);
+              const data = JSON.parse(raw) as Record<string, unknown>;
               let modified = false;
               const decryptUser = (u: Record<string, unknown>) => {
                 const enc = u['emailEncrypted'] ?? u['email_encrypted'];
                 const name = u['name'];
                 return {
                   ...u,
-                  email: enc
-                    ? decrypt(enc as string)
-                    : u['email'],
+                  email: enc ? decrypt(enc as string) : u['email'],
                   name: name
                     ? (() => {
-                        try { return decrypt(name as string); } catch { return name; }
+                        try {
+                          return decrypt(name as string);
+                        } catch {
+                          return name;
+                        }
                       })()
                     : name,
                 };
               };
-              if (data.users && Array.isArray(data.users)) {
-                data.users = data.users.map(decryptUser);
+              const users = data['users'];
+              if (users && Array.isArray(users)) {
+                data['users'] = (users as Record<string, unknown>[]).map(
+                  decryptUser,
+                );
                 modified = true;
               }
-              if (data.user && typeof data.user === 'object') {
-                data.user = decryptUser(data.user);
+              const user = data['user'];
+              if (user && typeof user === 'object' && user !== null) {
+                data['user'] = decryptUser(user as Record<string, unknown>);
                 modified = true;
               }
               if (modified) {
@@ -115,8 +121,8 @@ async function bootstrap() {
         } catch {
           // never break admin functionality
         }
-        return originalEnd(...(args as Parameters<typeof res.end>));
-      }) as typeof res.end;
+        return originalEnd(...(args as Parameters<Response['end']>));
+      }) as Response['end'];
       next();
     },
   );

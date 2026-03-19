@@ -11,7 +11,7 @@ import {
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { BetterAuthGuard } from './guards/jwt-auth.guard';
-import { decryptUser } from './user';
+import { decryptUser, type RawUser } from './user';
 import {
   validateRegister,
   validateLogin,
@@ -40,7 +40,7 @@ export class AuthController {
       headers,
     });
 
-    const u = decryptUser(result.user as any);
+    const u = decryptUser(result.user as RawUser & Record<string, unknown>);
     return {
       user: {
         id: u.id,
@@ -68,7 +68,7 @@ export class AuthController {
       return { twoFactorRequired: true };
     }
 
-    const u = decryptUser(result.user as any);
+    const u = decryptUser(result.user as RawUser & Record<string, unknown>);
     return {
       user: {
         id: u.id,

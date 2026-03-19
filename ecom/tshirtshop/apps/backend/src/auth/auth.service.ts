@@ -11,7 +11,7 @@ import { betterAuth } from 'better-auth';
 import { BETTER_AUTH_INSTANCE } from './constants';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { manualRefreshToken } from './schema';
-import { blindIndex, blindEmail } from './crypto';
+import { blindEmail } from './crypto';
 
 type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
@@ -118,7 +118,7 @@ export class AuthService {
       return null;
     }
 
-    const token = (oldRefreshToken as string).trim();
+    const token = oldRefreshToken.trim();
     if (!token) {
       return null;
     }
@@ -181,5 +181,5 @@ export class AuthService {
     });
 
     return rotatedToken;
-}
+  }
 }

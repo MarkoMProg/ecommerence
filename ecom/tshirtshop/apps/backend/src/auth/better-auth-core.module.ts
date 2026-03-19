@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { betterAuth } from 'better-auth';
-import { openAPI } from 'better-auth/plugins'
+import { openAPI } from 'better-auth/plugins';
 import { createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { twoFactor, bearer, captcha, admin } from 'better-auth/plugins';
@@ -21,6 +21,22 @@ import * as authSchema from './schema';
     {
       provide: BETTER_AUTH_INSTANCE,
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
+        // Fail fast: auth requires these for user creation (blind index + encryption).
+        const blindSecret = configService.get<string>('BLIND_INDEX_SECRET');
+        const encKey = configService.get<string>('ENCRYPTION_KEY');
+        if (!blindSecret) {
+          throw new Error(
+            '[BetterAuth] BLIND_INDEX_SECRET must be set in .env. ' +
+              "Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+          );
+        }
+        if (!encKey || encKey.length !== 64) {
+          throw new Error(
+            '[BetterAuth] ENCRYPTION_KEY must be a 64-char hex string in .env. ' +
+              "Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+          );
+        }
+
         const buildRefreshTokenValue = () =>
           randomBytes(48).toString('base64url');
         const buildTokenHash = (token: string) =>
@@ -65,7 +81,10 @@ import * as authSchema from './schema';
         const baseURL =
           configuredBaseUrl ?? `${protocol}://localhost:${port}/api/auth`;
 
-        const persistRefreshToken = async (userId: string, sessionId: string) => {
+        const persistRefreshToken = async (
+          userId: string,
+          sessionId: string,
+        ) => {
           const token = buildRefreshTokenValue();
           const now = new Date();
           const expiresAt = new Date(now.getTime() + refreshTokenTtlMs);
@@ -123,24 +142,23 @@ import * as authSchema from './schema';
             return null;
           }
 
-        
           const sessionIdForNewToken = newSessionId || existing.sessionId;
           if (!sessionIdForNewToken) {
             return null;
           }
 
-            return persistRefreshToken(consumed.userId, sessionIdForNewToken);
+          return persistRefreshToken(consumed.userId, sessionIdForNewToken);
         };
 
-          const invalidateSession = async (sessionId: string | undefined) => {
-            if (!sessionId) {
-              return;
-            }
+        const invalidateSession = async (sessionId: string | undefined) => {
+          if (!sessionId) {
+            return;
+          }
 
-            await database
-              .delete(authSchema.session)
-              .where(eq(authSchema.session.id, sessionId));
-          };
+          await database
+            .delete(authSchema.session)
+            .where(eq(authSchema.session.id, sessionId));
+        };
 
         return betterAuth({
           baseURL,
@@ -161,9 +179,10 @@ import * as authSchema from './schema';
                   configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
                 // email field in DB is the blind index — decrypt the real address
-                const realEmail = (user as any).emailEncrypted
-                  ? decrypt((user as any).emailEncrypted as string)
-                  : user.email;
+                const u = user as { emailEncrypted?: string; email?: string };
+                const realEmail = u.emailEncrypted
+                  ? decrypt(u.emailEncrypted)
+                  : u.email;
                 console.log(
                   `[Resend] Attempting to send password reset email to ${realEmail} from ${from}`,
                 );
@@ -208,9 +227,10 @@ import * as authSchema from './schema';
                   configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
                 // email field in DB is the blind index — decrypt the real address
-                const realEmail = (user as any).emailEncrypted
-                  ? decrypt((user as any).emailEncrypted as string)
-                  : user.email;
+                const u = user as { emailEncrypted?: string; email?: string };
+                const realEmail = u.emailEncrypted
+                  ? decrypt(u.emailEncrypted)
+                  : u.email;
                 console.log(
                   `[Resend] Attempting to send verification email to ${realEmail} from ${from}`,
                 );
@@ -291,31 +311,33 @@ import * as authSchema from './schema';
           databaseHooks: {
             user: {
               create: {
-                before: async (user) => ({
-                  data: {
-                    ...user,
-                    emailEncrypted: encrypt(user.email),
-                    emailIndex: blindIndex(user.email),
-                    // Store the blind index as a valid email-shaped token so that
-                    // Better Auth's internal Zod email-format validation passes.
-                    // Format: {hmac-hex}@blind.index
-                    email: blindEmail(user.email),
-                    name: encrypt(user.name),
-                  },
-                }),
-              },
-              update: {
-                before: async (user) => ({
-                  data: {
-                    ...user,
-                    ...(user.email && {
+                before: (user) =>
+                  Promise.resolve({
+                    data: {
+                      ...user,
                       emailEncrypted: encrypt(user.email),
                       emailIndex: blindIndex(user.email),
+                      // Store the blind index as a valid email-shaped token so that
+                      // Better Auth's internal Zod email-format validation passes.
+                      // Format: {hmac-hex}@blind.index
                       email: blindEmail(user.email),
-                    }),
-                    ...(user.name && { name: encrypt(user.name) }),
-                  },
-                }),
+                      name: encrypt(user.name),
+                    },
+                  }),
+              },
+              update: {
+                before: (user) =>
+                  Promise.resolve({
+                    data: {
+                      ...user,
+                      ...(user.email && {
+                        emailEncrypted: encrypt(user.email),
+                        emailIndex: blindIndex(user.email),
+                        email: blindEmail(user.email),
+                      }),
+                      ...(user.name && { name: encrypt(user.name) }),
+                    },
+                  }),
               },
             },
           },
@@ -349,7 +371,7 @@ import * as authSchema from './schema';
              * calls that bypass our custom /api/v1/auth/* endpoints.
              * Note: sign-up is handled entirely via databaseHooks.user.create.before.
              */
-            before: createAuthMiddleware(async (ctx) => {
+            before: createAuthMiddleware((ctx) => {
               const emailLookupPaths = [
                 '/sign-in/email',
                 '/forget-password',
@@ -364,6 +386,7 @@ import * as authSchema from './schema';
                   (ctx.body as Record<string, unknown>).email as string,
                 );
               }
+              return Promise.resolve();
             }),
 
             after: createAuthMiddleware(async (ctx) => {
@@ -385,7 +408,10 @@ import * as authSchema from './schema';
                   return;
                 }
 
-                const currentSession = (ctx.context as any).session;
+                const ctxSession = ctx.context as {
+                  session?: { id?: string };
+                };
+                const currentSession = ctxSession.session;
                 const currentSessionId = currentSession?.id;
 
                 const oldRefreshToken =
@@ -465,7 +491,7 @@ import * as authSchema from './schema';
             updateAge: 60 * 60 * 24,
             cookieCache: {
               enabled: true,
-              maxAge: 60 * 5, 
+              maxAge: 60 * 5,
               strategy: 'jwt',
             },
           },

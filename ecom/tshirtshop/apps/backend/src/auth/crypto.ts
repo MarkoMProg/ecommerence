@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+} from 'crypto';
 
 // Lazy-cached key + secret so the module can be imported without env vars
 // during testing — they are validated on first use.
@@ -57,7 +62,9 @@ export function decrypt(value: string): string {
   const encrypted = buf.subarray(28);
   const decipher = createDecipheriv('aes-256-gcm', key(), iv);
   decipher.setAuthTag(tag);
-  return decipher.update(encrypted) + decipher.final('utf8');
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString(
+    'utf8',
+  );
 }
 
 /**
@@ -70,7 +77,6 @@ export function blindIndex(value: string): string {
     .update(value.toLowerCase().trim())
     .digest('hex');
 }
-
 
 export function blindEmail(value: string): string {
   return `${blindIndex(value)}@blind.index`;
