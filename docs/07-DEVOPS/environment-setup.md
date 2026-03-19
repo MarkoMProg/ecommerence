@@ -86,6 +86,17 @@ Include:
 * OAuth credentials
 * Email service keys
 
+**Required for login/sign-up (copy from `apps/backend/.env.example`):**
+
+* `BETTER_AUTH_SECRET` — signing cookies/tokens
+* `ENCRYPTION_KEY` — 64-char hex for email/name encryption
+* `BLIND_INDEX_SECRET` — for deterministic email lookups (user creation fails without it)
+
+Generate secrets:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
 ---
 
 ### Frontend Environment File
@@ -209,6 +220,33 @@ Ensure:
 
 ---
 
+## Login / Sign-up Fails (unable_to_create_user, BLIND_INDEX_SECRET)
+
+If you see `BLIND_INDEX_SECRET must be set` or `unable_to_create_user`:
+
+1. Add `BLIND_INDEX_SECRET` to `apps/backend/.env` (any long random string, or generate with the command above).
+2. Add `ENCRYPTION_KEY` — must be exactly 64 hex characters.
+3. Restart the backend.
+
+---
+
+## Database Missing Tables (migration fails)
+
+If migrations fail because a table is missing:
+
+1. Ensure PostgreSQL is running and `DATABASE_URL` is correct.
+2. Run schema sync from `apps/backend`:
+   ```bash
+   npm run db:push
+   ```
+   This pushes the current schema to the DB without migration files.
+3. Or run migrations in order:
+   ```bash
+   npx drizzle-kit migrate
+   ```
+
+---
+
 # 8. Environment Setup Checklist
 
 Before starting development, confirm:
@@ -216,7 +254,8 @@ Before starting development, confirm:
 * PostgreSQL is available
 * Dependencies installed (`npm install` from monorepo root)
 * Environment variables configured (`apps/backend/.env`, `apps/web/.env.local`)
-* Database migrations applied
+* Auth secrets set: `BETTER_AUTH_SECRET`, `ENCRYPTION_KEY`, `BLIND_INDEX_SECRET`
+* Database migrations applied (`npm run db:push` from `apps/backend`)
 * `npm run dev` starts both services successfully
 
 ---

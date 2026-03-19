@@ -111,7 +111,9 @@ function LoginPageInner() {
           onForgotPassword={() => setActiveForm("forgot")}
         />
       )}
-      {activeForm === "signup" && <SignUpForm />}
+      {activeForm === "signup" && (
+        <SignUpForm onSwitchToLogin={() => setActiveForm("login")} />
+      )}
       {activeForm === "forgot" && (
         <ForgotPasswordForm onBack={() => setActiveForm("login")} />
       )}

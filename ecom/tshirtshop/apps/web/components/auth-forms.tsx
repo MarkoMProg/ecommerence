@@ -350,13 +350,14 @@ export function LoginForm({
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ onSwitchToLogin }: { onSwitchToLogin?: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [signupComplete, setSignupComplete] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>(
     {},
   );
@@ -418,12 +419,7 @@ export function SignUpForm() {
         return;
       }
 
-      setFormSuccess(
-        "Account created! Please check your email to verify your address.",
-      );
-
-      // Redirect after a short delay
-      setTimeout(() => window.location.reload(), 2000);
+      setSignupComplete(true);
     } catch {
       setFormError("An unexpected error occurred. Please try again.");
       captchaRef.current?.reset();
@@ -432,6 +428,43 @@ export function SignUpForm() {
       setIsLoading(false);
     }
   };
+
+  if (signupComplete) {
+    return (
+      <div className="space-y-4 max-w-md mx-auto">
+        <h2
+          className="text-2xl font-bold uppercase tracking-tight text-white"
+          style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
+        >
+          Check Your Email
+        </h2>
+        <Alert className="border-green-500/50 bg-green-950/30 text-green-400 dark:border-green-900 dark:bg-green-950/50">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">Account created successfully!</p>
+            <p className="mt-2 text-sm text-green-300/90">
+              We&apos;ve sent a verification link to <strong>{email}</strong>.
+              Please check your inbox and click the link to verify your account
+              before signing in.
+            </p>
+            <p className="mt-2 text-xs text-green-400/80">
+              Didn&apos;t receive it? Check your spam folder.
+            </p>
+          </AlertDescription>
+        </Alert>
+        {onSwitchToLogin && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={onSwitchToLogin}
+          >
+            Back to Sign In
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
