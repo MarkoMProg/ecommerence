@@ -27,17 +27,21 @@ erDiagram
     user ||--o{ session : has
     user ||--o{ account : has
     user ||--o| two_factor : has
+    user ||--o{ manual_refresh_token : owns
+    session ||--o{ manual_refresh_token : bound_to
     user ||--o{ user_address : has
-    category ||--o{ product : contains
-    product ||--o{ product_image : has
-    category ||--o{ category : "children"
-    cart ||--o{ cart_item : has
     user ||--o{ cart : has
     user ||--o{ order : has
-    order ||--o{ order_item : has
-    product ||--o{ order_item : referenced_by
-    product ||--o{ review : has
     user ||--o{ review : writes
+    user ||--o{ review_helpful_vote : casts
+    category ||--o{ product : contains
+    category ||--o{ category : parent_child
+    product ||--o{ product_image : has
+    product ||--o{ cart_item : in_cart
+    product ||--o{ order_item : ordered_as
+    product ||--o{ review : receives
+    cart ||--o{ cart_item : has
+    order ||--o{ order_item : has
     review ||--o{ review_helpful_vote : has
     user {
         text id PK
@@ -128,7 +132,27 @@ erDiagram
         text reviewId FK
         text userId FK
     }
+    manual_refresh_token {
+        text id PK
+        text userId FK
+        text sessionId FK
+        text tokenHash UK
+        timestamp expiresAt
+    }
+    verification {
+        text id PK
+        text identifier
+        text value
+        timestamp expiresAt
+    }
+    rate_limit {
+        text id PK
+        text key UK
+        integer count
+    }
 ```
+
+*No FK lines to `user`/`session`:* **`verification`** (Better Auth uses `identifier` + `value` only). **`rate_limit`** (opaque `key` strings only).
 
 | Schema | Tables | Purpose |
 |--------|--------|---------|

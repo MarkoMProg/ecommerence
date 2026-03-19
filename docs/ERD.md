@@ -15,18 +15,21 @@ erDiagram
     user ||--o{ session : has
     user ||--o{ account : has
     user ||--o| two_factor : has
-    category ||--o{ product : contains
-    product ||--o{ product_image : has
-    
-    category ||--o{ category : "children"
-    cart ||--o{ cart_item : has
+    user ||--o{ manual_refresh_token : owns
+    session ||--o{ manual_refresh_token : bound_to
     user ||--o{ cart : has
     user ||--o{ order : has
-    order ||--o{ order_item : has
-    product ||--o{ order_item : referenced_by
     user ||--o{ user_address : has
-    product ||--o{ review : has
     user ||--o{ review : writes
+    user ||--o{ review_helpful_vote : casts
+    category ||--o{ product : contains
+    category ||--o{ category : "parent_child"
+    product ||--o{ product_image : has
+    product ||--o{ cart_item : in_cart
+    product ||--o{ order_item : ordered_as
+    product ||--o{ review : receives
+    cart ||--o{ cart_item : has
+    order ||--o{ order_item : has
     review ||--o{ review_helpful_vote : has
     
     user {
@@ -215,6 +218,11 @@ erDiagram
     }
 ```
 
+**Diagram notes (no drawn edges — by design):**
+
+- **`verification`** — Better Auth stores tokens by `identifier` + `value`; there is **no** `user_id` foreign key in PostgreSQL. The link to a user is **application-level** (e.g. email / blind index in `identifier`), not a referential FK, so it is not drawn as `user → verification`.
+- **`rate_limit`** — Rows are keyed by opaque `key` strings (IP, route, etc.). **No foreign keys** to `user` or `session`.
+
 ---
 
 ## 2. Entity Summary
@@ -278,9 +286,13 @@ erDiagram
 | user → cart | 1:N | One user has many carts (typically one active) |
 | user → order | 1:N | One user has many orders |
 | user → review | 1:N | One user has many reviews |
+| user → review_helpful_vote | 1:N | One user casts many helpful votes |
+| user → manual_refresh_token | 1:N | One user has many refresh-token rows over time |
+| session → manual_refresh_token | 1:N | One session can be bound to many token rows (rotation) |
 | category → product | 1:N | One category contains many products |
 | product → product_image | 1:N | One product has many images |
 | product → order_item | 1:N | One product referenced by many order items |
+| product → cart_item | 1:N | One product appears in many cart lines |
 | product → review | 1:N | One product has many reviews |
 | cart → cart_item | 1:N | One cart has many line items |
 | order → order_item | 1:N | One order has many line items |
@@ -299,6 +311,7 @@ erDiagram
 | session.userId | Mandatory (1) | Every session belongs to a user |
 | cart_item.cartId, productId | Mandatory (1) | Every line item belongs to cart and product |
 | order_item.orderId, productId | Mandatory (1) | Every order line belongs to order and product |
+| manual_refresh_token.userId, sessionId | Mandatory (1) | Every token row belongs to user and session |
 
 ---
 
