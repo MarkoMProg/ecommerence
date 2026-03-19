@@ -102,11 +102,10 @@ describe('Cart API (Controller)', () => {
   describe('addItem', () => {
     it('adds item for guest with valid body', async () => {
       const req = { user: null } as any;
-      const result = await cartController.addItem(
-        req,
-        'cart-1',
-        { productId: 'prod-1', quantity: 1 },
-      );
+      const result = await cartController.addItem(req, 'cart-1', {
+        productId: 'prod-1',
+        quantity: 1,
+      });
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockCart);
@@ -127,11 +126,11 @@ describe('Cart API (Controller)', () => {
 
     it('adds item for authenticated user', async () => {
       const req = { user: { id: 'user-1' } } as any;
-      const result = await cartController.addItem(
-        req,
-        undefined,
-        { productId: 'prod-1', quantity: 2, selectedOption: 'L' },
-      );
+      const result = await cartController.addItem(req, undefined, {
+        productId: 'prod-1',
+        quantity: 2,
+        selectedOption: 'L',
+      });
 
       expect(result.success).toBe(true);
       expect(cartService.addItem).toHaveBeenCalledWith(

@@ -38,7 +38,8 @@ export class BetterAuthGuard implements CanActivate {
       throw new UnauthorizedException('Not authenticated');
     }
 
-    const u = session.user as AuthUser & Partial<typeof authSchema.user.$inferSelect>;
+    const u = session.user as AuthUser &
+      Partial<typeof authSchema.user.$inferSelect>;
     // Decrypt fields encrypted at rest — email stores the blind index in the DB.
     const realEmail = u.emailEncrypted ? decrypt(u.emailEncrypted) : u.email;
     const realName = u.name ? decrypt(u.name) : u.name;

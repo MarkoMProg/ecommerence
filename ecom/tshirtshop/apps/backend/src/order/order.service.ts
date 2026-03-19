@@ -148,9 +148,7 @@ export class OrderService {
   }
 
   /** Validate sort option for user order history. */
-  private static resolveOrderSort(
-    sort?: string,
-  ): 'date-asc' | 'date-desc' {
+  private static resolveOrderSort(sort?: string): 'date-asc' | 'date-desc' {
     return sort === 'date-asc' ? 'date-asc' : 'date-desc';
   }
 

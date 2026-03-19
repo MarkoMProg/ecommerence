@@ -11,7 +11,6 @@ export interface PaymentSuccessJobData {
   sessionId?: string;
 }
 
-
 @Processor(PAYMENT_EVENTS_QUEUE)
 export class PaymentEventsProcessor extends WorkerHost {
   private readonly logger = new Logger(PaymentEventsProcessor.name);
@@ -43,7 +42,9 @@ export class PaymentEventsProcessor extends WorkerHost {
       this.logger.log(
         `[job:${job.id}] payment.failed — sending failed payment email for orderId=${job.data.orderId}`,
       );
-      await this.orderService.triggerPaymentFailedNotification(job.data.orderId);
+      await this.orderService.triggerPaymentFailedNotification(
+        job.data.orderId,
+      );
       this.logger.log(
         `[job:${job.id}] payment.failed completed — orderId=${job.data.orderId}`,
       );

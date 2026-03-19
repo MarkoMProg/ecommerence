@@ -32,8 +32,6 @@ export interface ResetPasswordDto {
   token: string;
 }
 
-
-
 export interface ValidationError {
   field: string;
   message: string;
@@ -229,5 +227,3 @@ export function validateVerify2fa(body: unknown): ValidationError[] {
 
   return errors;
 }
-
-

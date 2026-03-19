@@ -647,7 +647,9 @@ export class CatalogService {
     slug?: string,
     parentCategoryId?: string,
   ): Promise<Category> {
-    const finalSlug = (slug?.trim() || this.generateCategorySlug(name)).toLowerCase();
+    const finalSlug = (
+      slug?.trim() || this.generateCategorySlug(name)
+    ).toLowerCase();
     const id = randomUUID();
     try {
       await this.db.insert(category).values({
@@ -696,10 +698,7 @@ export class CatalogService {
     if (Object.keys(updates).length === 0) return existing;
 
     try {
-      await this.db
-        .update(category)
-        .set(updates)
-        .where(eq(category.id, id));
+      await this.db.update(category).set(updates).where(eq(category.id, id));
     } catch (err: unknown) {
       const raw = (err as Error).message ?? '';
       if (raw.includes('unique') || raw.includes('duplicate')) {
@@ -720,7 +719,9 @@ export class CatalogService {
     return updated ?? null;
   }
 
-  async deleteCategory(id: string): Promise<{ deleted: boolean; conflict?: string }> {
+  async deleteCategory(
+    id: string,
+  ): Promise<{ deleted: boolean; conflict?: string }> {
     const [existing] = await this.db
       .select()
       .from(category)
@@ -747,7 +748,8 @@ export class CatalogService {
       if (raw.includes('foreign key') || raw.includes('violates')) {
         return {
           deleted: false,
-          conflict: 'Cannot delete — products or subcategories reference this category.',
+          conflict:
+            'Cannot delete — products or subcategories reference this category.',
         };
       }
       throw err;

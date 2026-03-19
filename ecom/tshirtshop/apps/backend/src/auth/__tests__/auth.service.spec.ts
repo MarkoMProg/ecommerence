@@ -203,7 +203,9 @@ describe('AuthService', () => {
           where: jest.fn().mockReturnValue({
             returning: jest
               .fn()
-              .mockResolvedValue([{ id: existing.id, userId: existing.userId }]),
+              .mockResolvedValue([
+                { id: existing.id, userId: existing.userId },
+              ]),
           }),
         }),
       });
@@ -322,7 +324,9 @@ describe('AuthService', () => {
             where: jest.fn().mockReturnValue({
               returning: jest
                 .fn()
-                .mockResolvedValue([{ id: recordAUnused.id, userId: mockUser.id }]),
+                .mockResolvedValue([
+                  { id: recordAUnused.id, userId: mockUser.id },
+                ]),
             }),
           }),
         })
@@ -332,7 +336,9 @@ describe('AuthService', () => {
             where: jest.fn().mockReturnValue({
               returning: jest
                 .fn()
-                .mockResolvedValue([{ id: recordBUnused.id, userId: mockUser.id }]),
+                .mockResolvedValue([
+                  { id: recordBUnused.id, userId: mockUser.id },
+                ]),
             }),
           }),
         });

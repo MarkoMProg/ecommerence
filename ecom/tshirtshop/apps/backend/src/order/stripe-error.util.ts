@@ -13,7 +13,9 @@ export interface MappedStripeError {
 }
 
 /** Check if error is a Stripe SDK error (has type/code). */
-function isStripeError(err: unknown): err is { type?: string; code?: string; message?: string } {
+function isStripeError(
+  err: unknown,
+): err is { type?: string; code?: string; message?: string } {
   return (
     typeof err === 'object' &&
     err !== null &&
@@ -78,8 +80,7 @@ export function mapStripeError(err: unknown): MappedStripeError | null {
   if (type === 'rate_limit_error' || code === 'rate_limit_error') {
     return {
       code: 'GATEWAY_ERROR',
-      userMessage:
-        'Too many requests. Please wait a moment and try again.',
+      userMessage: 'Too many requests. Please wait a moment and try again.',
     };
   }
   if (type === 'api_error' || code === 'api_error') {
@@ -92,10 +93,14 @@ export function mapStripeError(err: unknown): MappedStripeError | null {
 
   // Invalid request (e.g. resource not found)
   if (type === 'invalid_request_error') {
-    if (code === 'resource_missing' || message.toLowerCase().includes('no such')) {
+    if (
+      code === 'resource_missing' ||
+      message.toLowerCase().includes('no such')
+    ) {
       return {
         code: 'SESSION_NOT_FOUND',
-        userMessage: 'This payment session is invalid or expired. Please place your order again.',
+        userMessage:
+          'This payment session is invalid or expired. Please place your order again.',
       };
     }
     return {

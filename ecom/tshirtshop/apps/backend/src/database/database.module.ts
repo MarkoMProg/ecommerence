@@ -18,9 +18,9 @@ import * as addressSchema from '../address/schema';
       useFactory: (configService: ConfigService) => {
         const pool = new Pool({
           connectionString: configService.getOrThrow('DATABASE_URL'),
-          max: 5, 
-          idleTimeoutMillis: 10000, 
-          connectionTimeoutMillis: 10000, 
+          max: 5,
+          idleTimeoutMillis: 10000,
+          connectionTimeoutMillis: 10000,
         });
         return drizzle(pool, {
           schema: {

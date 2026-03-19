@@ -11,7 +11,10 @@ import { OrderService } from './order.service';
 import { OrdersController } from './orders.controller';
 import { StripeService } from './stripe.service';
 import { StripeWebhookController } from './stripe-webhook.controller';
-import { PaymentEventsProcessor, PAYMENT_EVENTS_QUEUE } from './payment-events.processor';
+import {
+  PaymentEventsProcessor,
+  PAYMENT_EVENTS_QUEUE,
+} from './payment-events.processor';
 
 @Module({
   imports: [
@@ -23,7 +26,12 @@ import { PaymentEventsProcessor, PAYMENT_EVENTS_QUEUE } from './payment-events.p
     BullModule.registerQueue({ name: PAYMENT_EVENTS_QUEUE }),
   ],
   controllers: [CheckoutController, OrdersController, StripeWebhookController],
-  providers: [CheckoutService, OrderService, StripeService, PaymentEventsProcessor],
+  providers: [
+    CheckoutService,
+    OrderService,
+    StripeService,
+    PaymentEventsProcessor,
+  ],
   exports: [CheckoutService, OrderService],
 })
 export class OrderModule {}

@@ -74,11 +74,36 @@ const USER_A = 'user-a';
 const USER_B = 'user-b';
 
 const ORDERS: StubOrder[] = [
-  { id: 'o1', userId: USER_A, status: 'paid', createdAt: new Date('2026-01-01') },
-  { id: 'o2', userId: USER_A, status: 'shipped', createdAt: new Date('2026-02-01') },
-  { id: 'o3', userId: USER_A, status: 'completed', createdAt: new Date('2026-03-01') },
-  { id: 'o4', userId: USER_A, status: 'paid', createdAt: new Date('2026-04-01') },
-  { id: 'o5', userId: USER_B, status: 'paid', createdAt: new Date('2026-01-15') },
+  {
+    id: 'o1',
+    userId: USER_A,
+    status: 'paid',
+    createdAt: new Date('2026-01-01'),
+  },
+  {
+    id: 'o2',
+    userId: USER_A,
+    status: 'shipped',
+    createdAt: new Date('2026-02-01'),
+  },
+  {
+    id: 'o3',
+    userId: USER_A,
+    status: 'completed',
+    createdAt: new Date('2026-03-01'),
+  },
+  {
+    id: 'o4',
+    userId: USER_A,
+    status: 'paid',
+    createdAt: new Date('2026-04-01'),
+  },
+  {
+    id: 'o5',
+    userId: USER_B,
+    status: 'paid',
+    createdAt: new Date('2026-01-15'),
+  },
 ];
 
 describe('getOrdersByUserId – filter by status', () => {
@@ -91,7 +116,9 @@ describe('getOrdersByUserId – filter by status', () => {
   it('returns only "paid" orders when status=paid', () => {
     const result = applyOrderQuery(ORDERS, USER_A, { status: 'paid' });
     expect(result.every((o) => o.status === 'paid')).toBe(true);
-    expect(result.map((o) => o.id)).toEqual(expect.arrayContaining(['o1', 'o4']));
+    expect(result.map((o) => o.id)).toEqual(
+      expect.arrayContaining(['o1', 'o4']),
+    );
     expect(result).toHaveLength(2);
   });
 
@@ -121,7 +148,7 @@ describe('getOrdersByUserId – sort by date', () => {
     const result = applyOrderQuery(ORDERS, USER_A);
     const dates = result.map((o) => o.createdAt.getTime());
     for (let i = 0; i < dates.length - 1; i++) {
-      expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]!);
+      expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]);
     }
   });
 
@@ -129,7 +156,7 @@ describe('getOrdersByUserId – sort by date', () => {
     const result = applyOrderQuery(ORDERS, USER_A, { sort: 'date-desc' });
     const dates = result.map((o) => o.createdAt.getTime());
     for (let i = 0; i < dates.length - 1; i++) {
-      expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]!);
+      expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]);
     }
   });
 
@@ -137,15 +164,15 @@ describe('getOrdersByUserId – sort by date', () => {
     const result = applyOrderQuery(ORDERS, USER_A, { sort: 'date-asc' });
     const dates = result.map((o) => o.createdAt.getTime());
     for (let i = 0; i < dates.length - 1; i++) {
-      expect(dates[i]).toBeLessThanOrEqual(dates[i + 1]!);
+      expect(dates[i]).toBeLessThanOrEqual(dates[i + 1]);
     }
     // First result is the oldest
-    expect(result[0]!.id).toBe('o1');
+    expect(result[0].id).toBe('o1');
   });
 
   it('first result is the most recent when sorted date-desc', () => {
     const result = applyOrderQuery(ORDERS, USER_A, { sort: 'date-desc' });
-    expect(result[0]!.id).toBe('o4');
+    expect(result[0].id).toBe('o4');
   });
 });
 

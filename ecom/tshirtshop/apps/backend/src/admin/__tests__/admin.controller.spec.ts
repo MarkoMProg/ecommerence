@@ -96,7 +96,10 @@ describe('AdminController', () => {
         {
           provide: AdminUsersService,
           useValue: {
-            listUsers: jest.fn().mockResolvedValue({ data: [], pagination: { page: 1, limit: 20, total: 0 } }),
+            listUsers: jest.fn().mockResolvedValue({
+              data: [],
+              pagination: { page: 1, limit: 20, total: 0 },
+            }),
             getUserById: jest.fn().mockResolvedValue(null),
           },
         },
@@ -155,9 +158,9 @@ describe('AdminController', () => {
     });
 
     it('throws BadRequestException when name is empty', async () => {
-      await expect(
-        controller.createCategory({ name: '   ' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.createCategory({ name: '   ' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -178,7 +181,9 @@ describe('AdminController', () => {
     });
 
     it('throws NotFoundException when category does not exist', async () => {
-      (controller['catalogService'].updateCategory as jest.Mock).mockResolvedValueOnce(null);
+      (
+        controller['catalogService'].updateCategory as jest.Mock
+      ).mockResolvedValueOnce(null);
       await expect(
         controller.updateCategory('nonexistent', { name: 'X' }),
       ).rejects.toThrow(NotFoundException);
@@ -198,7 +203,9 @@ describe('AdminController', () => {
     });
 
     it('throws BadRequestException when category has products', async () => {
-      (controller['catalogService'].deleteCategory as jest.Mock).mockResolvedValueOnce({
+      (
+        controller['catalogService'].deleteCategory as jest.Mock
+      ).mockResolvedValueOnce({
         deleted: false,
         conflict: 'Cannot delete — 5 product(s) use this category.',
       });
@@ -208,7 +215,9 @@ describe('AdminController', () => {
     });
 
     it('throws NotFoundException when category does not exist', async () => {
-      (controller['catalogService'].deleteCategory as jest.Mock).mockResolvedValueOnce({
+      (
+        controller['catalogService'].deleteCategory as jest.Mock
+      ).mockResolvedValueOnce({
         deleted: false,
       });
       await expect(controller.deleteCategory('nonexistent')).rejects.toThrow(

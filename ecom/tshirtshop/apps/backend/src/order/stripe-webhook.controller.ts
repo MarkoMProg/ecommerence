@@ -10,14 +10,17 @@ import { InjectQueue } from '@nestjs/bullmq';
 import type { Request } from 'express';
 import { Queue } from 'bullmq';
 import { StripeService } from './stripe.service';
-import { PAYMENT_EVENTS_QUEUE, type PaymentSuccessJobData } from './payment-events.processor';
-
+import {
+  PAYMENT_EVENTS_QUEUE,
+  type PaymentSuccessJobData,
+} from './payment-events.processor';
 
 @Controller('webhooks')
 export class StripeWebhookController {
   constructor(
     private readonly stripeService: StripeService,
-    @InjectQueue(PAYMENT_EVENTS_QUEUE) private readonly paymentQueue: Queue<PaymentSuccessJobData>,
+    @InjectQueue(PAYMENT_EVENTS_QUEUE)
+    private readonly paymentQueue: Queue<PaymentSuccessJobData>,
   ) {}
 
   @Post('stripe')
@@ -51,7 +54,6 @@ export class StripeWebhookController {
 
     const result = this.stripeService.handleWebhookEvent(rawBody, signature);
     if (result) {
-  
       await this.paymentQueue.add(
         'payment.success',
         { orderId: result.orderId, sessionId: result.sessionId },
@@ -59,7 +61,7 @@ export class StripeWebhookController {
           attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: { count: 1000 },
-          removeOnFail: false, 
+          removeOnFail: false,
         },
       );
     }

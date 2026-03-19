@@ -38,7 +38,8 @@ export class OptionalAuthGuard implements CanActivate {
     const session = await this.auth.api.getSession({ headers: webHeaders });
 
     if (session?.user) {
-      const u = session.user as AuthUser & Partial<typeof authSchema.user.$inferSelect>;
+      const u = session.user as AuthUser &
+        Partial<typeof authSchema.user.$inferSelect>;
       const realEmail = u.emailEncrypted ? decrypt(u.emailEncrypted) : u.email;
       const realName = u.name ? decrypt(u.name) : u.name;
       request.user = {
