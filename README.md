@@ -20,7 +20,73 @@ The platform is organized into three interconnected projects:
 
 ## Entity Relationship Diagram
 
-The database schema follows ACID properties. Key components: **Entities**, **Attributes**, **Relationships**, **Primary Keys**, **Foreign Keys**, **Cardinality**, **Modality**.
+The database follows ACID rules. ERD pieces: **entities**, **attributes**, **relationships**, **PKs**, **FKs**, **cardinality**, **modality**.
+
+**How to read this:** start with the **conceptual map** (where data flows), then use the three **domain diagrams** for column-level detail. A **full single diagram** is in [docs/ERD.md](docs/ERD.md).
+
+### Conceptual map — where everything connects
+
+Solid lines = foreign keys in PostgreSQL. Dotted lines = tables Better Auth uses **without** a `user_id` FK.
+
+```mermaid
+flowchart TB
+    subgraph identity["1 · Identity hub"]
+        user((user))
+    end
+
+    user --> session[(session)]
+    user --> account[(account)]
+    user --> two_factor[(two_factor)]
+    user --> mrt[(manual_refresh_token)]
+    session --> mrt
+
+    subgraph ba_side["Better Auth — token / throttle storage"]
+        verification[(verification)]
+        rate_limit[(rate_limit)]
+    end
+
+    BA[Better Auth runtime]
+    BA -.->|rows keyed by identifier, not user_id FK| verification
+    BA -.->|opaque keys e.g. IP + route| rate_limit
+    BA -.->|same app, not a SQL edge| user
+
+    subgraph catalog["2 · Catalog"]
+        category((category))
+        product((product))
+    end
+
+    category -->|parent_child| category
+    category -->|contains| product
+    product --> pimg[(product_image)]
+
+    subgraph social["Reviews"]
+        review[(review)]
+        vote[(review_helpful_vote)]
+    end
+
+    product -->|receives| review
+    user -->|writes| review
+    review --> vote
+    user -->|casts| vote
+
+    subgraph commerce["3 · Cart & orders"]
+        cart[(cart)]
+        citem[(cart_item)]
+        ord[(order)]
+        oitem[(order_item)]
+        addr[(user_address)]
+    end
+
+    user -->|optional: guest cart| cart
+    user -->|optional: guest order| ord
+    user --> addr
+    cart --> citem
+    product -->|line| citem
+    ord --> oitem
+    product -->|snapshot| oitem
+```
+
+### Domain 1 — Login, sessions, refresh tokens (SQL FKs only)
 
 ```mermaid
 erDiagram
@@ -29,20 +95,7 @@ erDiagram
     user ||--o| two_factor : has
     user ||--o{ manual_refresh_token : owns
     session ||--o{ manual_refresh_token : bound_to
-    user ||--o{ user_address : has
-    user ||--o{ cart : has
-    user ||--o{ order : has
-    user ||--o{ review : writes
-    user ||--o{ review_helpful_vote : casts
-    category ||--o{ product : contains
-    category ||--o{ category : parent_child
-    product ||--o{ product_image : has
-    product ||--o{ cart_item : in_cart
-    product ||--o{ order_item : ordered_as
-    product ||--o{ review : receives
-    cart ||--o{ cart_item : has
-    order ||--o{ order_item : has
-    review ||--o{ review_helpful_vote : has
+
     user {
         text id PK
         text name
@@ -63,6 +116,34 @@ erDiagram
         text userId FK
         text password
     }
+    two_factor {
+        text id PK
+        text userId FK
+        text secret
+    }
+    manual_refresh_token {
+        text id PK
+        text userId FK
+        text sessionId FK
+        text tokenHash UK
+        timestamp expiresAt
+    }
+```
+
+*`verification` and `rate_limit`* live in the conceptual map: **no FK to `user`**. Better Auth matches `verification.identifier` to a user in application code.
+
+### Domain 2 — Categories, products, images, reviews
+
+```mermaid
+erDiagram
+    category ||--o{ category : parent_child
+    category ||--o{ product : contains
+    product ||--o{ product_image : has
+    product ||--o{ review : receives
+    user ||--o{ review : writes
+    review ||--o{ review_helpful_vote : has
+    user ||--o{ review_helpful_vote : casts
+
     category {
         text id PK
         text name
@@ -73,30 +154,55 @@ erDiagram
         text id PK
         text name
         text slug UK
-        text description
+        text categoryId FK
         integer priceCents
         integer stockQuantity
-        text categoryId FK
-        text brand
     }
     product_image {
         text id PK
         text productId FK
         text imageUrl
-        boolean isPrimary
+    }
+    review {
+        text id PK
+        text productId FK
+        text userId FK
+        integer rating
+    }
+    review_helpful_vote {
+        text id PK
+        text reviewId FK
+        text userId FK
+    }
+    user {
+        text id PK
+    }
+```
+
+### Domain 3 — Addresses, cart, checkout, orders
+
+```mermaid
+erDiagram
+    user ||--o{ user_address : has
+    user ||--o{ cart : has
+    user ||--o{ order : has
+    cart ||--o{ cart_item : has
+    product ||--o{ cart_item : in_cart
+    order ||--o{ order_item : has
+    product ||--o{ order_item : ordered_as
+
+    user {
+        text id PK
     }
     user_address {
         text id PK
         text userId FK
-        text fullName
         text line1
         text city
-        text country
     }
     cart {
         text id PK
         text userId FK
-        timestamp createdAt
     }
     cart_item {
         text id PK
@@ -109,50 +215,17 @@ erDiagram
         text userId FK
         text status
         integer totalCents
-        text stripeSessionId
-        timestamp paidAt
     }
     order_item {
         text id PK
         text orderId FK
         text productId FK
-        integer quantity
         integer priceCentsAtOrder
     }
-    review {
+    product {
         text id PK
-        text productId FK
-        text userId FK
-        integer rating
-        text title
-        text body
-    }
-    review_helpful_vote {
-        text id PK
-        text reviewId FK
-        text userId FK
-    }
-    manual_refresh_token {
-        text id PK
-        text userId FK
-        text sessionId FK
-        text tokenHash UK
-        timestamp expiresAt
-    }
-    verification {
-        text id PK
-        text identifier
-        text value
-        timestamp expiresAt
-    }
-    rate_limit {
-        text id PK
-        text key UK
-        integer count
     }
 ```
-
-*No FK lines to `user`/`session`:* **`verification`** (Better Auth uses `identifier` + `value` only). **`rate_limit`** (opaque `key` strings only).
 
 | Schema | Tables | Purpose |
 |--------|--------|---------|

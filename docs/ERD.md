@@ -8,7 +8,81 @@ This ERD includes the key components required for task.md 1/3: **Entities**, **A
 
 ---
 
-## 1. Current Schema (Implemented)
+## 1. How to read these diagrams
+
+One giant ER diagram is hard to follow in Mermaid. This doc uses:
+
+1. A **conceptual flowchart** — shows where data flows; dotted edges mean “no `user_id` FK in Postgres.”
+2. **Three domain ER diagrams** — full attributes, only tables that belong together.
+3. **Appendix: single combined ER** — one block for search/print; same content as before, all entities.
+
+---
+
+## 1a. Conceptual map (flow + Better Auth sidecars)
+
+Solid arrows = **foreign keys**. Dotted arrows = **Better Auth** reads/writes tables **without** linking `verification` / `rate_limit` to `user` via SQL.
+
+```mermaid
+flowchart TB
+    subgraph identity["1 · Identity hub"]
+        user((user))
+    end
+
+    user --> session[(session)]
+    user --> account[(account)]
+    user --> two_factor[(two_factor)]
+    user --> mrt[(manual_refresh_token)]
+    session --> mrt
+
+    subgraph ba_side["Better Auth — no user_id FK on these tables"]
+        verification[(verification)]
+        rate_limit[(rate_limit)]
+    end
+
+    BA[Better Auth runtime]
+    BA -.->|identifier + value rows| verification
+    BA -.->|opaque throttle keys| rate_limit
+    BA -.->|app-level, not an SQL edge| user
+
+    subgraph catalog["2 · Catalog"]
+        category((category))
+        product((product))
+    end
+
+    category -->|parent_child| category
+    category -->|contains| product
+    product --> pimg[(product_image)]
+
+    subgraph social["Reviews"]
+        review[(review)]
+        vote[(review_helpful_vote)]
+    end
+
+    product -->|receives| review
+    user -->|writes| review
+    review --> vote
+    user -->|casts| vote
+
+    subgraph commerce["3 · Cart & orders"]
+        cart[(cart)]
+        citem[(cart_item)]
+        ord[(order)]
+        oitem[(order_item)]
+        addr[(user_address)]
+    end
+
+    user -->|optional guest| cart
+    user -->|optional guest| ord
+    user --> addr
+    cart --> citem
+    product -->|line| citem
+    ord --> oitem
+    product -->|snapshot| oitem
+```
+
+---
+
+## 1b. Domain 1 — Login, sessions, refresh tokens
 
 ```mermaid
 erDiagram
@@ -17,21 +91,7 @@ erDiagram
     user ||--o| two_factor : has
     user ||--o{ manual_refresh_token : owns
     session ||--o{ manual_refresh_token : bound_to
-    user ||--o{ cart : has
-    user ||--o{ order : has
-    user ||--o{ user_address : has
-    user ||--o{ review : writes
-    user ||--o{ review_helpful_vote : casts
-    category ||--o{ product : contains
-    category ||--o{ category : "parent_child"
-    product ||--o{ product_image : has
-    product ||--o{ cart_item : in_cart
-    product ||--o{ order_item : ordered_as
-    product ||--o{ review : receives
-    cart ||--o{ cart_item : has
-    order ||--o{ order_item : has
-    review ||--o{ review_helpful_vote : has
-    
+
     user {
         text id PK
         text name
@@ -42,7 +102,7 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
-    
+
     session {
         text id PK
         timestamp expiresAt
@@ -53,7 +113,7 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
-    
+
     account {
         text id PK
         text accountId
@@ -65,23 +125,41 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
-    
-    verification {
-        text id PK
-        text identifier
-        text value
-        timestamp expiresAt
-        timestamp createdAt
-        timestamp updatedAt
-    }
-    
+
     two_factor {
         text id PK
         text secret
         text backupCodes
         text userId FK
     }
-    
+
+    manual_refresh_token {
+        text id PK
+        text userId FK
+        text sessionId FK
+        text tokenHash UK
+        timestamp expiresAt
+        timestamp usedAt
+        timestamp createdAt
+    }
+```
+
+**`verification` and `rate_limit`** — defined in appendix; no FK to `user`. Better Auth resolves `verification.identifier` in code.
+
+---
+
+## 1c. Domain 2 — Categories, products, images, reviews
+
+```mermaid
+erDiagram
+    category ||--o{ category : parent_child
+    category ||--o{ product : contains
+    product ||--o{ product_image : has
+    product ||--o{ review : receives
+    user ||--o{ review : writes
+    review ||--o{ review_helpful_vote : has
+    user ||--o{ review_helpful_vote : casts
+
     category {
         text id PK
         text name
@@ -89,7 +167,7 @@ erDiagram
         text parentCategoryId FK
         timestamp createdAt
     }
-    
+
     product {
         text id PK
         text name
@@ -106,7 +184,7 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
-    
+
     product_image {
         text id PK
         text productId FK
@@ -114,54 +192,50 @@ erDiagram
         text altText
         boolean isPrimary
     }
-    
-    cart {
+
+    review {
         text id PK
-        text userId FK "nullable, guest when null"
-        timestamp createdAt
-        timestamp updatedAt
-    }
-    
-    cart_item {
-        text id PK
-        text cartId FK
         text productId FK
-        integer quantity
+        text userId FK
+        text userName
+        integer rating
+        text title
+        text body
+        integer helpfulCount
         timestamp createdAt
         timestamp updatedAt
     }
-    
-    order {
+
+    review_helpful_vote {
         text id PK
-        text userId FK "nullable, guest when null"
-        text status
-        text shippingFullName
-        text shippingLine1
-        text shippingLine2
-        text shippingCity
-        text shippingStateOrProvince
-        text shippingPostalCode
-        text shippingCountry
-        text shippingPhone
-        integer subtotalCents
-        integer shippingCents
-        integer totalCents
-        text stripeSessionId "PAY-004"
-        timestamp paidAt "PAY-004"
-        timestamp createdAt
-        timestamp updatedAt
-    }
-    
-    order_item {
-        text id PK
-        text orderId FK
-        text productId FK
-        integer quantity
-        integer priceCentsAtOrder
-        text productNameAtOrder
+        text reviewId FK
+        text userId FK
         timestamp createdAt
     }
-    
+
+    user {
+        text id PK
+    }
+```
+
+---
+
+## 1d. Domain 3 — Addresses, cart, orders
+
+```mermaid
+erDiagram
+    user ||--o{ user_address : has
+    user ||--o{ cart : has
+    user ||--o{ order : has
+    cart ||--o{ cart_item : has
+    product ||--o{ cart_item : in_cart
+    order ||--o{ order_item : has
+    product ||--o{ order_item : ordered_as
+
+    user {
+        text id PK
+    }
+
     user_address {
         text id PK
         text userId FK
@@ -179,49 +253,178 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
     }
-    
-    review {
+
+    cart {
         text id PK
-        text productId FK
-        text userId FK
-        text userName
-        integer rating
-        text title
-        text body
-        integer helpfulCount
+        text userId FK "nullable guest"
         timestamp createdAt
         timestamp updatedAt
     }
-    
-    review_helpful_vote {
+
+    cart_item {
         text id PK
-        text reviewId FK
-        text userId FK
+        text cartId FK
+        text productId FK
+        integer quantity
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    order {
+        text id PK
+        text userId FK "nullable guest"
+        text status
+        text shippingFullName
+        text shippingLine1
+        text shippingLine2
+        text shippingCity
+        text shippingStateOrProvince
+        text shippingPostalCode
+        text shippingCountry
+        text shippingPhone
+        integer subtotalCents
+        integer shippingCents
+        integer totalCents
+        text stripeSessionId
+        timestamp paidAt
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    order_item {
+        text id PK
+        text orderId FK
+        text productId FK
+        integer quantity
+        integer priceCentsAtOrder
+        text productNameAtOrder
         timestamp createdAt
     }
-    
-    manual_refresh_token {
+
+    product {
         text id PK
+    }
+```
+
+---
+
+## 1e. Appendix — combined ER (all entities, one diagram)
+
+Use this when you need **one** Mermaid block (e.g. export). Layout may look busy; prefer **§1a–1d** when explaining.
+
+```mermaid
+erDiagram
+    user ||--o{ session : has
+    user ||--o{ account : has
+    user ||--o| two_factor : has
+    user ||--o{ manual_refresh_token : owns
+    session ||--o{ manual_refresh_token : bound_to
+    user ||--o{ cart : has
+    user ||--o{ order : has
+    user ||--o{ user_address : has
+    user ||--o{ review : writes
+    user ||--o{ review_helpful_vote : casts
+    category ||--o{ product : contains
+    category ||--o{ category : parent_child
+    product ||--o{ product_image : has
+    product ||--o{ cart_item : in_cart
+    product ||--o{ order_item : ordered_as
+    product ||--o{ review : receives
+    cart ||--o{ cart_item : has
+    order ||--o{ order_item : has
+    review ||--o{ review_helpful_vote : has
+
+    user {
+        text id PK
+        text name
+        text email UK
+        boolean emailVerified
+        timestamp createdAt
+        timestamp updatedAt
+    }
+    session {
+        text id PK
+        text token UK
         text userId FK
-        text sessionId FK
-        text tokenHash UK
         timestamp expiresAt
-        timestamp usedAt
-        timestamp createdAt
     }
-    
+    account {
+        text id PK
+        text userId FK
+        text providerId
+        text password
+    }
+    verification {
+        text id PK
+        text identifier
+        text value
+        timestamp expiresAt
+    }
+    two_factor {
+        text id PK
+        text userId FK
+        text secret
+    }
     rate_limit {
         text id PK
         text key UK
         integer count
-        bigint lastRequest
+    }
+    category {
+        text id PK
+        text slug UK
+        text parentCategoryId FK
+    }
+    product {
+        text id PK
+        text categoryId FK
+        integer priceCents
+    }
+    product_image {
+        text id PK
+        text productId FK
+    }
+    cart {
+        text id PK
+        text userId FK
+    }
+    cart_item {
+        text id PK
+        text cartId FK
+        text productId FK
+    }
+    order {
+        text id PK
+        text userId FK
+        integer totalCents
+    }
+    order_item {
+        text id PK
+        text orderId FK
+        text productId FK
+    }
+    user_address {
+        text id PK
+        text userId FK
+    }
+    review {
+        text id PK
+        text productId FK
+        text userId FK
+    }
+    review_helpful_vote {
+        text id PK
+        text reviewId FK
+        text userId FK
+    }
+    manual_refresh_token {
+        text id PK
+        text userId FK
+        text sessionId FK
     }
 ```
 
-**Diagram notes (no drawn edges — by design):**
-
-- **`verification`** — Better Auth stores tokens by `identifier` + `value`; there is **no** `user_id` foreign key in PostgreSQL. The link to a user is **application-level** (e.g. email / blind index in `identifier`), not a referential FK, so it is not drawn as `user → verification`.
-- **`rate_limit`** — Rows are keyed by opaque `key` strings (IP, route, etc.). **No foreign keys** to `user` or `session`.
+*`verification` and `rate_limit` appear here for completeness; they have **no** FK lines to `user` (see §1a).*
 
 ---
 
