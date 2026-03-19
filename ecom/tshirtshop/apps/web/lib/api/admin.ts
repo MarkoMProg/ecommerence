@@ -53,6 +53,61 @@ function normalizeAdminProduct(product: AdminProduct): AdminProduct {
   };
 }
 
+// ─── Admin Users (decrypted by backend) ────────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  twoFactorEnabled: boolean | null;
+  role: string | null;
+  banned: boolean | null;
+  createdAt: string;
+  orderCount: number;
+}
+
+export interface AdminUserDetail extends AdminUser {
+  image: string | null;
+  updatedAt: string;
+  banReason: string | null;
+}
+
+export interface AdminUserListResult {
+  data: AdminUser[];
+  pagination: { page: number; limit: number; total: number };
+}
+
+/** Fetch paginated users list with decrypted names/emails. */
+export async function fetchAdminUsers(
+  page = 1,
+  limit = 20,
+  search?: string,
+): Promise<AdminUserListResult | null> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search?.trim()) params.set("search", search.trim());
+  try {
+    const res = await adminFetch(`/api/v1/admin/users?${params}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success ? { data: json.data, pagination: json.pagination } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch a single user by ID with decrypted name/email. */
+export async function fetchAdminUser(id: string): Promise<AdminUserDetail | null> {
+  try {
+    const res = await adminFetch(`/api/v1/admin/users/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface AdminOrder {
   id: string;
   userId: string | null;

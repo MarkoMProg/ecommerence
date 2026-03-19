@@ -2,27 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { fetchAdminUsers, type AdminUser } from "@/lib/api/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-/**
- * Better Auth admin plugin user type.
- * Fields come from authClient.admin.listUsers().
- */
-interface BAUser {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  image?: string | null;
-  role?: string | null;
-  banned?: boolean | null;
-  banReason?: string | null;
-  banExpires?: number | null;
-  twoFactorEnabled?: boolean | null;
-  createdAt: Date;
-}
 
 function formatDate(d: Date | string): string {
   try {
@@ -40,39 +22,25 @@ function formatDate(d: Date | string): string {
 const PAGE_SIZE = 20;
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<BAUser[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (newOffset = 0, searchValue?: string) => {
+  const load = useCallback(async (newPage = 1, searchValue?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await authClient.admin.listUsers({
-        query: {
-          limit: PAGE_SIZE,
-          offset: newOffset,
-          ...(searchValue?.trim()
-            ? {
-                searchValue: searchValue.trim(),
-                searchField: "email" as const,
-                searchOperator: "contains" as const,
-              }
-            : {}),
-          sortBy: "createdAt",
-          sortDirection: "desc" as const,
-        },
-      });
+      const result = await fetchAdminUsers(newPage, PAGE_SIZE, searchValue);
 
-      if (result?.data) {
-        setUsers(result.data.users as unknown as BAUser[]);
-        setTotal(result.data.total ?? 0);
-        setOffset(newOffset);
-      } else if (result?.error) {
-        setError(result.error.message || "Failed to load users");
+      if (result) {
+        setUsers(result.data);
+        setTotal(result.pagination.total);
+        setPage(newPage);
+      } else {
+        setError("Failed to load users");
       }
     } catch {
       setError("Failed to load users. Ensure you have admin access.");
@@ -87,10 +55,10 @@ export default function AdminUsersPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    load(0, search);
+    load(1, search);
   };
 
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+  const currentPage = page;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
@@ -210,7 +178,7 @@ export default function AdminUsersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => load(Math.max(0, offset - PAGE_SIZE), search)}
+                  onClick={() => load(currentPage - 1, search)}
                   disabled={currentPage <= 1}
                   className="border-white/20 disabled:opacity-50"
                 >
@@ -219,12 +187,7 @@ export default function AdminUsersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    load(
-                      Math.min(offset + PAGE_SIZE, (total - 1)),
-                      search,
-                    )
-                  }
+                  onClick={() => load(currentPage + 1, search)}
                   disabled={currentPage >= totalPages}
                   className="border-white/20 disabled:opacity-50"
                 >

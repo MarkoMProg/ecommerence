@@ -5,28 +5,10 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import { fetchAdminOrders } from "@/lib/api/admin";
+import { fetchAdminOrders, fetchAdminUser, type AdminUserDetail } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-/**
- * Better Auth admin plugin user type.
- */
-interface BAUser {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified: boolean;
-  image?: string | null;
-  role?: string | null;
-  banned?: boolean | null;
-  banReason?: string | null;
-  banExpires?: number | null;
-  twoFactorEnabled?: boolean | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 interface UserOrder {
   id: string;
@@ -56,7 +38,7 @@ export default function AdminUserDetailPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [user, setUser] = useState<BAUser | null | undefined>(undefined);
+  const [user, setUser] = useState<AdminUserDetail | null | undefined>(undefined);
   const [userOrders, setUserOrders] = useState<UserOrder[] | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -64,23 +46,11 @@ export default function AdminUserDetailPage() {
   const [banReason, setBanReason] = useState("");
   const [banDuration, setBanDuration] = useState("");
 
-  // Load user via Better Auth admin plugin
+  // Load user via custom admin endpoint (decrypted)
   const loadUser = useCallback(async () => {
     try {
-      const result = await authClient.admin.listUsers({
-        query: {
-          limit: 1,
-          filterField: "id",
-          filterValue: id,
-          filterOperator: "eq" as const,
-        },
-      });
-
-      if (result?.data?.users?.[0]) {
-        setUser(result.data.users[0] as unknown as BAUser);
-      } else {
-        setUser(null);
-      }
+      const result = await fetchAdminUser(id);
+      setUser(result);
     } catch {
       setUser(null);
     }
