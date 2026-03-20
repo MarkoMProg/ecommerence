@@ -2,8 +2,8 @@
 /**
  * Populate / sync the database from the repo catalog JSON (published inventory).
  *
- * Source file (default): apps/web/public/products/products-bulk-import.json
- * Regenerate that file with: npm run generate:products-bulk --workspace=web
+ * Source file (default): apps/backend/public/uploads/products/products-bulk-import.json
+ * Regenerate with: npm run generate:products-bulk --workspace=web
  *
  * Behaviour:
  * - Match existing rows by exact product name (trimmed).
@@ -36,9 +36,8 @@ if (!DATABASE_URL) {
 
 const defaultJsonPath = resolve(
   backendDir,
-  '..',
-  'web',
   'public',
+  'uploads',
   'products',
   'products-bulk-import.json',
 );

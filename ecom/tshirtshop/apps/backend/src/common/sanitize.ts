@@ -234,7 +234,7 @@ export function isValidImageUrl(url: string): boolean {
   if (isValidRelativeImagePath('/uploads/', url)) {
     return true;
   }
-  // Static assets under Next.js public/products (bulk import from repo folders)
+  // Legacy bulk paths (migrate with npm run db:migrate-product-image-urls)
   if (isValidRelativeImagePath('/products/', url)) {
     return true;
   }

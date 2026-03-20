@@ -13,22 +13,29 @@ import { nextAppOriginForServerFetch } from "./next-origin";
 
 function normalizeCartImageUrl(url: string | null): string | null {
   if (!url) return null;
-  if (url.startsWith("/uploads/") || url.startsWith("/products/")) return url;
+  let u = url;
+  if (u.startsWith("/products/")) {
+    u = `/uploads/products/${u.slice("/products/".length)}`;
+  }
+  if (u.startsWith("/uploads/")) return u;
 
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(u);
     const host = parsed.hostname.toLowerCase();
-    if (
-      (host === "localhost" || host === "127.0.0.1") &&
-      (parsed.pathname.startsWith("/uploads/") || parsed.pathname.startsWith("/products/"))
-    ) {
-      return `${parsed.pathname}${parsed.search}`;
+    if (host === "localhost" || host === "127.0.0.1") {
+      let p = parsed.pathname;
+      if (p.startsWith("/products/")) {
+        p = `/uploads/products/${p.slice("/products/".length)}`;
+      }
+      if (p.startsWith("/uploads/")) {
+        return `${p}${parsed.search}`;
+      }
     }
   } catch {
-    return url;
+    return u;
   }
 
-  return url;
+  return u;
 }
 
 function normalizeCart(cart: Cart | null): Cart | null {

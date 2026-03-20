@@ -139,10 +139,12 @@ describe('Catalog DTO Validators', () => {
       expect(errors).toHaveLength(0);
     });
 
-    it('should accept relative public products image URLs', () => {
+    it('should accept catalog image URLs under /uploads/products/', () => {
       const errors = validateCreateProduct({
         ...validCreateBody,
-        images: [{ url: '/products/tshirts/Sample Tee/il_1140xN.123.webp' }],
+        images: [
+          { url: '/uploads/products/tshirts/Sample Tee/il_1140xN.123.webp' },
+        ],
       });
       expect(errors).toHaveLength(0);
     });

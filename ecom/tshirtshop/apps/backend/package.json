@@ -30,7 +30,8 @@
     "db:migrate-0008": "node scripts/run-migration-0008.mjs",
     "db:add-product-archived": "node scripts/db-add-product-archived.mjs",
     "db:improve-descriptions": "node scripts/improve-product-descriptions.mjs",
-    "db:populate-from-json": "node scripts/populate-products-from-json.mjs"
+    "db:populate-from-json": "node scripts/populate-products-from-json.mjs",
+    "db:migrate-product-image-urls": "node scripts/migrate-product-image-urls.mjs"
   },
   "dependencies": {
     "@bull-board/api": "^6.20.5",
