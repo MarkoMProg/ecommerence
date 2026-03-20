@@ -21,7 +21,7 @@ import * as authSchema from './schema';
     {
       provide: BETTER_AUTH_INSTANCE,
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
-        // Fail fast: auth requires these for user creation (blind index + encryption).
+
         const blindSecret = configService.get<string>('BLIND_INDEX_SECRET');
         const encKey = configService.get<string>('ENCRYPTION_KEY');
         if (!blindSecret) {
@@ -178,7 +178,6 @@ import * as authSchema from './schema';
                 const from =
                   configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
-                // email field in DB is the blind index — decrypt the real address
                 const u = user as { emailEncrypted?: string; email?: string };
                 const realEmail = u.emailEncrypted
                   ? decrypt(u.emailEncrypted)
@@ -229,7 +228,6 @@ import * as authSchema from './schema';
                 const from =
                   configService.get<string>('EMAIL_FROM') ??
                   'Darkloom <noreply@lugriv.com>';
-                // email field in DB is the blind index — decrypt the real address
                 const u = user as { emailEncrypted?: string; email?: string };
                 const realEmail = u.emailEncrypted
                   ? decrypt(u.emailEncrypted)
@@ -300,8 +298,6 @@ import * as authSchema from './schema';
                 type: 'string',
                 required: false,
                 input: false,
-                // returned:true is required for Better Auth's adapter to include
-                // the hook value in the INSERT. The guard strips it before sending to clients.
                 returned: true,
               },
               emailIndex: {
@@ -323,9 +319,6 @@ import * as authSchema from './schema';
                       ...user,
                       emailEncrypted: encrypt(user.email),
                       emailIndex: blindIndex(user.email),
-                      // Store the blind index as a valid email-shaped token so that
-                      // Better Auth's internal Zod email-format validation passes.
-                      // Format: {hmac-hex}@blind.index
                       email: blindEmail(user.email),
                       name: encrypt(user.name),
                     },
@@ -371,12 +364,6 @@ import * as authSchema from './schema';
           ],
 
           hooks: {
-            /**
-             * Blind-index the email on any Better Auth HTTP route that accepts
-             * an email as input for a DB lookup.  This covers direct client
-             * calls that bypass our custom /api/v1/auth/* endpoints.
-             * Note: sign-up is handled entirely via databaseHooks.user.create.before.
-             */
             before: createAuthMiddleware((ctx) => {
               const emailLookupPaths = [
                 '/sign-in/email',

@@ -69,11 +69,7 @@ export class BillingService {
     return u?.stripeCustomerId ?? null;
   }
 
-  /**
-   * Idempotently get or create a Stripe Customer for the user.
-   * Persists the customer ID to the DB on first creation.
-   * Safe to call multiple times — never creates duplicates.
-   */
+
   async getOrCreateCustomer(
     userId: string,
     email: string,

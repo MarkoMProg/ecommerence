@@ -33,5 +33,5 @@ export class ContactController {
     const data = body as ContactDto;
     await this.contactService.submit(data);
     return { success: true, message: 'Thank you for your message.' };
+    }
   }
-}

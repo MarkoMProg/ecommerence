@@ -37,10 +37,7 @@ function blindSecret(): string {
   return _blindSecret;
 }
 
-/**
- * Encrypts a UTF-8 string with AES-256-GCM.
- * Output format (base64): 12-byte IV | 16-byte auth tag | ciphertext
- */
+
 export function encrypt(value: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key(), iv);
@@ -52,9 +49,7 @@ export function encrypt(value: string): string {
   return Buffer.concat([iv, tag, encrypted]).toString('base64');
 }
 
-/**
- * Decrypts a value produced by `encrypt`.
- */
+
 export function decrypt(value: string): string {
   const buf = Buffer.from(value, 'base64');
   const iv = buf.subarray(0, 12);
@@ -67,11 +62,7 @@ export function decrypt(value: string): string {
   );
 }
 
-/**
- * Deterministic HMAC-SHA256 blind index for an email address.
- * Normalises to lowercase + trim before hashing so lookups are
- * case-insensitive, matching the encrypt-on-write transform.
- */
+
 export function blindIndex(value: string): string {
   return createHmac('sha256', blindSecret())
     .update(value.toLowerCase().trim())
