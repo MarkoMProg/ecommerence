@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { fetchCategories, type ApiCategory } from "@/lib/api/catalog";
 import {
   fetchAdminProduct,
@@ -103,6 +103,18 @@ function ImageManager({
     onChange(images.map((img, i) => (i === index ? { ...img, ...patch } : img)));
   const remove = (index: number) => onChange(images.filter((_, i) => i !== index));
   const add = () => onChange([...images, { url: "", uploading: false }]);
+  const moveUp = (index: number) => {
+    if (index <= 0) return;
+    const next = [...images];
+    [next[index - 1], next[index]] = [next[index], next[index - 1]];
+    onChange(next);
+  };
+  const moveDown = (index: number) => {
+    if (index >= images.length - 1) return;
+    const next = [...images];
+    [next[index], next[index + 1]] = [next[index + 1], next[index]];
+    onChange(next);
+  };
 
   const handleFile = async (index: number, file: File) => {
     update(index, { uploading: true, url: "" });
@@ -125,13 +137,38 @@ function ImageManager({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              className="text-xs text-white/30 hover:text-red-400 transition-colors"
-            >
-              Remove
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="mr-1 text-[10px] uppercase tracking-wider text-white/35 max-sm:hidden">
+                Order
+              </span>
+              <button
+                type="button"
+                onClick={() => moveUp(i)}
+                disabled={i === 0}
+                title="Move up (higher priority — shown first on the store)"
+                aria-label="Move image up"
+                className="rounded border border-white/15 p-1.5 text-white/50 transition-colors hover:border-white/30 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+              >
+                <ChevronUp className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveDown(i)}
+                disabled={i === images.length - 1}
+                title="Move down (lower priority)"
+                aria-label="Move image down"
+                className="rounded border border-white/15 p-1.5 text-white/50 transition-colors hover:border-white/30 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+              >
+                <ChevronDown className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="ml-1 text-xs text-white/30 hover:text-red-400 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-3 items-start">
@@ -249,7 +286,11 @@ export default function AdminEditProductPage() {
           framingInfo: p.framingInfo ?? "",
           isArchived: p.isArchived,
         });
-        setImages(p.images.map((img) => ({ url: img.imageUrl, uploading: false })));
+        const sortedImages = [...p.images].sort((a, b) => {
+          if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+          return a.id.localeCompare(b.id);
+        });
+        setImages(sortedImages.map((img) => ({ url: img.imageUrl, uploading: false })));
       }
     });
   }, [id]);
@@ -577,7 +618,7 @@ export default function AdminEditProductPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wider text-white/60">
               Product Images{" "}
               <span className="font-normal normal-case text-white/30">
-                (first image will be primary)
+                (first = primary on the store — use ↑↓ to change order)
               </span>
             </h2>
           </CardHeader>

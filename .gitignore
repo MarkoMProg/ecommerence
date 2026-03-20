@@ -1,0 +1,3 @@
+# Repo-wide: never commit Docker env files with real secrets (template: apps/backend/.env.docker.example).
+**/apps/backend/.env.docker
+**/apps/backend/env.docker
