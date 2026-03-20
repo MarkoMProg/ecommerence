@@ -1,4 +1,3 @@
-/** DTOs and validation for user address endpoints (ADDR-001) */
 
 import {
   sanitizeString,

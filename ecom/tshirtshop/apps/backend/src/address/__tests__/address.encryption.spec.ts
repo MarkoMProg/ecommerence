@@ -1,10 +1,5 @@
 /**
- * Encryption integration tests for AddressService (SEC-003).
- *
- * Strategy: mock the database layer so tests run without a real Postgres instance.
- * We capture every value written to the DB (via mock insert/update) and verify:
- *   - PII fields are stored as ciphertext (not plaintext)
- *   - The service returns decrypted plaintext to the caller
+ * Encryption integration tests for AddressService 
  *
  * Tests cover createAddress, listAddresses, updateAddress, setDefaultShipping
  * and setDefaultBilling.
@@ -57,7 +52,7 @@ function buildEncryptedRow(
  * Returns a minimal Drizzle-like mock DB that captures inserted/updated values
  * and returns pre-configured rows for selects.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for test utilities
+
 function buildMockDb(selectRows: Record<string, unknown>[] = []) {
   const insertedValues: Record<string, unknown>[] = [];
   const updatedValues: Record<string, unknown>[] = [];
@@ -86,10 +81,10 @@ function buildMockDb(selectRows: Record<string, unknown>[] = []) {
     }),
   };
 
-  // Make .where() ultimately return selectRows when awaited
+
   queryBuilder.where.mockImplementation(() => ({
     ...queryBuilder,
-    // Final .where / .orderBy in chain resolves to rows
+   
     then: (resolve: (v: unknown) => void) => resolve(selectRows),
   }));
 
@@ -105,8 +100,6 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
     it('decrypts PII fields before returning them to the caller', async () => {
       const encryptedRow = buildEncryptedRow();
 
-      // We drive the service through its real decryptRow path by wiring a mock
-      // that speaks the same Drizzle fluent-API the service uses.
       const mockSelect = jest.fn();
       const mockFrom = jest.fn();
       const mockWhere = jest.fn();
@@ -148,7 +141,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       const service = new AddressService(db as never);
       const [row] = await service.listAddresses('user-1');
 
-      // Ciphertext contains ':' separators — plaintext fields should not
+     
       expect(row.fullName).not.toContain(':');
       expect(row.line1).not.toContain(':');
       expect(row.city).not.toContain(':');
@@ -158,12 +151,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
   // ── createAddress ──────────────────────────────────────────────────────────
 
   describe('createAddress() — verifies values written to the DB are encrypted', () => {
-    /**
-     * Builds a mock DB that:
-     *  - Returns [] for the initial listAddresses call (no existing addresses)
-     *  - Captures .insert().values() arguments
-     *  - Returns the captured inserted row (with same values) on the read-back select
-     */
+    
     function buildCreateDb() {
       const captured: Record<string, unknown>[] = [];
       let callCount = 0;
@@ -178,12 +166,11 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       });
 
       const db = {
-        // First call to select (list existing) returns [] — address is the first one
-        // Subsequent call (read-back after insert) returns the captured inserted row
+     
         select: jest.fn().mockImplementation(() => {
           callCount++;
           if (callCount === 1) return makeSelectChain([]).from;
-          // callCount >= 2 — read-back; return the inserted row so decryptRow can run
+          
           return makeSelectChain(captured).from;
         }),
         update: jest.fn().mockReturnValue({
@@ -206,7 +193,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
     it('stores fullName as ciphertext, not plaintext', async () => {
       const { db, captured } = buildCreateDb();
 
-      // Re-wire select properly using a simpler approach
+      
       let selectCallIdx = 0;
       db.select = jest.fn().mockImplementation(() => {
         selectCallIdx++;
@@ -234,11 +221,9 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       expect(captured).toHaveLength(1);
       const stored = captured[0];
 
-      // fullName in DB must NOT be the plaintext
+      
       expect(stored['fullName']).not.toBe('Jane Doe');
-      // Must be ciphertext format
       expect((stored['fullName'] as string).split(':').length).toBe(3);
-      // Decrypting the stored value must yield the original
       expect(decrypt(stored['fullName'] as string)).toBe('Jane Doe');
     });
 
@@ -282,7 +267,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         city: 'Austin',
         stateOrRegion: 'TX',
         postalCode: '78701',
-        country: 'us', // should be upper-cased before encryption
+        country: 'us', 
       });
 
       const stored = captured[0];
@@ -294,14 +279,14 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         ['city', 'Austin'],
         ['stateOrRegion', 'TX'],
         ['postalCode', '78701'],
-        ['country', 'US'], // upper-cased
+        ['country', 'US'],
       ];
 
       for (const [field, expected] of piiFields) {
         const raw = stored[field] as string;
-        expect(raw).not.toBe(expected); // not stored in plaintext
-        expect(raw.split(':').length).toBe(3); // ciphertext format
-        expect(decrypt(raw)).toBe(expected); // round-trips correctly
+        expect(raw).not.toBe(expected); 
+        expect(raw.split(':').length).toBe(3); 
+        expect(decrypt(raw)).toBe(expected); 
       }
     });
 
@@ -344,7 +329,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         stateOrRegion: 'TX',
         postalCode: '78701',
         country: 'US',
-        // phone and line2 intentionally omitted → should be null in DB
+        
       });
 
       expect(captured[0]['phone']).toBeNull();
