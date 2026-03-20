@@ -2,11 +2,13 @@
  * Orders API client. Fetch order by ID (CHK-004).
  */
 
+import { nextAppOriginForServerFetch } from "./next-origin";
+
 function apiBase(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return process.env.API_URL || "http://127.0.0.1:3000";
+  return nextAppOriginForServerFetch();
 }
 
 export interface OrderItem {

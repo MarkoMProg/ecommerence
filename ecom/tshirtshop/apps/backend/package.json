@@ -28,7 +28,9 @@
     "db:add-stripe-customer-id": "node scripts/db-add-stripe-customer-id.mjs",
     "db:add-review-tables": "node scripts/db-add-review-tables.mjs",
     "db:migrate-0008": "node scripts/run-migration-0008.mjs",
-    "db:add-product-archived": "node scripts/db-add-product-archived.mjs"
+    "db:add-product-archived": "node scripts/db-add-product-archived.mjs",
+    "db:improve-descriptions": "node scripts/improve-product-descriptions.mjs",
+    "db:populate-from-json": "node scripts/populate-products-from-json.mjs"
   },
   "dependencies": {
     "@bull-board/api": "^6.20.5",

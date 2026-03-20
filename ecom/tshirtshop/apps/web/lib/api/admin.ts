@@ -1,3 +1,5 @@
+import { nextAppOriginForServerFetch } from "./next-origin";
+
 /**
  * Admin API client.
  *
@@ -15,7 +17,7 @@ function apiBase(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return process.env.API_URL || "http://127.0.0.1:3000";
+  return nextAppOriginForServerFetch();
 }
 
 const adminFetch = async (path: string, init?: RequestInit): Promise<Response> => {
@@ -28,12 +30,15 @@ const adminFetch = async (path: string, init?: RequestInit): Promise<Response> =
 
 function normalizeAdminImageUrl(url: string): string {
   if (!url) return url;
-  if (url.startsWith("/uploads/")) return url;
+  if (url.startsWith("/uploads/") || url.startsWith("/products/")) return url;
 
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    if ((host === "localhost" || host === "127.0.0.1") && parsed.pathname.startsWith("/uploads/")) {
+    if (
+      (host === "localhost" || host === "127.0.0.1") &&
+      (parsed.pathname.startsWith("/uploads/") || parsed.pathname.startsWith("/products/"))
+    ) {
       return `${parsed.pathname}${parsed.search}`;
     }
   } catch {

@@ -1,6 +1,8 @@
+import { nextAppOriginForServerFetch } from "./next-origin";
+
 /**
  * Catalog API client.
- * Fetches from backend. Always uses absolute URLs (required for Node fetch).
+ * Fetches via this app’s `/api/*` proxy (same as the browser). Always uses absolute URLs for Node fetch.
  */
 async function trustedFetch(urlString: string, init?: RequestInit): Promise<Response> {
   const url = new URL(urlString);
@@ -97,9 +99,7 @@ function apiUrl(path: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}${path}`;
   }
-  // Use 127.0.0.1 to avoid Windows IPv6 localhost resolution issues (ECONNREFUSED)
-  const base = process.env.API_URL || "http://127.0.0.1:3000";
-  return `${base}${path}`;
+  return `${nextAppOriginForServerFetch()}${path}`;
 }
 
 export interface ApiCategory {
@@ -195,6 +195,8 @@ export interface ProductDisplay {
   /** REV-003: average star rating 0–5, number of reviews */
   averageRating?: number;
   reviewCount?: number;
+  /** All product images (primary first), for PDP gallery */
+  imageUrls: string[];
 }
 
 function parseSizeOptions(raw: string | null | undefined): string[] | null {
@@ -206,12 +208,15 @@ function parseSizeOptions(raw: string | null | undefined): string[] | null {
 function normalizeImageUrl(url: string | undefined): string {
   if (!url) return '';
 
-  if (url.startsWith('/uploads/')) return url;
+  if (url.startsWith('/uploads/') || url.startsWith('/products/')) return url;
 
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    if ((host === 'localhost' || host === '127.0.0.1') && parsed.pathname.startsWith('/uploads/')) {
+    if (
+      (host === 'localhost' || host === '127.0.0.1') &&
+      (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/products/'))
+    ) {
       return `${parsed.pathname}${parsed.search}`;
     }
   } catch {
@@ -223,13 +228,23 @@ function normalizeImageUrl(url: string | undefined): string {
 
 /** Maps API product shape to ProductDisplay. Exported for reuse (e.g. cart recommendations). */
 export function mapProduct(p: ApiProduct): ProductDisplay {
-  const primaryImage = p.images.find((i) => i.isPrimary) ?? p.images[0];
+  const list = [...(p.images ?? [])].sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1;
+    if (!a.isPrimary && b.isPrimary) return 1;
+    return 0;
+  });
+  const imageUrls = list
+    .map((i) => normalizeImageUrl(i.imageUrl))
+    .filter((u) => u.length > 0);
+  const primaryImage = list[0] ?? p.images?.[0];
+  const primaryUrl = normalizeImageUrl(primaryImage?.imageUrl);
   return {
     id: p.id,
     slug: p.slug,
     name: p.name,
     price: p.priceCents / 100,
-    imageUrl: normalizeImageUrl(primaryImage?.imageUrl),
+    imageUrl: primaryUrl || imageUrls[0] || '',
+    imageUrls: imageUrls.length > 0 ? imageUrls : primaryUrl ? [primaryUrl] : [],
     category: p.category?.slug ?? '',
     description: p.description,
     brand: p.brand,
@@ -295,7 +310,8 @@ export async function fetchSearchSuggestions(
   if (trimmed.length < 2) {
     return { products: [], categories: [], brands: [] };
   }
-  const base = typeof window !== "undefined" ? window.location.origin : process.env.API_URL || "http://127.0.0.1:3000";
+  const base =
+    typeof window !== "undefined" ? window.location.origin : nextAppOriginForServerFetch();
   const url = `${base}/api/v1/products/suggestions?q=${encodeURIComponent(trimmed)}&limit=${limit}`;
   const res = await trustedFetch(url, { cache: "no-store" });
   if (!res.ok) return { products: [], categories: [], brands: [] };

@@ -138,6 +138,14 @@ describe('Catalog DTO Validators', () => {
       });
       expect(errors).toHaveLength(0);
     });
+
+    it('should accept relative public products image URLs', () => {
+      const errors = validateCreateProduct({
+        ...validCreateBody,
+        images: [{ url: '/products/tshirts/Sample Tee/il_1140xN.123.webp' }],
+      });
+      expect(errors).toHaveLength(0);
+    });
   });
 
   describe('validateUpdateProduct', () => {

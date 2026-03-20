@@ -1,5 +1,5 @@
 /**
- * Encryption integration tests for AddressService 
+ * Encryption integration tests for AddressService
  *
  * Tests cover createAddress, listAddresses, updateAddress, setDefaultShipping
  * and setDefaultBilling.
@@ -81,10 +81,9 @@ function buildMockDb(selectRows: Record<string, unknown>[] = []) {
     }),
   };
 
-
   queryBuilder.where.mockImplementation(() => ({
     ...queryBuilder,
-   
+
     then: (resolve: (v: unknown) => void) => resolve(selectRows),
   }));
 
@@ -141,7 +140,6 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       const service = new AddressService(db as never);
       const [row] = await service.listAddresses('user-1');
 
-     
       expect(row.fullName).not.toContain(':');
       expect(row.line1).not.toContain(':');
       expect(row.city).not.toContain(':');
@@ -151,7 +149,6 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
   // ── createAddress ──────────────────────────────────────────────────────────
 
   describe('createAddress() — verifies values written to the DB are encrypted', () => {
-    
     function buildCreateDb() {
       const captured: Record<string, unknown>[] = [];
       let callCount = 0;
@@ -166,11 +163,10 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       });
 
       const db = {
-     
         select: jest.fn().mockImplementation(() => {
           callCount++;
           if (callCount === 1) return makeSelectChain([]).from;
-          
+
           return makeSelectChain(captured).from;
         }),
         update: jest.fn().mockReturnValue({
@@ -193,7 +189,6 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
     it('stores fullName as ciphertext, not plaintext', async () => {
       const { db, captured } = buildCreateDb();
 
-      
       let selectCallIdx = 0;
       db.select = jest.fn().mockImplementation(() => {
         selectCallIdx++;
@@ -221,7 +216,6 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
       expect(captured).toHaveLength(1);
       const stored = captured[0];
 
-      
       expect(stored['fullName']).not.toBe('Jane Doe');
       expect((stored['fullName'] as string).split(':').length).toBe(3);
       expect(decrypt(stored['fullName'] as string)).toBe('Jane Doe');
@@ -267,7 +261,7 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         city: 'Austin',
         stateOrRegion: 'TX',
         postalCode: '78701',
-        country: 'us', 
+        country: 'us',
       });
 
       const stored = captured[0];
@@ -284,9 +278,9 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
 
       for (const [field, expected] of piiFields) {
         const raw = stored[field] as string;
-        expect(raw).not.toBe(expected); 
-        expect(raw.split(':').length).toBe(3); 
-        expect(decrypt(raw)).toBe(expected); 
+        expect(raw).not.toBe(expected);
+        expect(raw.split(':').length).toBe(3);
+        expect(decrypt(raw)).toBe(expected);
       }
     });
 
@@ -329,7 +323,6 @@ describe('AddressService — encryption at rest (SEC-003)', () => {
         stateOrRegion: 'TX',
         postalCode: '78701',
         country: 'US',
-        
       });
 
       expect(captured[0]['phone']).toBeNull();

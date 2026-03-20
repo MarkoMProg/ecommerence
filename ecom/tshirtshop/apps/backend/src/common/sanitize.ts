@@ -214,19 +214,28 @@ export const ALLOWED_IMAGE_EXTENSIONS = [
   '.svg',
 ] as const;
 
+function isValidRelativeImagePath(pathPrefix: string, url: string): boolean {
+  if (!url.startsWith(pathPrefix)) return false;
+  const lowerPath = url.toLowerCase().split('?')[0];
+  const ext = lowerPath.slice(lowerPath.lastIndexOf('.'));
+  if (
+    ext &&
+    ext.length > 1 &&
+    !ALLOWED_IMAGE_EXTENSIONS.includes(
+      ext as (typeof ALLOWED_IMAGE_EXTENSIONS)[number],
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function isValidImageUrl(url: string): boolean {
-  if (url.startsWith('/uploads/')) {
-    const lowerPath = url.toLowerCase().split('?')[0];
-    const ext = lowerPath.slice(lowerPath.lastIndexOf('.'));
-    if (
-      ext &&
-      ext.length > 1 &&
-      !ALLOWED_IMAGE_EXTENSIONS.includes(
-        ext as (typeof ALLOWED_IMAGE_EXTENSIONS)[number],
-      )
-    ) {
-      return false;
-    }
+  if (isValidRelativeImagePath('/uploads/', url)) {
+    return true;
+  }
+  // Static assets under Next.js public/products (bulk import from repo folders)
+  if (isValidRelativeImagePath('/products/', url)) {
     return true;
   }
 

@@ -9,15 +9,19 @@ import {
 } from "../cart-cookie";
 import { mapProduct } from "./catalog";
 import type { ProductDisplay } from "./catalog";
+import { nextAppOriginForServerFetch } from "./next-origin";
 
 function normalizeCartImageUrl(url: string | null): string | null {
   if (!url) return null;
-  if (url.startsWith("/uploads/")) return url;
+  if (url.startsWith("/uploads/") || url.startsWith("/products/")) return url;
 
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    if ((host === "localhost" || host === "127.0.0.1") && parsed.pathname.startsWith("/uploads/")) {
+    if (
+      (host === "localhost" || host === "127.0.0.1") &&
+      (parsed.pathname.startsWith("/uploads/") || parsed.pathname.startsWith("/products/"))
+    ) {
       return `${parsed.pathname}${parsed.search}`;
     }
   } catch {
@@ -42,7 +46,7 @@ function apiBase(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return process.env.API_URL || "http://127.0.0.1:3000";
+  return nextAppOriginForServerFetch();
 }
 
 async function trustedServerFetch(urlString: string, init?: RequestInit): Promise<Response> {

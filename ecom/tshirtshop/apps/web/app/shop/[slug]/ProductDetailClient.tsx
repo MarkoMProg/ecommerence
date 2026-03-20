@@ -76,6 +76,15 @@ export default function ProductDetailClient({
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [votingId, setVotingId] = useState<string | null>(null);
   const [helpfulVotes, setHelpfulVotes] = useState<Set<string>>(new Set());
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const galleryImages =
+    product.imageUrls.length > 0
+      ? product.imageUrls
+      : product.imageUrl
+        ? [product.imageUrl]
+        : [];
+  const mainImageSrc = galleryImages[activeImageIndex] ?? galleryImages[0] ?? "";
   const { session } = useAuth();
   const isLoggedIn = !!session?.user;
   const {
@@ -94,6 +103,10 @@ export default function ProductDetailClient({
       // ignore
     }
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [product.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,28 +237,49 @@ export default function ProductDetailClient({
 
       {/* Two-column layout */}
       <div className="mb-16 grid grid-cols-1 gap-8 sm:mb-24 sm:gap-12 lg:grid-cols-2">
-        {/* Left: Gallery */}
+        {/* Left: Gallery — primary first in product.imageUrls; click thumb to change main */}
         <div className="space-y-4">
           <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-            />
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <div className="relative h-16 w-16 min-w-[64px] shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-20 sm:w-20">
+            {mainImageSrc ? (
               <Image
-                src={product.imageUrl}
+                src={mainImageSrc}
                 alt={product.name}
                 fill
-                sizes="80px"
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
               />
-            </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-white/40">
+                No image
+              </div>
+            )}
           </div>
+          {galleryImages.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {galleryImages.map((src, idx) => (
+                <button
+                  key={`${src}-${idx}`}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  aria-label={`View product image ${idx + 1} of ${galleryImages.length}`}
+                  aria-pressed={idx === activeImageIndex}
+                  className={`relative h-16 w-16 min-w-[64px] shrink-0 overflow-hidden rounded bg-[#1A1A1A] sm:h-20 sm:w-20 ${
+                    idx === activeImageIndex
+                      ? "ring-2 ring-[#FF4D00] ring-offset-2 ring-offset-[#0a0a0a]"
+                      : "ring-1 ring-white/15 opacity-90 hover:opacity-100"
+                  }`}
+                >
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Details */}
@@ -418,7 +452,7 @@ export default function ProductDetailClient({
                 {section.contentType === "specs" ? (
                   <SpecTable rows={section.content as { label: string; value: string }[]} />
                 ) : (
-                  <p className="text-sm leading-relaxed text-white/80">
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-white/80">
                     {section.content as string}
                   </p>
                 )}
