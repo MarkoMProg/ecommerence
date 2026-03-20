@@ -1,0 +1,33 @@
+# ── Large generated directories ───────────────────────────────────────────────
+# Excluding these keeps the build context small and prevents host-installed
+# Windows binaries from leaking into the Linux container.
+**/node_modules/
+**/.next/
+**/.turbo/
+**/dist/
+**/coverage/
+
+# ── Environment files ─────────────────────────────────────────────────────────
+# Each service gets its own .env.docker injected at runtime via env_file.
+**/.env
+**/.env.local
+**/.env.*.local
+# Keep .env.docker – it IS needed (referenced by docker-compose env_file)
+**/.env.docker
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Test artefacts ────────────────────────────────────────────────────────────
+**/test/
+**/__tests__/
+**/e2e/
+load-tests/
+
+# ── Uploads (mounted as a named volume at runtime) ────────────────────────────
+apps/backend/public/uploads/

@@ -1,0 +1,149 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Compose – tshirtshop (production mode, self-signed TLS)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# ── Prerequisites before the very first `docker compose up --build` ──────────
+#
+#   1. Regenerate the TLS cert with Docker SANs (run from apps/backend/):
+#        node scripts/generate-tls-cert.mjs
+#
+#   2. After containers are up, apply the database schema:
+#        docker compose exec backend npm run db:push
+#
+#   3. (Optional) Seed the database:
+#        docker compose exec backend npm run db:seed
+#
+# ── How to access ─────────────────────────────────────────────────────────────
+#
+#   Frontend  →  https://localhost:3001   (nginx TLS → Next.js)
+#   Backend   →  https://localhost:3000   (NestJS TLS – Stripe webhooks / tools)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       ecommerenceshop
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: "gT9#qV!s4rP@"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Exposed to host so you can run `npm run db:push` / `db:seed` locally
+    ports:
+      - "5432:5432"
+    networks:
+      - tshirtshop
+    healthcheck:
+      test:         ["CMD-SHELL", "pg_isready -U postgres -d ecommerenceshop"]
+      interval:     10s
+      timeout:      5s
+      retries:      5
+      start_period: 15s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - tshirtshop
+    healthcheck:
+      test:     ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    restart: unless-stopped
+
+  # ── Migrator (one-shot schema push) ──────────────────────────────────────────
+  # Runs `drizzle-kit push` once to apply / sync the database schema.
+  # backend waits for this to complete successfully before starting.
+  # Re-run manually after schema changes:
+  #   docker compose run --rm migrator
+  migrator:
+    build:
+      context:    .
+      dockerfile: apps/backend/Dockerfile
+      target:     migrator
+    env_file:
+      - apps/backend/.env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tshirtshop
+    restart: "no"
+
+  # ── Application ─────────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context:    .
+      dockerfile: apps/backend/Dockerfile
+    env_file:
+      - apps/backend/.env.docker
+    volumes:
+      # TLS cert (read-only) – must exist before starting (run generate-tls-cert.mjs first)
+      - ./apps/backend/certs:/app/certs:ro
+      # Persistent uploads – named volume so images survive container rebuilds
+      - uploads:/app/public/uploads
+    ports:
+      # Exposed so Stripe CLI / direct API access works from the host
+      - "3000:3000"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tshirtshop
+    restart: unless-stopped
+
+  web:
+    build:
+      context:    .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Public reCAPTCHA site key – baked into the Next.js client bundle at
+        # build time (NEXT_PUBLIC_* vars must be available during `next build`)
+        NEXT_PUBLIC_RECAPTCHA_SITEKEY: "6LcLpGcsAAAAALTlJkb33AjGE4an7t8c8RN7rGfK"
+    env_file:
+      - apps/web/.env.docker
+    volumes:
+      # Backend cert so NODE_EXTRA_CA_CERTS can trust it for server-side HTTPS
+      - ./apps/backend/certs:/app/certs:ro
+    depends_on:
+      - backend
+    networks:
+      - tshirtshop
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Same cert as the backend – nginx uses it to terminate TLS for the browser
+      - ./apps/backend/certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    networks:
+      - tshirtshop
+    restart: unless-stopped
+
+  # ── Networks & Volumes ──────────────────────────────────────────────────────
+
+networks:
+  tshirtshop:
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads:

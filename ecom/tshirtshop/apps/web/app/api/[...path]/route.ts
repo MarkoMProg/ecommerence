@@ -12,11 +12,18 @@ const mkcertCaRoot = join(
 	"mkcert",
 	"rootCA.pem",
 );
+const backendCa   = join(process.cwd(), "..", "backend", "certs", "ca.pem");
+const backendCert = join(process.cwd(), "..", "backend", "certs", "cert.pem");
+const devCaPath =
+	process.env.NODE_EXTRA_CA_CERTS ||
+	(existsSync(mkcertCaRoot) ? mkcertCaRoot : null) ||
+	(existsSync(backendCa)   ? backendCa   : null) ||
+	(existsSync(backendCert) ? backendCert : null);
 
-const devCA =
-	process.env.NODE_ENV !== "production" && existsSync(mkcertCaRoot)
-		? readFileSync(mkcertCaRoot)
-		: undefined;
+// Load CA cert in all environments (dev + Docker/production).
+// In Docker: NODE_EXTRA_CA_CERTS=/app/certs/ca.pem is set via env_file;
+// in local dev: mkcert rootCA or certs/ca.pem is used.
+const customCA = devCaPath ? readFileSync(devCaPath) : undefined;
 
 function buildUpstreamUrl(request: NextRequest, path: string[]): string {
 	const baseUrl = process.env.API_URL || "https://localhost:3000";
@@ -44,7 +51,7 @@ async function proxy(request: NextRequest, path: string[]): Promise<Response> {
 				path: `${upstreamUrl.pathname}${upstreamUrl.search}`,
 				method,
 				headers: Object.fromEntries(headers.entries()),
-				...(devCA ? { ca: devCA } : {}),
+				...(customCA ? { ca: customCA } : {}),
 			},
 			(res) => {
 				const chunks: Buffer[] = [];

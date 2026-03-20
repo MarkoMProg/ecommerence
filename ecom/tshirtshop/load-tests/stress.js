@@ -45,13 +45,24 @@ export const options = {
 const TEST_EMAIL = __ENV.TEST_EMAIL || "k6-loadtest@loadtest.invalid";
 const TEST_PASSWORD = __ENV.TEST_PASSWORD || "LoadTest1!";
 
-export default function () {
+// Login once per test run (not per iteration) to avoid hitting the
+// IP-based rate limiter on the auth endpoint.
+export function setup() {
+  const token = login(TEST_EMAIL, TEST_PASSWORD);
+  if (!token) {
+    throw new Error("setup(): login failed — check test user credentials");
+  }
+  return { token };
+}
+
+export default function (data) {
+  const { token } = data;
+
   // Mix of anonymous and authenticated traffic
   const isAuthenticated = Math.random() < 0.25; // ~25% authenticated
 
   if (isAuthenticated) {
     group("stress: authenticated", () => {
-      const token = login(TEST_EMAIL, TEST_PASSWORD);
       sleep(0.3);
 
       const pid = browseProducts();

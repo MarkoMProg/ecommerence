@@ -19,10 +19,15 @@ async function trustedFetch(urlString: string, init?: RequestInit): Promise<Resp
     "mkcert",
     "rootCA.pem",
   );
-  const devCA =
-    process.env.NODE_ENV !== "production" && fs.existsSync(mkcertCaRoot)
-      ? fs.readFileSync(mkcertCaRoot)
-      : undefined;
+  const backendCa   = path.join(process.cwd(), "..", "backend", "certs", "ca.pem");
+  const backendCert = path.join(process.cwd(), "..", "backend", "certs", "cert.pem");
+  const devCaPath =
+    process.env.NODE_EXTRA_CA_CERTS ||
+    (fs.existsSync(mkcertCaRoot) ? mkcertCaRoot : null) ||
+    (fs.existsSync(backendCa)   ? backendCa   : null) ||
+    (fs.existsSync(backendCert) ? backendCert : null);
+  // Load CA in all environments – dev (mkcert/ca.pem) and Docker (NODE_EXTRA_CA_CERTS).
+  const customCA = devCaPath ? fs.readFileSync(devCaPath) : undefined;
 
   const method = init?.method || "GET";
   const headers = new Headers(init?.headers);
@@ -55,7 +60,7 @@ async function trustedFetch(urlString: string, init?: RequestInit): Promise<Resp
         path: `${url.pathname}${url.search}`,
         method,
         headers: Object.fromEntries(headers.entries()),
-        ...(devCA ? { ca: devCA } : {}),
+        ...(customCA ? { ca: customCA } : {}),
       },
       (response) => {
         const chunks: Buffer[] = [];

@@ -1,0 +1,21 @@
+# Build artefacts
+dist/
+node_modules/
+.turbo/
+
+# Environment files – passed via env_file in docker-compose
+.env
+.env.local
+.env.*.local
+
+# Uploaded product images – mounted as a named volume in compose
+public/uploads/
+
+# Test / coverage
+test/
+coverage/
+**/*.spec.ts
+**/*.e2e-spec.ts
+
+# Source maps
+**/*.map

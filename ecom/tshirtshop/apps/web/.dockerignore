@@ -1,0 +1,17 @@
+# Build artefacts
+.next/
+node_modules/
+.turbo/
+
+# Environment files – passed via env_file in docker-compose
+.env
+.env.local
+.env.*.local
+
+# Test / coverage
+__tests__/
+e2e/
+coverage/
+
+# Source maps
+**/*.map
