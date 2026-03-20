@@ -30,22 +30,29 @@ const adminFetch = async (path: string, init?: RequestInit): Promise<Response> =
 
 function normalizeAdminImageUrl(url: string): string {
   if (!url) return url;
-  if (url.startsWith("/uploads/") || url.startsWith("/products/")) return url;
+  let u = url;
+  if (u.startsWith("/products/")) {
+    u = `/uploads/products/${u.slice("/products/".length)}`;
+  }
+  if (u.startsWith("/uploads/")) return u;
 
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(u);
     const host = parsed.hostname.toLowerCase();
-    if (
-      (host === "localhost" || host === "127.0.0.1") &&
-      (parsed.pathname.startsWith("/uploads/") || parsed.pathname.startsWith("/products/"))
-    ) {
-      return `${parsed.pathname}${parsed.search}`;
+    if (host === "localhost" || host === "127.0.0.1") {
+      let p = parsed.pathname;
+      if (p.startsWith("/products/")) {
+        p = `/uploads/products/${p.slice("/products/".length)}`;
+      }
+      if (p.startsWith("/uploads/")) {
+        return `${p}${parsed.search}`;
+      }
     }
   } catch {
-    return url;
+    return u;
   }
 
-  return url;
+  return u;
 }
 
 function normalizeAdminProduct(product: AdminProduct): AdminProduct {

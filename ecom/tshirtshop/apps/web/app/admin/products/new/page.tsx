@@ -115,13 +115,21 @@ function ImageManager({
   const moveUp = (index: number) => {
     if (index <= 0) return;
     const next = [...images];
-    [next[index - 1], next[index]] = [next[index], next[index - 1]];
+    const cur = next[index];
+    const above = next[index - 1];
+    if (!cur || !above) return;
+    next[index - 1] = cur;
+    next[index] = above;
     onChange(next);
   };
   const moveDown = (index: number) => {
     if (index >= images.length - 1) return;
     const next = [...images];
-    [next[index], next[index + 1]] = [next[index + 1], next[index]];
+    const cur = next[index];
+    const below = next[index + 1];
+    if (!cur || !below) return;
+    next[index] = below;
+    next[index + 1] = cur;
     onChange(next);
   };
 
@@ -282,7 +290,7 @@ export default function AdminNewProductPage() {
     const invalidImage = validImages.find((img) => !isValidImageUrl(img.url.trim()));
     if (invalidImage)
       return setError(
-        `Invalid image URL: ${invalidImage.url}. Use https URLs, /uploads/…, or /products/… with a valid image extension.`,
+        `Invalid image URL: ${invalidImage.url}. Use https URLs or /uploads/… (e.g. /uploads/products/…) with a valid image extension.`,
       );
     setSubmitting(true);
     const result = await adminCreateProduct({

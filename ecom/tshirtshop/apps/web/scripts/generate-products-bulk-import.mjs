@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Build products-bulk-import.json from public/products/{tshirts,misc,Posters}/<product name>/*.
- * Each immediate subfolder name becomes the product name; all image files in that folder are attached.
+ * Build products-bulk-import.json from apps/backend/public/uploads/products/{tshirts,misc,Posters}/<product name>/*.
+ * Image URLs are /uploads/products/... (served by the Nest static /uploads mount).
  *
- * Run from repo: npm run generate:products-bulk --workspace=web
+ * Run: npm run generate:products-bulk --workspace=web
  *
  * categoryId values match apps/backend/scripts/seed.mjs (run db:seed or ensure same IDs exist).
  */
@@ -13,8 +13,17 @@ import { fileURLToPath } from 'url';
 import { buildRichDescription } from '../../../apps/backend/scripts/build-product-description.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const webRoot = path.resolve(__dirname, '..');
-const productsRoot = path.join(webRoot, 'public', 'products');
+const productsRoot = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'apps',
+  'backend',
+  'public',
+  'uploads',
+  'products',
+);
 
 /** Top-level folder under public/products → seed category id */
 const CATEGORY_MAP = {
@@ -56,7 +65,7 @@ for (const [folder, meta] of Object.entries(CATEGORY_MAP)) {
     });
     files.sort(sortImageFiles);
     const images = files.map((f) => ({
-      url: `/products/${folder}/${productName}/${f}`.replace(/\\/g, '/'),
+      url: `/uploads/products/${folder}/${productName}/${f}`.replace(/\\/g, '/'),
     }));
     const row = {
       name: productName,

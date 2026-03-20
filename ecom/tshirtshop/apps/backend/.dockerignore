@@ -8,8 +8,9 @@ node_modules/
 .env.local
 .env.*.local
 
-# Uploaded product images – mounted as a named volume in compose
-public/uploads/
+# NOTE: public/uploads/ is included in the build so catalog assets under uploads/products/
+# ship with the image. Compose may still mount a named volume over /app/public/uploads —
+# then seed the volume or adjust compose if those files must appear at runtime.
 
 # Test / coverage
 test/

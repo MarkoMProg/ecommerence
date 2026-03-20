@@ -208,22 +208,30 @@ function parseSizeOptions(raw: string | null | undefined): string[] | null {
 function normalizeImageUrl(url: string | undefined): string {
   if (!url) return '';
 
-  if (url.startsWith('/uploads/') || url.startsWith('/products/')) return url;
-
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (
-      (host === 'localhost' || host === '127.0.0.1') &&
-      (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/products/'))
-    ) {
-      return `${parsed.pathname}${parsed.search}`;
-    }
-  } catch {
-    return url;
+  let u = url;
+  if (u.startsWith('/products/')) {
+    u = `/uploads/products/${u.slice('/products/'.length)}`;
   }
 
-  return url;
+  if (u.startsWith('/uploads/')) return u;
+
+  try {
+    const parsed = new URL(u);
+    const host = parsed.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1') {
+      let p = parsed.pathname;
+      if (p.startsWith('/products/')) {
+        p = `/uploads/products/${p.slice('/products/'.length)}`;
+      }
+      if (p.startsWith('/uploads/')) {
+        return `${p}${parsed.search}`;
+      }
+    }
+  } catch {
+    return u;
+  }
+
+  return u;
 }
 
 /** Maps API product shape to ProductDisplay. Exported for reuse (e.g. cart recommendations). */
