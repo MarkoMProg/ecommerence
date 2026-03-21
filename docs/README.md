@@ -13,3 +13,7 @@ Structure:
 07 DevOps
 08 Compliance
 09 Glossary
+
+## Rubric
+
+- **[RUBRIC-CHECKLIST.md](RUBRIC-CHECKLIST.md)** — Course requirements vs. current project (`task.md` & `testing.md`), with checkboxes and gaps.

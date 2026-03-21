@@ -7,7 +7,11 @@
     "NEXT_PUBLIC_APP_URL",
     "NODE_ENV",
     "LOCALAPPDATA",
-    "NODE_EXTRA_CA_CERTS"
+    "NODE_EXTRA_CA_CERTS",
+    "PLAYWRIGHT_BASE_URL",
+    "PLAYWRIGHT_SKIP_WEBSERVER",
+    "E2E_USER_EMAIL",
+    "E2E_USER_PASSWORD"
   ],
   "tasks": {
     "build": {
@@ -19,6 +23,9 @@
       "dependsOn": ["^lint"]
     },
     "test": {},
+    "test:e2e": {
+      "cache": false
+    },
     "check-types": {
       "dependsOn": ["^check-types"]
     },
