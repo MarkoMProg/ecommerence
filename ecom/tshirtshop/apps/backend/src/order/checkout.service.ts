@@ -19,6 +19,7 @@ import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { applyCoupon } from './coupons';
 import type { ShippingAddressInput } from './dto/checkout.dto';
+import { DeliveryService } from './delivery.service';
 
 export interface OrderItemDto {
   id: string;
@@ -46,11 +47,13 @@ export interface OrderDto {
   totalCents: number;
   items: OrderItemDto[];
   createdAt: Date;
+  /** Delivery method chosen at checkout (audit). */
+  deliveryOptionId: string | null;
 }
 
-/** Free shipping threshold: $75 */
+/** @deprecated Use shop delivery config via DeliveryService */
 export const FREE_SHIPPING_THRESHOLD_CENTS = 7500;
-/** Default shipping cost when under threshold (cents) */
+/** @deprecated Use delivery_option table via DeliveryService */
 export const DEFAULT_SHIPPING_CENTS = 599;
 
 export interface OrderSummaryDto {
@@ -60,6 +63,13 @@ export interface OrderSummaryDto {
   itemCount: number;
   freeShippingThresholdCents: number;
   couponApplied?: boolean;
+  deliveryOptions: Array<{
+    id: string;
+    label: string;
+    priceCents: number;
+    isDefault?: boolean;
+  }>;
+  selectedDeliveryOptionId: string | null;
 }
 
 @Injectable()
@@ -69,6 +79,7 @@ export class CheckoutService {
     private readonly db: NodePgDatabase,
     private readonly cartService: CartService,
     private readonly inventoryService: InventoryService,
+    private readonly deliveryService: DeliveryService,
   ) {}
 
   /**
@@ -77,25 +88,34 @@ export class CheckoutService {
   async getOrderSummary(
     cartId: string,
     couponCode?: string | null,
+    deliveryOptionId?: string | null,
   ): Promise<OrderSummaryDto | null> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData || !cartData.items.length) return null;
 
+    const config = await this.deliveryService.getConfig();
+    const allOptions = await this.deliveryService.listAllOptions();
     const coupon = couponCode ? applyCoupon(couponCode) : null;
-    const freeShippingByCoupon = coupon?.freeShipping ?? false;
-    const shippingCents =
-      freeShippingByCoupon ||
-      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
-        ? 0
-        : DEFAULT_SHIPPING_CENTS;
+    const { shippingCents, selectedOptionId } =
+      this.deliveryService.resolveShipping(
+        cartData.totalCents,
+        couponCode,
+        deliveryOptionId,
+        config,
+        allOptions,
+      );
+    const deliveryOptions =
+      await this.deliveryService.listActiveOptionsPublic();
 
     return {
       subtotalCents: cartData.totalCents,
       shippingCents,
       totalCents: cartData.totalCents + shippingCents,
       itemCount: cartData.itemCount,
-      freeShippingThresholdCents: FREE_SHIPPING_THRESHOLD_CENTS,
+      freeShippingThresholdCents: config.freeShippingThresholdCents,
       couponApplied: coupon ? true : false,
+      deliveryOptions,
+      selectedDeliveryOptionId: selectedOptionId,
     };
   }
 
@@ -109,6 +129,7 @@ export class CheckoutService {
     shippingAddress: ShippingAddressInput,
     userId?: string | null,
     couponCode?: string | null,
+    deliveryOptionId?: string | null,
   ): Promise<OrderDto> {
     const cartData = await this.cartService.getCartById(cartId);
     if (!cartData) {
@@ -147,13 +168,16 @@ export class CheckoutService {
     const now = new Date();
     const orderId = randomUUID();
 
-    const coupon = couponCode ? applyCoupon(couponCode) : null;
-    const freeShippingByCoupon = coupon?.freeShipping ?? false;
-    const shippingCents =
-      freeShippingByCoupon ||
-      cartData.totalCents >= FREE_SHIPPING_THRESHOLD_CENTS
-        ? 0
-        : DEFAULT_SHIPPING_CENTS;
+    const config = await this.deliveryService.getConfig();
+    const allOptions = await this.deliveryService.listAllOptions();
+    const { shippingCents, selectedOptionId } =
+      this.deliveryService.resolveShipping(
+        cartData.totalCents,
+        couponCode,
+        deliveryOptionId,
+        config,
+        allOptions,
+      );
     const totalCents = cartData.totalCents + shippingCents;
 
     await this.db.insert(order).values({
@@ -180,6 +204,7 @@ export class CheckoutService {
           ? String(shippingAddress.phone).trim()
           : null,
       ),
+      deliveryOptionId: selectedOptionId,
       subtotalCents: cartData.totalCents,
       shippingCents,
       totalCents,
@@ -225,6 +250,7 @@ export class CheckoutService {
       subtotalCents: o.subtotalCents,
       shippingCents: o.shippingCents,
       totalCents: o.totalCents,
+      deliveryOptionId: o.deliveryOptionId ?? null,
       items: items.map((i) => ({
         id: i.id,
         productId: i.productId,

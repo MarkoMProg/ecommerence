@@ -4,6 +4,7 @@ import {
   Delete,
   Patch,
   Post,
+  Put,
   Param,
   Body,
   Query,
@@ -27,6 +28,7 @@ import {
 } from '../catalog/bulk-upload.service';
 import { ReviewService } from '../review/review.service';
 import { AdminUsersService } from './admin-users.service';
+import { DeliveryService } from '../order/delivery.service';
 
 @Controller('api/v1/admin')
 @UseGuards(AdminGuard)
@@ -37,11 +39,87 @@ export class AdminController {
     private readonly bulkUploadService: BulkUploadService,
     private readonly reviewService: ReviewService,
     private readonly adminUsersService: AdminUsersService,
+    private readonly deliveryService: DeliveryService,
   ) {}
 
   @Get('dashboard')
   getDashboard() {
     return { success: true, data: { ok: true }, message: 'Admin access' };
+  }
+
+  // ─── Delivery / shipping (admin-configurable) ───────────────────────────
+
+  @Get('delivery')
+  async getDeliverySettings() {
+    await this.deliveryService.ensureDefaults();
+    const config = await this.deliveryService.getConfig();
+    const options = await this.deliveryService.listAllOptions();
+    return {
+      success: true,
+      data: {
+        freeShippingThresholdCents: config.freeShippingThresholdCents,
+        options,
+      },
+      message: 'Delivery settings',
+    };
+  }
+
+  @Put('delivery')
+  async putDeliverySettings(
+    @Body()
+    body: {
+      freeShippingThresholdCents?: number;
+      options?: Array<{
+        id: string;
+        label: string;
+        priceCents: number;
+        sortOrder: number;
+        active: boolean;
+        isDefault: boolean;
+      }>;
+    },
+  ) {
+    if (
+      body?.freeShippingThresholdCents == null ||
+      !Number.isFinite(body.freeShippingThresholdCents)
+    ) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'INVALID_THRESHOLD',
+          message: 'freeShippingThresholdCents is required (cents)',
+        },
+      });
+    }
+    if (!Array.isArray(body.options) || body.options.length === 0) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'OPTIONS_REQUIRED',
+          message: 'options array is required with at least one entry',
+        },
+      });
+    }
+    try {
+      await this.deliveryService.updateConfig(body.freeShippingThresholdCents);
+      await this.deliveryService.replaceOptions(body.options);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Invalid delivery settings';
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'DELIVERY_UPDATE_FAILED', message: msg },
+      });
+    }
+    const config = await this.deliveryService.getConfig();
+    const options = await this.deliveryService.listAllOptions();
+    return {
+      success: true,
+      data: {
+        freeShippingThresholdCents: config.freeShippingThresholdCents,
+        options,
+      },
+      message: 'Delivery settings updated',
+    };
   }
 
   // ─── Users (decrypted) ──────────────────────────────────────────────────

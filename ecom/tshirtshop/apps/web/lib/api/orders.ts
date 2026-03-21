@@ -36,6 +36,7 @@ export interface Order {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  deliveryOptionId?: string | null;
   /** Stripe Checkout Session ID when paid via Stripe (PAY-004). */
   stripeSessionId?: string | null;
   /** When order was marked paid (PAY-004). */

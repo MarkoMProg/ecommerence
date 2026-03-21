@@ -10,6 +10,7 @@ import {
   Package,
   FolderTree,
   Star,
+  Truck,
   Lock,
   Menu,
   X,
@@ -26,6 +27,7 @@ const adminNavLinks = [
   { href: "/admin/products", label: "Products", Icon: Package },
   { href: "/admin/categories", label: "Categories", Icon: FolderTree },
   { href: "/admin/reviews", label: "Reviews", Icon: Star },
+  { href: "/admin/delivery", label: "Delivery", Icon: Truck },
 ];
 
 export default function AdminLayout({

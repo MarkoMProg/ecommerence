@@ -8,6 +8,7 @@ import { CatalogService } from '../../catalog/catalog.service';
 import { BulkUploadService } from '../../catalog/bulk-upload.service';
 import { ReviewService } from '../../review/review.service';
 import { AdminUsersService } from '../admin-users.service';
+import { DeliveryService } from '../../order/delivery.service';
 
 /**
  * AdminController integration tests.
@@ -40,6 +41,7 @@ describe('AdminController', () => {
     subtotalCents: 2999,
     shippingCents: 500,
     totalCents: 3499,
+    deliveryOptionId: 'standard',
     stripeSessionId: null,
     paidAt: null,
     items: [
@@ -91,6 +93,27 @@ describe('AdminController', () => {
               .fn()
               .mockResolvedValue({ data: [], total: 0 }),
             adminDelete: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: DeliveryService,
+          useValue: {
+            ensureDefaults: jest.fn().mockResolvedValue(undefined),
+            getConfig: jest
+              .fn()
+              .mockResolvedValue({ freeShippingThresholdCents: 7500 }),
+            listAllOptions: jest.fn().mockResolvedValue([
+              {
+                id: 'standard',
+                label: 'Standard',
+                priceCents: 599,
+                sortOrder: 0,
+                active: true,
+                isDefault: true,
+              },
+            ]),
+            updateConfig: jest.fn().mockResolvedValue(undefined),
+            replaceOptions: jest.fn().mockResolvedValue(undefined),
           },
         },
         {

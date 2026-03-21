@@ -34,6 +34,7 @@ function buildEncryptedOrder(
     shippingPostalCode: encrypt('78701'),
     shippingCountry: encrypt('US'),
     shippingPhone: encryptNullable('+1 555 000 0000'),
+    deliveryOptionId: 'standard',
     subtotalCents: 5000,
     shippingCents: 599,
     totalCents: 5599,

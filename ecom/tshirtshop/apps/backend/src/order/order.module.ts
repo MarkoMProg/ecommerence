@@ -6,6 +6,7 @@ import { CartModule } from '../cart/cart.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { EmailModule } from '../email/email.module';
 import { CheckoutService } from './checkout.service';
+import { DeliveryService } from './delivery.service';
 import { CheckoutController } from './checkout.controller';
 import { OrderService } from './order.service';
 import { OrdersController } from './orders.controller';
@@ -28,10 +29,11 @@ import {
   controllers: [CheckoutController, OrdersController, StripeWebhookController],
   providers: [
     CheckoutService,
+    DeliveryService,
     OrderService,
     StripeService,
     PaymentEventsProcessor,
   ],
-  exports: [CheckoutService, OrderService],
+  exports: [CheckoutService, DeliveryService, OrderService],
 })
 export class OrderModule {}

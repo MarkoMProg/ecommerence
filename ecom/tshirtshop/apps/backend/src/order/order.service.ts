@@ -54,6 +54,8 @@ export interface OrderDto {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  /** Delivery method id at checkout (audit). */
+  deliveryOptionId: string | null;
   /** Stripe Checkout Session ID when paid via Stripe (PAY-004). */
   stripeSessionId: string | null;
   /** When order was marked paid (PAY-004). */
@@ -92,6 +94,7 @@ function toOrderDto(o: OrderRow, items: OrderItemRow[]): OrderDto {
     subtotalCents: o.subtotalCents,
     shippingCents: o.shippingCents,
     totalCents: o.totalCents,
+    deliveryOptionId: o.deliveryOptionId ?? null,
     stripeSessionId: o.stripeSessionId ?? null,
     paidAt: o.paidAt ?? null,
     stripeRefundId: o.stripeRefundId ?? null,

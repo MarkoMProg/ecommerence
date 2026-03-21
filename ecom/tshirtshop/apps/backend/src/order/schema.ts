@@ -1,5 +1,11 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  integer,
+  timestamp,
+  boolean,
+} from 'drizzle-orm/pg-core';
 import { user } from '../auth/schema';
 import { product } from '../catalog/schema';
 
@@ -22,6 +28,32 @@ export const orderStatusEnum = [
 ] as const;
 export type OrderStatus = (typeof orderStatusEnum)[number];
 
+/** Singleton row: free-shipping threshold (subtotal in cents). */
+export const shopDeliveryConfig = pgTable('shop_delivery_config', {
+  id: text('id').primaryKey(),
+  freeShippingThresholdCents: integer('free_shipping_threshold_cents')
+    .notNull()
+    .default(7500),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+/** Admin-configurable delivery methods (standard, express, etc.). */
+export const deliveryOption = pgTable('delivery_option', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  active: boolean('active').notNull().default(true),
+  isDefault: boolean('is_default').notNull().default(false),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
 /**
  * Placed order. Created from cart at checkout.
  * Shipping address stored as columns for validation and indexing (CHK-002).
@@ -40,6 +72,8 @@ export const order = pgTable('order', {
   shippingPostalCode: text('shipping_postal_code').notNull(),
   shippingCountry: text('shipping_country').notNull(),
   shippingPhone: text('shipping_phone'),
+  /** Selected delivery method at checkout (audit); shipping_cents is the charged amount. */
+  deliveryOptionId: text('delivery_option_id'),
   subtotalCents: integer('subtotal_cents').notNull(),
   shippingCents: integer('shipping_cents').notNull().default(0),
   totalCents: integer('total_cents').notNull(),

@@ -120,6 +120,47 @@ export async function fetchAdminUser(id: string): Promise<AdminUserDetail | null
   }
 }
 
+export interface AdminDeliveryOption {
+  id: string;
+  label: string;
+  priceCents: number;
+  sortOrder: number;
+  active: boolean;
+  isDefault: boolean;
+}
+
+export interface AdminDeliverySettings {
+  freeShippingThresholdCents: number;
+  options: AdminDeliveryOption[];
+}
+
+export async function fetchAdminDeliverySettings(): Promise<AdminDeliverySettings | null> {
+  try {
+    const res = await adminFetch("/api/v1/admin/delivery");
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: AdminDeliverySettings };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function putAdminDeliverySettings(
+  data: AdminDeliverySettings
+): Promise<AdminDeliverySettings | null> {
+  try {
+    const res = await adminFetch("/api/v1/admin/delivery", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success: boolean; data: AdminDeliverySettings };
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface AdminOrder {
   id: string;
   userId: string | null;
@@ -135,6 +176,7 @@ export interface AdminOrder {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  deliveryOptionId?: string | null;
   /** Stripe Checkout Session ID when paid via Stripe (PAY-004). */
   stripeSessionId?: string | null;
   /** When order was marked paid (PAY-004). */

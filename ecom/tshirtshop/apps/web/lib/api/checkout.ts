@@ -35,10 +35,41 @@ export interface Order {
   subtotalCents: number;
   shippingCents: number;
   totalCents: number;
+  deliveryOptionId?: string | null;
   stripeSessionId?: string | null;
   paidAt?: string | null;
   items: OrderItem[];
   createdAt: string;
+}
+
+export interface CheckoutDeliveryOption {
+  id: string;
+  label: string;
+  priceCents: number;
+  isDefault: boolean;
+}
+
+export interface CheckoutDeliveryResponse {
+  freeShippingThresholdCents: number;
+  options: CheckoutDeliveryOption[];
+}
+
+/** Public: admin-configured free-shipping threshold and delivery methods. */
+export async function fetchCheckoutDelivery(): Promise<CheckoutDeliveryResponse | null> {
+  try {
+    const res = await fetch(`${apiBase()}/api/v1/checkout/delivery`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      success: boolean;
+      data: CheckoutDeliveryResponse;
+    };
+    return json.success && json.data ? json.data : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface ShippingAddress {
@@ -61,13 +92,19 @@ export interface CreateOrderResponse {
 export async function createOrder(
   shippingAddress: ShippingAddress,
   cartId?: string | null,
-  couponCode?: string | null
+  couponCode?: string | null,
+  deliveryOptionId?: string | null
 ): Promise<CreateOrderResponse> {
   const id = cartId ?? getCartIdClient();
   if (!id?.trim()) throw new Error("No cart");
 
-  const body: { shippingAddress: ShippingAddress; couponCode?: string } = { shippingAddress };
+  const body: {
+    shippingAddress: ShippingAddress;
+    couponCode?: string;
+    deliveryOptionId?: string;
+  } = { shippingAddress };
   if (couponCode?.trim()) body.couponCode = couponCode.trim();
+  if (deliveryOptionId?.trim()) body.deliveryOptionId = deliveryOptionId.trim();
 
   const res = await fetch(`${apiBase()}/api/v1/checkout`, {
     method: "POST",

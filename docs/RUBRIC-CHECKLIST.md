@@ -153,7 +153,7 @@
 
 - [x] **2FA required for admin** (guard enforces)
 - [x] Product CRUD + categories + orders + refunds + bulk JSON/CSV
-- [ ] **Configurable “delivery options”** — confirm vs fixed shipping; implement if rubric strict
+- [x] **Configurable “delivery options”** — admin [`/admin/delivery`](../ecom/tshirtshop/apps/web/app/admin/delivery/page.tsx); API `GET/PUT /api/v1/admin/delivery`; checkout reads `GET /api/v1/checkout/delivery` + `deliveryOptionId` on order
 
 ### Storefront pages (`testing.md` list)
 

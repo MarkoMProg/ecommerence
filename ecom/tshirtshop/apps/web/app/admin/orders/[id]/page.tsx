@@ -215,6 +215,12 @@ export default function AdminOrderDetailPage() {
               <span>Shipping</span>
               <span>${(order.shippingCents / 100).toFixed(2)}</span>
             </div>
+            {order.deliveryOptionId && (
+              <div className="flex justify-between text-xs text-white/50">
+                <span>Delivery method</span>
+                <span className="font-mono">{order.deliveryOptionId}</span>
+              </div>
+            )}
           </div>
           <div className="flex justify-between border-t border-white/10 pt-4 text-lg font-medium text-white">
             <span>Total</span>

@@ -6,7 +6,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Cart } from "@/lib/api/cart";
 import { fetchCartClient } from "@/lib/api/cart";
-import { createOrder, InsufficientStockError, notifyPaymentCanceled } from "@/lib/api/checkout";
+import {
+  createOrder,
+  fetchCheckoutDelivery,
+  InsufficientStockError,
+  notifyPaymentCanceled,
+  type CheckoutDeliveryResponse,
+} from "@/lib/api/checkout";
 import { fetchMyAddresses } from "@/lib/api/addresses";
 import type { SavedAddress } from "@/lib/api/addresses";
 import { fetchMyPaymentMethods } from "@/lib/api/billing";
@@ -87,8 +93,9 @@ const initialAddress: ShippingAddress = {
   phone: "",
 };
 
-const FREE_SHIPPING_CENTS = 7500;
-const DEFAULT_SHIPPING_CENTS = 599;
+/** Used only if /api/v1/checkout/delivery fails */
+const FALLBACK_FREE_SHIPPING_THRESHOLD_CENTS = 7500;
+const FALLBACK_SHIPPING_CENTS = 599;
 
 /** FRESHP100 = free shipping. Case-insensitive. */
 function isFreeShippingCoupon(code: string): boolean {
@@ -140,6 +147,22 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("manual");
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<SavedPaymentMethod | null>(null);
+  const [deliveryConfig, setDeliveryConfig] = useState<CheckoutDeliveryResponse | null>(null);
+  const [selectedDeliveryOptionId, setSelectedDeliveryOptionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCheckoutDelivery()
+      .then((d) => {
+        if (d?.options?.length) {
+          setDeliveryConfig(d);
+          const def = d.options.find((o) => o.isDefault) ?? d.options[0];
+          setSelectedDeliveryOptionId(def?.id ?? null);
+        }
+      })
+      .catch(() => {
+        /* fallback constants below */
+      });
+  }, []);
 
   useEffect(() => {
     if (canceled && orderId) {
@@ -252,8 +275,22 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
   }
 
   const freeShippingByCoupon = appliedCoupon ? isFreeShippingCoupon(appliedCoupon) : false;
-  const shippingCents =
-    freeShippingByCoupon || effectiveCart.totalCents >= FREE_SHIPPING_CENTS ? 0 : DEFAULT_SHIPPING_CENTS;
+  const freeShippingThresholdCents =
+    deliveryConfig?.freeShippingThresholdCents ?? FALLBACK_FREE_SHIPPING_THRESHOLD_CENTS;
+  const options = deliveryConfig?.options ?? [];
+  let shippingCents = 0;
+  if (freeShippingByCoupon || effectiveCart.totalCents >= freeShippingThresholdCents) {
+    shippingCents = 0;
+  } else if (options.length > 0) {
+    const opt =
+      options.find((o) => o.id === selectedDeliveryOptionId) ??
+      options.find((o) => o.isDefault) ??
+      options[0];
+    shippingCents = opt?.priceCents ?? FALLBACK_SHIPPING_CENTS;
+  } else {
+    shippingCents =
+      effectiveCart.totalCents >= freeShippingThresholdCents ? 0 : FALLBACK_SHIPPING_CENTS;
+  }
   const totalCents = effectiveCart.totalCents + shippingCents;
   const totalDollars = (totalCents / 100).toFixed(2);
   const subtotalDollars = (effectiveCart.totalCents / 100).toFixed(2);
@@ -285,7 +322,8 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
           phone: address.phone.trim() || undefined,
         },
         effectiveCart.id,
-        appliedCoupon
+        appliedCoupon,
+        selectedDeliveryOptionId
       );
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -605,6 +643,32 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
               <p className="mt-1 text-xs text-[#4ADE80]">Free shipping applied</p>
             )}
           </div>
+          {options.length > 0 &&
+            !freeShippingByCoupon &&
+            effectiveCart.totalCents < freeShippingThresholdCents && (
+              <div className="mb-6">
+                <p className="mb-2 text-xs uppercase tracking-widest text-white/60">
+                  Delivery
+                </p>
+                <ul className="space-y-2">
+                  {options.map((opt) => (
+                    <li key={opt.id}>
+                      <label className="flex cursor-pointer items-center gap-3 rounded-md border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white/90 has-[:checked]:border-[#FF4D00]/50 has-[:checked]:bg-[#FF4D00]/10">
+                        <input
+                          type="radio"
+                          name="delivery-option"
+                          className="size-4 accent-[#FF4D00]"
+                          checked={selectedDeliveryOptionId === opt.id}
+                          onChange={() => setSelectedDeliveryOptionId(opt.id)}
+                        />
+                        <span className="flex-1">{opt.label}</span>
+                        <span className="text-[#E6C068]">${(opt.priceCents / 100).toFixed(2)}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           <div className="mb-6 space-y-2">
             <div className="flex justify-between text-sm text-white/80">
               <span>Subtotal</span>

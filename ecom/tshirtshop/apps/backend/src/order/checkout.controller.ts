@@ -22,6 +22,7 @@ import { DATABASE_CONNECTION } from '../database/database-connection';
 import { user as authUserTable } from '../auth/schema';
 import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { CheckoutService } from './checkout.service';
+import { DeliveryService } from './delivery.service';
 import { validateShippingAddress } from './dto/checkout.dto';
 import { CartService } from '../cart/cart.service';
 import { StripeService } from './stripe.service';
@@ -36,10 +37,29 @@ export class CheckoutController {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase,
     private readonly checkoutService: CheckoutService,
+    private readonly deliveryService: DeliveryService,
     private readonly cartService: CartService,
     private readonly stripeService: StripeService,
     private readonly orderService: OrderService,
   ) {}
+
+  /**
+   * Public: admin-configured free-shipping threshold and active delivery options (no cart required).
+   */
+  @Get('delivery')
+  async getDelivery() {
+    await this.deliveryService.ensureDefaults();
+    const config = await this.deliveryService.getConfig();
+    const options = await this.deliveryService.listActiveOptionsPublic();
+    return {
+      success: true,
+      data: {
+        freeShippingThresholdCents: config.freeShippingThresholdCents,
+        options,
+      },
+      message: 'Delivery settings',
+    };
+  }
 
   /**
    * Get order summary for cart (CHK-003). Uses user cart when authenticated.
@@ -49,6 +69,7 @@ export class CheckoutController {
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
     @Query('coupon') couponCode: string | undefined,
+    @Query('deliveryOptionId') deliveryOptionId: string | undefined,
   ) {
     const user = req.user;
     let cartId = cartIdHeader?.trim();
@@ -66,6 +87,7 @@ export class CheckoutController {
     const summary = await this.checkoutService.getOrderSummary(
       cartId,
       couponCode?.trim() || null,
+      deliveryOptionId?.trim() || null,
     );
     return {
       success: true,
@@ -82,7 +104,12 @@ export class CheckoutController {
   async createOrder(
     @Req() req: Request,
     @Headers('x-cart-id') cartIdHeader: string | undefined,
-    @Body() body: { shippingAddress?: unknown; couponCode?: string },
+    @Body()
+    body: {
+      shippingAddress?: unknown;
+      couponCode?: string;
+      deliveryOptionId?: string;
+    },
   ) {
     const user = req.user;
     let cartId = cartIdHeader?.trim();
@@ -114,6 +141,7 @@ export class CheckoutController {
 
     const shippingAddress = body.shippingAddress as Record<string, string>;
     const couponCode = body.couponCode?.trim() || null;
+    const deliveryOptionId = body.deliveryOptionId?.trim() || null;
     const order = await this.checkoutService.createOrderFromCart(
       cartId.trim(),
       {
@@ -128,6 +156,7 @@ export class CheckoutController {
       },
       user?.id ?? null,
       couponCode,
+      deliveryOptionId,
     );
 
     // Look up Stripe customer ID so saved payment methods appear at checkout (BILL-001)
