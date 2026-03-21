@@ -37,7 +37,6 @@ function blindSecret(): string {
   return _blindSecret;
 }
 
-
 export function encrypt(value: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key(), iv);
@@ -48,7 +47,6 @@ export function encrypt(value: string): string {
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, tag, encrypted]).toString('base64');
 }
-
 
 export function decrypt(value: string): string {
   const buf = Buffer.from(value, 'base64');
@@ -61,7 +59,6 @@ export function decrypt(value: string): string {
     'utf8',
   );
 }
-
 
 export function blindIndex(value: string): string {
   return createHmac('sha256', blindSecret())

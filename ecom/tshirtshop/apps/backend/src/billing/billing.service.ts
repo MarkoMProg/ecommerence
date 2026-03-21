@@ -69,7 +69,6 @@ export class BillingService {
     return u?.stripeCustomerId ?? null;
   }
 
-
   async getOrCreateCustomer(
     userId: string,
     email: string,

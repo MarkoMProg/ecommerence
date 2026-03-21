@@ -39,9 +39,19 @@ const LEGACY_CATEGORY_FOLDER: Record<string, string> = {
   '5': 'Posters',
 };
 
+function stripUnsafeFolderChars(s: string): string {
+  return [...s]
+    .filter((ch) => {
+      const c = ch.codePointAt(0)!;
+      if (c < 32 || c === 127) return false;
+      return !'<>:"/\\|?*'.includes(ch);
+    })
+    .join('');
+}
+
 function sanitizeProductFolderName(raw: string): string {
   let s = raw.replace(/\s+/g, ' ').trim();
-  s = s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '');
+  s = stripUnsafeFolderChars(s);
   s = s.replace(/\s+/g, ' ').trim();
   s = s.replace(/^\.+|\.+$/g, '').trim();
   if (s.length > 120) s = s.slice(0, 120).trim();
@@ -117,7 +127,8 @@ export class UploadController {
     }
 
     const body = req.body as Record<string, string | undefined>;
-    const categoryId = typeof body?.categoryId === 'string' ? body.categoryId.trim() : '';
+    const categoryId =
+      typeof body?.categoryId === 'string' ? body.categoryId.trim() : '';
     const productNameRaw =
       typeof body?.productName === 'string' ? body.productName : '';
 

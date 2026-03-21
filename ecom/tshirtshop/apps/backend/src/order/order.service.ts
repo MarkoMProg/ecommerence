@@ -616,10 +616,7 @@ export class OrderService {
           order.stripeSessionId,
         );
         if (guestEmail) {
-          await this.emailService.sendOrderConfirmationEmail(
-            order,
-            guestEmail,
-          );
+          await this.emailService.sendOrderConfirmationEmail(order, guestEmail);
         }
       }
     } catch (err) {

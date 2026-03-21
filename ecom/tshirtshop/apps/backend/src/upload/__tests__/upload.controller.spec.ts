@@ -93,7 +93,10 @@ describe('UploadController', () => {
 
   describe('POST /api/v1/uploads', () => {
     it('returns success:true with a hosted url under /uploads/products/...', async () => {
-      const result = await controller.uploadImage(mockFile('abc123.jpg'), mockReq());
+      const result = await controller.uploadImage(
+        mockFile('abc123.jpg'),
+        mockReq(),
+      );
       expect(result.success).toBe(true);
       expect(result.data.url).toMatch(
         /^http:\/\/localhost:3000\/uploads\/products\/tshirts\/Test%20Product\/[0-9a-f-]+\.jpg$/,
@@ -162,7 +165,10 @@ describe('UploadController', () => {
       await expect(
         controller.uploadImage(
           mockFile(),
-          mockReq('localhost:3000', 'http', { categoryId: '1', productName: '  ' }),
+          mockReq('localhost:3000', 'http', {
+            categoryId: '1',
+            productName: '  ',
+          }),
         ),
       ).rejects.toThrow(/productName/i);
     });

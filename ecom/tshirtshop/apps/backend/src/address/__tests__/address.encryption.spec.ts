@@ -53,7 +53,7 @@ function buildEncryptedRow(
  * and returns pre-configured rows for selects.
  */
 
-function buildMockDb(selectRows: Record<string, unknown>[] = []) {
+function _buildMockDb(selectRows: Record<string, unknown>[] = []) {
   const insertedValues: Record<string, unknown>[] = [];
   const updatedValues: Record<string, unknown>[] = [];
 

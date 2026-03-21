@@ -21,7 +21,6 @@ import * as authSchema from './schema';
     {
       provide: BETTER_AUTH_INSTANCE,
       useFactory: (database: NodePgDatabase, configService: ConfigService) => {
-
         const blindSecret = configService.get<string>('BLIND_INDEX_SECRET');
         const encKey = configService.get<string>('ENCRYPTION_KEY');
         if (!blindSecret) {
