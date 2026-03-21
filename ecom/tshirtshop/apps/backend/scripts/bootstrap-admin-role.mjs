@@ -4,7 +4,7 @@
  * Run: npm run db:bootstrap-admin (from apps/backend)
  *
  * Sets role='admin' for users whose email is in ADMIN_EMAILS.
- * Idempotent: safe to run multiple times.
+ *  safe to run multiple times.
  */
 import { config } from 'dotenv';
 import { resolve, dirname } from 'path';
