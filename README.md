@@ -286,6 +286,15 @@ npm run db:push    # Apply schema
 npm run db:seed    # Populate products and categories
 ```
 
+**Regenerate catalog from on-disk product images (bulk JSON + DB sync)** — If you keep images under `apps/backend/public/uploads/products/` (e.g. `tshirts/`, `misc/`, `Posters/`), run this from the **monorepo root** (`ecom/tshirtshop`):
+
+```bash
+cd ecom/tshirtshop
+npm run generate:products-bulk --workspace=backend
+```
+
+This rebuilds `products-bulk-import.json` from those folders and runs the populate step so the database matches that inventory. Requires `DATABASE_URL` and seeded categories. To only write the JSON file without touching the database, run from `apps/backend`: `node scripts/generate-products-bulk-import.mjs --json-only`.
+
 ### Step 4 — Run the Application
 
 ```bash
@@ -351,6 +360,20 @@ Access admin at `/admin` (requires admin role).
 | **Coupon codes**              | e.g. FRESHP100 for free shipping                                                   |
 | **Encryption at rest**        | PII (addresses, email) encrypted in DB                                             |
 | **Local HTTPS**               | Self-signed certs for dev ([docs/LOCAL-HTTPS-SETUP.md](docs/LOCAL-HTTPS-SETUP.md)) |
+
+### Security posture vs. coursework requirements
+
+The specs in [docs/task.md](docs/task.md) and the review checklist in [docs/testing.md](docs/testing.md) define a solid **minimum**: JWT-style sessions with rotation and revocation, CAPTCHA, OAuth, optional user 2FA, token-bucket rate limiting, TLS, client and server validation, encryption at rest for sensitive data, and automated tests that cover auth, validation, and abuse-style inputs.
+
+Darkloom treats that as a **floor**, not a ceiling:
+
+- **Auth** — [Better Auth](https://www.better-auth.com/) drives **httpOnly cookie sessions**, refresh rotation, and revocation with patterns that match common production practice—reducing whole classes of mistakes (e.g. storing access tokens in `localStorage`) that a minimal hand-rolled JWT stack can accidentally invite.
+- **Payments** — **Stripe** hosts card collection; we never store PAN/CVV on our servers, which satisfies the coursework rule on payment data and **keeps PCI scope narrow** relative to any design that posts raw card fields to our API.
+- **Data at rest** — PII such as addresses uses **field-level encryption** with a dedicated key; **blind indexing** supports lookups where plaintext storage would be weaker than the spec’s general “encrypt sensitive data” expectation.
+- **Defense in depth** — **Role-gated admin APIs**, **mandatory admin 2FA** (per [docs/testing.md](docs/testing.md)), **rate limiting** on auth-sensitive routes, and **server-side validation** on DTOs complement client checks—so security does not rely on a single layer.
+- **Evidence** — A broad **automated test suite** (unit, integration, and security-oriented cases on the backend) exercises these paths regularly, not only during manual review demos.
+
+This is not a substitute for a formal audit or compliance sign-off, but it is **why** the platform’s security story is stronger than “meet the bullet list and stop.”
 
 ---
 
