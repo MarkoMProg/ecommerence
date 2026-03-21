@@ -157,6 +157,21 @@ export class StripeService {
   }
 
   /**
+   * Retrieve the customer email from a completed Stripe Checkout Session.
+   * Returns the email entered by the guest (or logged-in customer) during checkout,
+   * or null if Stripe is not configured / session has no email.
+   */
+  async getSessionCustomerEmail(sessionId: string): Promise<string | null> {
+    if (!this.stripe) return null;
+    try {
+      const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      return session.customer_details?.email ?? session.customer_email ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Verify Stripe session and return orderId if payment is complete (PAY-002: amount validation).
    * Throws if session not found, not paid, metadata.orderId mismatch, or amount mismatch.
    */

@@ -585,27 +585,42 @@ export class OrderService {
 
   /**
    * Look up the owner's email and name, then fire the order confirmation email.
-   * Only sends for registered users (guest orders have no stored email).
+   * For registered users the email is fetched from the database.
+   * For guest users the email is retrieved from the Stripe Checkout Session
+   * (the address the guest entered during payment).
    * All errors are swallowed — email failure must never affect the checkout flow.
    */
   private async notifyOrderPaid(order: OrderDto): Promise<void> {
-    if (!order.userId) return; // guest checkout — no email address available
     if (!this.emailService.isConfigured()) return;
 
     try {
-      const [userRow] = await this.db
-        .select({ emailEncrypted: user.emailEncrypted, name: user.name })
-        .from(user)
-        .where(eq(user.id, order.userId));
+      if (order.userId) {
+        // Registered user — fetch encrypted email from DB
+        const [userRow] = await this.db
+          .select({ emailEncrypted: user.emailEncrypted, name: user.name })
+          .from(user)
+          .where(eq(user.id, order.userId));
 
-      if (userRow?.emailEncrypted) {
-        const realEmail = decryptAuth(userRow.emailEncrypted);
-        const realName = userRow.name ? decryptAuth(userRow.name) : undefined;
-        await this.emailService.sendOrderConfirmationEmail(
-          order,
-          realEmail,
-          realName,
+        if (userRow?.emailEncrypted) {
+          const realEmail = decryptAuth(userRow.emailEncrypted);
+          const realName = userRow.name ? decryptAuth(userRow.name) : undefined;
+          await this.emailService.sendOrderConfirmationEmail(
+            order,
+            realEmail,
+            realName,
+          );
+        }
+      } else if (order.stripeSessionId) {
+        // Guest checkout — get the email the guest entered in Stripe
+        const guestEmail = await this.stripeService.getSessionCustomerEmail(
+          order.stripeSessionId,
         );
+        if (guestEmail) {
+          await this.emailService.sendOrderConfirmationEmail(
+            order,
+            guestEmail,
+          );
+        }
       }
     } catch (err) {
       console.error('[OrderService] Failed to send order confirmation email', {
