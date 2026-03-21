@@ -102,9 +102,12 @@ function FormField({
 function ImageManager({
   images,
   onChange,
+  uploadContext,
 }: {
   images: ImageEntry[];
   onChange: (images: ImageEntry[]) => void;
+  /** Required for file uploads: category + product name determine the folder under uploads/products/. */
+  uploadContext: { categoryId: string; productName: string } | null;
 }) {
   const fileInputs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -133,14 +136,29 @@ function ImageManager({
     onChange(next);
   };
 
+  const canUpload =
+    Boolean(uploadContext?.categoryId?.trim()) &&
+    Boolean(uploadContext?.productName?.trim());
+
   const handleFile = async (index: number, file: File) => {
+    if (!uploadContext || !canUpload) return;
     update(index, { uploading: true, url: "" });
-    const url = await adminUploadImage(file);
+    const url = await adminUploadImage(file, {
+      categoryId: uploadContext.categoryId,
+      productName: uploadContext.productName,
+    });
     update(index, { uploading: false, url: url ?? "" });
   };
 
   return (
     <div className="space-y-3">
+      {!canUpload && (
+        <p className="text-xs text-amber-200/90">
+          Set <span className="font-medium">product name</span> and{" "}
+          <span className="font-medium">category</span> before uploading images — files are stored under{" "}
+          <code className="rounded bg-white/10 px-1 py-0.5 text-[10px]">uploads/products/…</code> for that product.
+        </p>
+      )}
       {images.map((img, i) => (
         <div key={i} className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -211,7 +229,12 @@ function ImageManager({
               <button
                 type="button"
                 onClick={() => fileInputs.current[i]?.click()}
-                disabled={img.uploading}
+                disabled={img.uploading || !canUpload}
+                title={
+                  canUpload
+                    ? undefined
+                    : "Choose category and product name before uploading files"
+                }
                 className="shrink-0 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
               >
                 {img.uploading ? "…" : "Upload"}
@@ -574,7 +597,15 @@ export default function AdminNewProductPage() {
             </h2>
           </CardHeader>
           <CardContent>
-            <ImageManager images={images} onChange={setImages} />
+            <ImageManager
+              images={images}
+              onChange={setImages}
+              uploadContext={
+                form.categoryId.trim() && form.name.trim()
+                  ? { categoryId: form.categoryId, productName: form.name.trim() }
+                  : null
+              }
+            />
           </CardContent>
         </Card>
 

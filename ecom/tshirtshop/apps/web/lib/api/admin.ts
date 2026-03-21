@@ -223,12 +223,18 @@ export interface ProductImageInput {
 
 /**
  * Upload a product image file to the backend.
+ * Stores under public/uploads/products/<category>/<product name>/ on the API host.
  * Returns the hosted URL on success, or null on failure.
  */
-export async function adminUploadImage(file: File): Promise<string | null> {
+export async function adminUploadImage(
+  file: File,
+  ctx: { categoryId: string; productName: string },
+): Promise<string | null> {
   try {
     const form = new FormData();
     form.append("file", file);
+    form.append("categoryId", ctx.categoryId.trim());
+    form.append("productName", ctx.productName.trim());
     // Do NOT set Content-Type — the browser sets it with the correct boundary.
     const res = await fetch(`${apiBase()}/api/v1/uploads`, {
       method: "POST",
