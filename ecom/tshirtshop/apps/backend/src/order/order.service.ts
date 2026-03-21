@@ -511,10 +511,120 @@ export class OrderService {
 
   /**
    * Refund order (ORD-005). Only paid, shipped, or completed orders can be refunded.
-   * Admin-only. When PAY-001 exists, integrate with Stripe/PayPal refund API and restore stock.
+   * Admin-only. Issues a full Stripe refund when the order was paid via Checkout, then
+   * marks the order refunded, records refund metadata, and restocks inventory.
    */
   async refundOrder(orderId: string): Promise<OrderDto | null> {
-    return this.updateOrderStatus(orderId.trim(), 'refunded');
+    const id = orderId.trim();
+    const [o] = await this.db.select().from(order).where(eq(order.id, id));
+    if (!o) return null;
+
+    const allowed = ALLOWED_TRANSITIONS[o.status as OrderStatus];
+    if (!allowed?.includes('refunded')) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: `Cannot transition from ${o.status} to refunded`,
+        },
+      });
+    }
+
+    if (o.stripeRefundId) {
+      return this.getOrderById(id);
+    }
+
+    if (o.totalCents <= 0) {
+      return this.updateOrderStatus(id, 'refunded');
+    }
+
+    const sessionId = o.stripeSessionId?.trim();
+    if (!sessionId) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'NO_STRIPE_PAYMENT',
+          message:
+            'This order was not paid via Stripe and cannot be refunded automatically.',
+        },
+      });
+    }
+
+    if (!this.stripeService.isConfigured()) {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          code: 'STRIPE_NOT_CONFIGURED',
+          message:
+            'Refunds are not available at this time. Please contact support.',
+        },
+      });
+    }
+
+    try {
+      const { refundId } = await this.stripeService.createRefundForSession(
+        sessionId,
+        o.totalCents,
+      );
+      const now = new Date();
+      await this.db
+        .update(order)
+        .set({
+          status: 'refunded',
+          stripeRefundId: refundId,
+          refundedAt: now,
+          refundAmountCents: o.totalCents,
+          updatedAt: now,
+        })
+        .where(eq(order.id, id));
+
+      if (PAID_STATUSES.includes(o.status as OrderStatus)) {
+        const items = await this.db
+          .select({
+            productId: orderItem.productId,
+            quantity: orderItem.quantity,
+          })
+          .from(orderItem)
+          .where(eq(orderItem.orderId, id));
+        await this.inventoryService.incrementStockForOrder(items);
+      }
+
+      return this.getOrderById(id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Refund failed';
+      if (
+        msg.includes('already been refunded') ||
+        msg.includes('Refund already exists')
+      ) {
+        const now = new Date();
+        await this.db
+          .update(order)
+          .set({
+            status: 'refunded',
+            refundedAt: o.refundedAt ?? now,
+            refundAmountCents: o.refundAmountCents ?? o.totalCents,
+            updatedAt: now,
+          })
+          .where(eq(order.id, id));
+
+        if (PAID_STATUSES.includes(o.status as OrderStatus)) {
+          const items = await this.db
+            .select({
+              productId: orderItem.productId,
+              quantity: orderItem.quantity,
+            })
+            .from(orderItem)
+            .where(eq(orderItem.orderId, id));
+          await this.inventoryService.incrementStockForOrder(items);
+        }
+
+        return this.getOrderById(id);
+      }
+      throw new BadRequestException({
+        success: false,
+        error: { code: 'REFUND_FAILED', message: msg },
+      });
+    }
   }
 
   /**
