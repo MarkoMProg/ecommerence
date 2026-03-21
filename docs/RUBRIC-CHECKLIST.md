@@ -2,7 +2,7 @@
 
 **Sources:** [`task.md`](task.md), [`testing.md`](testing.md)  
 **Project:** Darkloom (tshirtshop) — `ecom/tshirtshop`  
-**Last reviewed:** 2026-03-21 (codebase audit; verify before submission)
+**Last reviewed:** 2026-03-21 (E2E/Playwright + rubric alignment; verify before submission)
 
 **Legend**
 
@@ -93,7 +93,7 @@
 - [x] Guest cart (temporary)
 - [x] Persistent cart for logged-in users
 - [x] Out-of-stock handling on add/checkout
-- [ ] **Related / recommended products on cart page** — `task.md` narrative; verify PDP/elsewhere; **cart page section may be missing**
+- [x] **Related / recommended products** — `CartRecommendations` in [`cart-drawer.tsx`](../ecom/tshirtshop/apps/web/components/cart-drawer.tsx) (compact “You might also like” after add-to-cart) and [`CartClient.tsx`](../ecom/tshirtshop/apps/web/app/cart/CartClient.tsx) on `/cart` (full grid); API [`fetchCartRecommendations`](../ecom/tshirtshop/apps/web/lib/api/cart.ts) → `/api/v1/cart/recommendations`
 
 ### Checkout
 
@@ -126,7 +126,7 @@
 ### Automated testing (rubric)
 
 - [x] Backend unit tests (cart, order logic, calculations where covered)
-- [ ] **Automated critical flows: registration + checkout** — recommend E2E
+- [x] **Automated critical flows: registration + checkout** — Playwright (`apps/web/e2e/`: `signup.spec.ts`, `checkout-flow.spec.ts`, etc.; `npm run test:e2e` from `ecom/tshirtshop`)
 
 ### Docker (extra)
 
@@ -190,8 +190,8 @@
 ### Automated testing (rubric)
 
 - [x] Backend: unit + integration + security-flavored tests
-- [ ] Frontend automated tests
-- [ ] **User-flow + security tests** as separate category — partially covered by backend only
+- [x] Frontend automated tests — Playwright E2E in `ecom/tshirtshop/apps/web/e2e/` (`npm run test:e2e` at monorepo root runs `--filter=web`)
+- [x] **User-flow + security tests** — critical storefront flows covered by E2E (smoke, catalog, cart, checkout, optional auth via `auth.setup.ts` + `storageState`); auth/security edge cases still primarily in backend Jest
 
 ### Load testing (`testing.md`)
 
@@ -231,7 +231,7 @@
 ## Quick “before submission” actions
 
 1. [ ] Walk through [`testing.md`](testing.md) line-by-line and tick items you will demo orally.
-2. [ ] Run `npm test` in `apps/backend`; add or run frontend tests if required.
+2. [ ] Run `npm test` in `apps/backend` (from `ecom/tshirtshop`); run `npm run test:e2e` for Playwright (stack up or rely on `webServer` in `playwright.config.ts`).
 3. [ ] Manual: CAPTCHA, OAuth, 2FA, Stripe success/decline cards, admin refund in Stripe Dashboard.
 4. [ ] Update performance numbers if you changed hot paths (DB, catalog queries).
 5. [ ] Add README link to [`07-DEVOPS/performance-analysis-report.md`](07-DEVOPS/performance-analysis-report.md) if evaluators expect a single canonical PDF/MD path.
@@ -247,3 +247,4 @@
 | [`ERD.md`](ERD.md) | Database ERD |
 | [`07-DEVOPS/performance-analysis-report.md`](07-DEVOPS/performance-analysis-report.md) | Load test report |
 | [`PROJECT-STATUS-AUDIT.md`](PROJECT-STATUS-AUDIT.md) | Historical implementation status *(if maintained)* |
+| [`../ecom/tshirtshop/apps/web/e2e/README.md`](../ecom/tshirtshop/apps/web/e2e/README.md) | Playwright E2E: commands, env vars, Better Auth `storageState` setup |
