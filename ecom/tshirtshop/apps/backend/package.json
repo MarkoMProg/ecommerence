@@ -31,6 +31,7 @@
     "db:add-product-archived": "node scripts/db-add-product-archived.mjs",
     "db:improve-descriptions": "node scripts/improve-product-descriptions.mjs",
     "db:populate-from-json": "node scripts/populate-products-from-json.mjs",
+    "generate:products-bulk": "node scripts/generate-products-bulk-import.mjs",
     "db:migrate-product-image-urls": "node scripts/migrate-product-image-urls.mjs"
   },
   "dependencies": {

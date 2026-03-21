@@ -3,7 +3,7 @@
  * Populate / sync the database from the repo catalog JSON (published inventory).
  *
  * Source file (default): apps/backend/public/uploads/products/products-bulk-import.json
- * Regenerate with: npm run generate:products-bulk --workspace=web
+ * Regenerate JSON + sync DB: npm run generate:products-bulk --workspace=backend
  *
  * Behaviour:
  * - Match existing rows by exact product name (trimmed).
