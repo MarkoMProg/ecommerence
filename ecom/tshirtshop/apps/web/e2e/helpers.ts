@@ -25,3 +25,68 @@ export function e2eUserCredentials(): { email: string; password: string } | null
   if (!email || !password) return null;
   return { email, password };
 }
+
+/**
+ * Prefer posters (no size pickers); otherwise first product on /shop.
+ * Throws if the catalog is empty so the test fails instead of skipping.
+ */
+export async function openFirstProductForE2E(page: Page): Promise<void> {
+  await page.goto("/shop?category=posters");
+  if ((await page.locator("a.group.block").count()) > 0) {
+    await page.locator("a.group.block").first().click();
+    return;
+  }
+  await page.goto("/shop");
+  const n = await page.locator("a.group.block").count();
+  if (n === 0) {
+    throw new Error(
+      "E2E needs at least one product — seed the DB (e.g. npm run db:seed in backend).",
+    );
+  }
+  await page.locator("a.group.block").first().click();
+}
+
+/** Apparel PDPs require a size before Add to Cart runs the mutation. */
+export async function selectSizeIfRequired(page: Page): Promise<void> {
+  const sizeLabel = page.locator("p").filter({ hasText: /^Size$/i });
+  if ((await sizeLabel.count()) === 0) return;
+  const row = sizeLabel.locator("..").locator("div.flex.flex-wrap.gap-2 button").first();
+  if ((await row.count()) === 0) return;
+  await row.click();
+}
+
+/**
+ * When reCAPTCHA v2 is shown, wait for g-recaptcha-response before submit.
+ * Clicks the checkbox iframe if the token does not appear on its own (e.g. some keys).
+ */
+export async function waitForRecaptchaTokenIfPresent(page: Page): Promise<void> {
+  const iframe = page.locator('iframe[src*="recaptcha"]').first();
+  try {
+    await iframe.waitFor({ state: "attached", timeout: 15_000 });
+  } catch {
+    return;
+  }
+
+  const hasToken = () => {
+    const t = document.querySelector('textarea[name="g-recaptcha-response"]');
+    if (t instanceof HTMLTextAreaElement && t.value.length > 0) return true;
+    const w = window as unknown as {
+      grecaptcha?: { getResponse: (widgetId?: number) => string };
+    };
+    const r = w.grecaptcha?.getResponse?.();
+    return typeof r === "string" && r.length > 0;
+  };
+
+  if (await page.evaluate(hasToken)) return;
+
+  const frame = page.frameLocator('iframe[src*="recaptcha"]').first();
+  await frame.locator("#recaptcha-anchor").click({ timeout: 20_000 });
+
+  try {
+    await page.waitForFunction(hasToken, { timeout: 45_000 });
+  } catch {
+    throw new Error(
+      "reCAPTCHA did not produce a token in time. If a dev server was already running, stop it so Playwright can start Next with E2E_RECAPTCHA_SITEKEY, or use Google's test site + secret together. See apps/web/e2e/README.md.",
+    );
+  }
+}

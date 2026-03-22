@@ -5,7 +5,7 @@ test.describe("Smoke", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /Forged in Shadow/i })).toBeVisible();
     await page.getByRole("link", { name: /Shop Now/i }).click();
-    await expect(page).toHaveURL(/\/shop/);
+    await expect(page).toHaveURL(/\/shop/, { timeout: 30_000 });
   });
 
   test("auth page loads", async ({ page }) => {

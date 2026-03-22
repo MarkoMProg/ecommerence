@@ -1,18 +1,16 @@
 import { test, expect } from "@playwright/test";
-import { openFirstProductInCategory } from "./helpers";
+import { openFirstProductForE2E, selectSizeIfRequired } from "./helpers";
 
 test.describe("Guest cart flow", () => {
-  test("add poster to cart and see cart page", async ({ page }) => {
-    await page.goto("/shop?category=posters");
-    if ((await page.locator("a.group.block").count()) === 0) {
-      test.skip(true, "No poster products — seed the catalog or run bulk import.");
-    }
-
-    await openFirstProductInCategory(page, "posters");
+  test("add product to cart and see cart page", async ({ page }) => {
+    await openFirstProductForE2E(page);
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
+    await selectSizeIfRequired(page);
 
     await page.getByRole("button", { name: /Add to Cart/i }).click();
-    await expect(page.getByText("Added", { exact: true })).toBeVisible({
+    await expect(
+      page.getByRole("button", { name: /Added/i }).first(),
+    ).toBeVisible({
       timeout: 15_000,
     });
 

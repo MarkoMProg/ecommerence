@@ -117,9 +117,18 @@ export async function createOrder(
   });
 
   if (!res.ok) {
-    const body = await res.json();
-    const err = body?.error;
-    const msg = err?.message ?? "Failed to create order";
+    const payload = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    const err = payload?.error as
+      | { message?: string; code?: string; details?: unknown }
+      | undefined;
+    const nestMsg = payload?.message;
+    const msgFromNest =
+      typeof nestMsg === "string"
+        ? nestMsg
+        : Array.isArray(nestMsg)
+          ? nestMsg.filter((m): m is string => typeof m === "string").join(" ")
+          : null;
+    const msg = err?.message ?? msgFromNest ?? `HTTP ${res.status}`;
     if (err?.code === "INSUFFICIENT_STOCK" && Array.isArray(err?.details)) {
       throw new InsufficientStockError(msg, err.details as StockFailureDetail[]);
     }

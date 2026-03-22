@@ -186,7 +186,15 @@ export class CheckoutController {
             error: { code: mapped.code, message: mapped.userMessage },
           });
         }
-        throw err;
+        const detail =
+          err instanceof Error ? err.message : 'Stripe Checkout session failed';
+        throw new BadRequestException({
+          success: false,
+          error: {
+            code: 'STRIPE_SESSION_FAILED',
+            message: detail,
+          },
+        });
       }
     }
 

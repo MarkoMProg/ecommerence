@@ -11,7 +11,9 @@
     "PLAYWRIGHT_BASE_URL",
     "PLAYWRIGHT_SKIP_WEBSERVER",
     "E2E_USER_EMAIL",
-    "E2E_USER_PASSWORD"
+    "E2E_USER_PASSWORD",
+    "E2E_KEEP_RECAPTCHA",
+    "E2E_RECAPTCHA_SITEKEY"
   ],
   "tasks": {
     "build": {

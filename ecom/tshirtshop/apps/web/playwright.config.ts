@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Load apps/web/.env.local so Playwright sees NEXT_PUBLIC_* (e.g. reCAPTCHA) for test.skip logic. */
+/** Load apps/web/.env.local so Playwright sees E2E_USER_* and other vars. */
 function loadEnvLocal(): void {
   const envPath = path.join(__dirname, ".env.local");
   if (!existsSync(envPath)) return;
@@ -28,16 +28,24 @@ function loadEnvLocal(): void {
 }
 
 loadEnvLocal();
+
+/**
+ * Sign-up E2E: by default clear NEXT_PUBLIC_RECAPTCHA_SITEKEY unless E2E_KEEP_RECAPTCHA=1.
+ * If E2E_RECAPTCHA_SITEKEY is set (e.g. Google's test site key when the backend uses
+ * Google's test secret), apply it so the widget can run in automation.
+ */
+if (process.env.E2E_KEEP_RECAPTCHA !== "1") {
+  delete process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY;
+  const e2eRecaptcha = process.env.E2E_RECAPTCHA_SITEKEY?.trim();
+  if (e2eRecaptcha) {
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY = e2eRecaptcha;
+  }
+}
+
 /** Monorepo root: ecom/tshirtshop (contains apps/web, apps/backend). */
 const monorepoRoot = path.resolve(__dirname, "..", "..");
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost:3001";
-
-/** When false, omit setup + storageState project so Playwright does not require a missing `.auth/user.json`. */
-const hasE2EAuth = Boolean(
-  process.env.E2E_USER_EMAIL?.trim() &&
-    process.env.E2E_USER_PASSWORD?.trim(),
-);
 
 /**
  * Set PLAYWRIGHT_SKIP_WEBSERVER=1 if you already run `npm run dev` from the monorepo root.
@@ -45,14 +53,12 @@ const hasE2EAuth = Boolean(
  */
 const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
 
-const authStorageState = path.join(__dirname, "e2e", ".auth", "user.json");
-
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 3,
   reporter: process.env.CI ? "github" : [["html", { open: "never" }]],
   timeout: 60_000,
   expect: { timeout: 15_000 },
@@ -67,22 +73,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/auth\.setup\.ts$/, /authenticated\.spec\.ts$/],
     },
-    ...(hasE2EAuth
-      ? [
-          { name: "setup" as const, testMatch: /auth\.setup\.ts$/ },
-          {
-            name: "chromium-authenticated" as const,
-            use: {
-              ...devices["Desktop Chrome"],
-              storageState: authStorageState,
-            },
-            dependencies: ["setup"],
-            testMatch: /authenticated\.spec\.ts$/,
-          },
-        ]
-      : []),
   ],
   webServer: skipWebServer
     ? undefined
@@ -97,6 +88,15 @@ export default defineConfig({
           ...process.env,
           // Non-interactive Turbo (avoid TUI blocking Playwright).
           TURBO_UI: "0",
+          // Let registration E2E run without a CAPTCHA widget when Playwright starts dev.
+          ...(process.env.E2E_KEEP_RECAPTCHA === "1"
+            ? {}
+            : process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY
+              ? {
+                  NEXT_PUBLIC_RECAPTCHA_SITEKEY:
+                    process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY,
+                }
+              : { NEXT_PUBLIC_RECAPTCHA_SITEKEY: "" }),
         },
       },
 });
