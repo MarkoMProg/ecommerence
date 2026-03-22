@@ -15,9 +15,16 @@ test.describe("Checkout user flow (guest)", () => {
     await page.getByRole("button", { name: /Add to Cart/i }).click();
     await added;
 
-    await page.goto("/checkout");
+    await page.keyboard.press("Escape");
+    await page.goto("/checkout", { waitUntil: "load" });
+    await page.waitForLoadState("load");
+
     await expect(page.getByRole("heading", { name: /Checkout/i })).toBeVisible();
     await expect(page.getByText("Your cart is empty")).not.toBeVisible();
+    await expect(page.locator("#checkout-form")).toBeVisible();
+
+    // Wait for client hydration so controlled inputs accept fill (avoid empty React state + dead Select).
+    await expect(page.locator("#checkout-fullName")).toBeEditable({ timeout: 15_000 });
 
     await page.fill("#checkout-fullName", "E2E Test User");
     await page.fill("#checkout-line1", "123 Test Street");
@@ -25,11 +32,14 @@ test.describe("Checkout user flow (guest)", () => {
     await page.fill("#checkout-state", "TX");
 
     // Country before postal so client validation (US + ZIP) matches React state.
-    await page.locator("#checkout-country").click();
+    await page.locator("#checkout-form").getByRole("combobox").click();
     await page.getByRole("option", { name: "United States" }).click();
+    await expect(page.locator("#checkout-country")).toContainText(/United States/i);
 
     await page.fill("#checkout-postal", "78701");
-    await page.fill("#checkout-phone", "+1 555 123 4567");
+    await page.fill("#checkout-phone", "5551234567");
+
+    await page.getByRole("heading", { name: /Order summary/i }).click();
 
     const placeBtn = page.getByRole("button", { name: /Place Order/i });
     await expect(placeBtn).toBeEnabled({ timeout: 15_000 });
