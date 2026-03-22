@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { openFirstProductForE2E, selectSizeIfRequired } from "./helpers";
+import {
+  openFirstProductForE2E,
+  selectSizeIfRequired,
+  waitForCartItemAdded,
+} from "./helpers";
 
 test.describe("Checkout user flow (guest)", () => {
   test("place order navigates to Stripe or confirmation", async ({ page }) => {
@@ -7,12 +11,9 @@ test.describe("Checkout user flow (guest)", () => {
     await openFirstProductForE2E(page);
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
     await selectSizeIfRequired(page);
+    const added = waitForCartItemAdded(page);
     await page.getByRole("button", { name: /Add to Cart/i }).click();
-    await expect(
-      page.getByRole("button", { name: /Added/i }).first(),
-    ).toBeVisible({
-      timeout: 15_000,
-    });
+    await added;
 
     await page.goto("/checkout");
     await expect(page.getByRole("heading", { name: /Checkout/i })).toBeVisible();

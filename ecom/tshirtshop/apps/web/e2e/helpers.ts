@@ -57,6 +57,20 @@ export async function openFirstProductForE2E(page: Page): Promise<void> {
   await firstAny.click();
 }
 
+/**
+ * Resolves when guest/user add-to-cart succeeds. Prefer this over asserting the PDP
+ * button text "Added!" — that state only lasts ~1.5s and flakes under load.
+ */
+export function waitForCartItemAdded(page: Page): Promise<Response> {
+  return page.waitForResponse(
+    (r) =>
+      r.request().method() === "POST" &&
+      r.url().includes("/api/v1/cart/items") &&
+      r.ok(),
+    { timeout: 30_000 },
+  );
+}
+
 /** Apparel PDPs require a size before Add to Cart runs the mutation. */
 export async function selectSizeIfRequired(page: Page): Promise<void> {
   const sizeLabel = page.locator("p").filter({ hasText: /^Size$/i });
