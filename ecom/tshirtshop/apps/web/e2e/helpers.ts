@@ -31,19 +31,30 @@ export function e2eUserCredentials(): { email: string; password: string } | null
  * Throws if the catalog is empty so the test fails instead of skipping.
  */
 export async function openFirstProductForE2E(page: Page): Promise<void> {
-  await page.goto("/shop?category=posters");
-  if ((await page.locator("a.group.block").count()) > 0) {
-    await page.locator("a.group.block").first().click();
+  await page.goto("/shop?category=posters", { waitUntil: "load" });
+  await page.waitForLoadState("domcontentloaded");
+
+  const firstPoster = page.locator("a.group.block").first();
+  try {
+    await firstPoster.waitFor({ state: "visible", timeout: 15_000 });
+    await firstPoster.click();
     return;
+  } catch {
+    // Category empty or listing still settling — try full shop.
   }
-  await page.goto("/shop");
-  const n = await page.locator("a.group.block").count();
-  if (n === 0) {
+
+  await page.goto("/shop", { waitUntil: "load" });
+  await page.waitForLoadState("domcontentloaded");
+
+  const firstAny = page.locator("a.group.block").first();
+  try {
+    await firstAny.waitFor({ state: "visible", timeout: 30_000 });
+  } catch {
     throw new Error(
       "E2E needs at least one product — seed the DB (e.g. npm run db:seed in backend).",
     );
   }
-  await page.locator("a.group.block").first().click();
+  await firstAny.click();
 }
 
 /** Apparel PDPs require a size before Add to Cart runs the mutation. */
@@ -58,6 +69,7 @@ export async function selectSizeIfRequired(page: Page): Promise<void> {
 /**
  * When reCAPTCHA v2 is shown, wait for g-recaptcha-response before submit.
  * Clicks the checkbox iframe if the token does not appear on its own (e.g. some keys).
+ * Not used by default signup E2E (see signup.spec.ts); keep for manual/headed flows if needed.
  */
 export async function waitForRecaptchaTokenIfPresent(page: Page): Promise<void> {
   const iframe = page.locator('iframe[src*="recaptcha"]').first();

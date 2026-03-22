@@ -30,11 +30,12 @@ function loadEnvLocal(): void {
 loadEnvLocal();
 
 /**
- * Sign-up E2E: by default clear NEXT_PUBLIC_RECAPTCHA_SITEKEY unless E2E_KEEP_RECAPTCHA=1.
- * If E2E_RECAPTCHA_SITEKEY is set (e.g. Google's test site key when the backend uses
- * Google's test secret), apply it so the widget can run in automation.
+ * reCAPTCHA: preserve NEXT_PUBLIC_RECAPTCHA_SITEKEY from .env.local unless explicitly
+ * stripped (E2E_STRIP_RECAPTCHA=1) or overridden (E2E_RECAPTCHA_SITEKEY / E2E_KEEP_RECAPTCHA).
  */
-if (process.env.E2E_KEEP_RECAPTCHA !== "1") {
+if (process.env.E2E_KEEP_RECAPTCHA === "1") {
+  // keep .env.local as loaded
+} else if (process.env.E2E_STRIP_RECAPTCHA === "1") {
   delete process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY;
   const e2eRecaptcha = process.env.E2E_RECAPTCHA_SITEKEY?.trim();
   if (e2eRecaptcha) {
@@ -81,6 +82,8 @@ export default defineConfig({
         command: "npm run dev",
         cwd: monorepoRoot,
         url: baseURL,
+        // Reuse dev on 3001 if already running. Set E2E_SKIP_STRIPE_CHECKOUT=1 in apps/backend/.env
+        // so guest checkout E2E skips Stripe session creation (see .env.example).
         reuseExistingServer: true,
         timeout: 180_000,
         ignoreHTTPSErrors: true,
@@ -88,15 +91,18 @@ export default defineConfig({
           ...process.env,
           // Non-interactive Turbo (avoid TUI blocking Playwright).
           TURBO_UI: "0",
-          // Let registration E2E run without a CAPTCHA widget when Playwright starts dev.
+          // Guest checkout E2E: skip Stripe session creation in dev (invalid keys → 500).
+          E2E_SKIP_STRIPE_CHECKOUT: "1",
           ...(process.env.E2E_KEEP_RECAPTCHA === "1"
             ? {}
-            : process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY
-              ? {
-                  NEXT_PUBLIC_RECAPTCHA_SITEKEY:
-                    process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY,
-                }
-              : { NEXT_PUBLIC_RECAPTCHA_SITEKEY: "" }),
+            : process.env.E2E_STRIP_RECAPTCHA === "1"
+              ? process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY
+                ? {
+                    NEXT_PUBLIC_RECAPTCHA_SITEKEY:
+                      process.env.NEXT_PUBLIC_RECAPTCHA_SITEKEY,
+                  }
+                : { NEXT_PUBLIC_RECAPTCHA_SITEKEY: "" }
+              : {}),
         },
       },
 });

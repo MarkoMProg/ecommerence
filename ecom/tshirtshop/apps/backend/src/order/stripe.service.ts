@@ -24,6 +24,14 @@ export class StripeService {
   }
 
   isConfigured(): boolean {
+    // BRITTLE: Local E2E only — Playwright sets E2E_SKIP_STRIPE_CHECKOUT=1 so checkout
+    // can complete at /checkout/confirmation without a valid Stripe session. Ignored in production.
+    const skipStripe =
+      this.configService.get<string>('E2E_SKIP_STRIPE_CHECKOUT')?.trim() ===
+        '1' || process.env.E2E_SKIP_STRIPE_CHECKOUT === '1';
+    if (process.env.NODE_ENV !== 'production' && skipStripe) {
+      return false;
+    }
     return this.stripe !== null;
   }
 
