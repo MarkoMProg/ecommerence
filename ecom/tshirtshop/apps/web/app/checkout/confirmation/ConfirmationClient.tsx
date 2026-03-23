@@ -133,6 +133,22 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
 
   const isPaid = order.status === "paid";
   const isPending = order.status === "pending";
+  const isOversold = order.status === "oversold";
+  const isRefunded = order.status === "refunded";
+
+  const heading = isRefunded
+    ? "Order refunded"
+    : isOversold
+      ? "We couldn't fulfill this order"
+      : "Order Confirmed";
+
+  const thankYouMessage = isPaid
+    ? "Thank you for your order. Your payment has been received."
+    : isOversold
+      ? "Your payment was received, but the item is no longer in stock. A refund is being processed automatically when possible, or use Cancel order below."
+      : isRefunded
+        ? "Your payment has been refunded to your original payment method."
+        : "Thank you for your order. Your order has been created and is pending payment.";
 
   async function handleCompletePayment() {
     if (paymentLoading || !orderId) return;
@@ -153,13 +169,9 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
           className="mb-4 text-2xl font-bold uppercase tracking-tight text-white sm:text-4xl"
           style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
         >
-          Order Confirmed
+          {heading}
         </h1>
-        <p className="mb-6 text-white/80">
-          {isPaid
-            ? "Thank you for your order. Your payment has been received."
-            : "Thank you for your order. Your order has been created and is pending payment."}
-        </p>
+        <p className="mb-6 text-white/80">{thankYouMessage}</p>
         {orderId && (
           <p className="mb-6 font-mono text-sm text-white/60">Order ID: {orderId}</p>
         )}
@@ -206,6 +218,11 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
           {order.status === "refunded" && (
             <p className="mb-6 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
               This order has been refunded.
+            </p>
+          )}
+          {order.status === "oversold" && (
+            <p className="mb-6 rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              Inventory was sold out. Your payment is on hold until we process a refund or you cancel below.
             </p>
           )}
           <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">

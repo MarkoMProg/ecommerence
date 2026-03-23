@@ -33,6 +33,7 @@ function statusBadge(status: string): string {
   const map: Record<string, string> = {
     pending: "bg-amber-500/20 text-amber-300",
     paid: "bg-emerald-500/20 text-emerald-300",
+    oversold: "bg-orange-500/20 text-orange-200",
     shipped: "bg-blue-500/20 text-blue-300",
     completed: "bg-white/10 text-white/70",
     cancelled: "bg-red-500/20 text-red-300",
@@ -229,6 +230,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "All statuses" },
   { value: "pending", label: "Pending" },
   { value: "paid", label: "Paid" },
+  { value: "oversold", label: "Oversold (review)" },
   { value: "shipped", label: "Shipped" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
@@ -302,7 +304,7 @@ export default function OrdersPage() {
   }
 
   const canCancelOrder = (order: Order) =>
-    order.status === "paid";
+    order.status === "paid" || order.status === "oversold";
 
   async function handleCancelOrder(orderId: string) {
     setCancelStates((p) => ({ ...p, [orderId]: { status: "loading" } }));

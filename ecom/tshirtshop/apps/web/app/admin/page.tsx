@@ -190,6 +190,7 @@ function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     pending: "bg-yellow-500/20 text-yellow-300",
     paid: "bg-blue-500/20 text-blue-300",
+    oversold: "bg-orange-500/20 text-orange-200",
     shipped: "bg-purple-500/20 text-purple-300",
     completed: "bg-green-500/20 text-green-300",
     cancelled: "bg-red-500/20 text-red-300",

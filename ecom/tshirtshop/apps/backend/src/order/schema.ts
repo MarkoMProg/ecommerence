@@ -12,15 +12,17 @@ import { product } from '../catalog/schema';
 /**
  * Order status lifecycle:
  * - pending: Created, awaiting payment (PAY-001)
- * - paid: Payment confirmed
+ * - paid: Payment confirmed and stock allocated
+ * - oversold: Payment captured but stock allocation failed (race on last units); refund attempted or manual
  * - shipped: Order shipped
  * - completed: Delivered
  * - cancelled: Cancelled by user or system
- * - refunded: Refunded (ORD-005); from paid/shipped/completed
+ * - refunded: Refunded (ORD-005); from paid/shipped/completed/oversold
  */
 export const orderStatusEnum = [
   'pending',
   'paid',
+  'oversold',
   'shipped',
   'completed',
   'cancelled',

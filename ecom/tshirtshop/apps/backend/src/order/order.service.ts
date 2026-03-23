@@ -6,13 +6,16 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { eq, and, asc, desc, inArray } from 'drizzle-orm';
+import { eq, and, asc, desc, inArray, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { order, orderItem } from './schema';
 import type { OrderStatus } from './schema';
 import { user } from '../auth/schema';
-import { InventoryService } from '../inventory/inventory.service';
+import {
+  InventoryService,
+  type StockFailure,
+} from '../inventory/inventory.service';
 import { StripeService } from './stripe.service';
 import { EmailService } from '../email/email.service';
 import { decrypt, decryptNullable } from '../common/crypto.util';
@@ -23,6 +26,7 @@ import { PAYMENT_EVENTS_QUEUE } from './payment-queue.constants';
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ['paid', 'cancelled'],
   paid: ['shipped', 'cancelled', 'refunded'],
+  oversold: ['refunded', 'cancelled'],
   shipped: ['completed', 'refunded'],
   completed: ['refunded'],
   cancelled: [],
@@ -71,8 +75,8 @@ export interface OrderDto {
 /** Statuses that indicate stock has already been decremented for the order */
 const PAID_STATUSES: OrderStatus[] = ['paid', 'shipped', 'completed'];
 
-/** Statuses that allow customer-initiated cancel-with-refund (paid, not yet shipped). */
-const CUSTOMER_CANCEL_ELIGIBLE_STATUSES: OrderStatus[] = ['paid'];
+/** Statuses that allow customer-initiated cancel-with-refund (paid / oversold, not yet shipped). */
+const CUSTOMER_CANCEL_ELIGIBLE_STATUSES: OrderStatus[] = ['paid', 'oversold'];
 
 type OrderRow = typeof order.$inferSelect;
 type OrderItemRow = typeof orderItem.$inferSelect;
@@ -215,64 +219,106 @@ export class OrderService {
 
   /**
    * Mark order as paid if currently pending (PAY-002 idempotency).
-   * Stores stripeSessionId and paidAt when provided (PAY-004).
-   * Atomically decrements stock for all order items after marking as paid.
+   * Stores stripeSessionId and paidAt when payment is confirmed.
    *
-   * The "if pending" guard makes this idempotent — stock is decremented exactly
-   * once per order. If a stock decrement fails here (extremely rare race condition
-   * where two users paid simultaneously for the last unit), the order is still
-   * marked as paid (payment is authoritative) and the failure is logged for
-   * admin review. Stock will show negative; admin should restock or cancel.
+   * Stock is decremented in the **same database transaction** as the status update:
+   * - Success → `paid` + confirmation email queue.
+   * - Insufficient stock (race on last units) → `oversold` (payment captured, no allocation),
+   *   then automatic Stripe refund when configured; on success → `refunded`.
    *
-   * Returns order; no-op (returns current state) if already paid.
+   * Idempotent: `paid` / `refunded` return as-is; `oversold` retries auto-refund when needed.
    * Used by both the webhook and verify-payment paths.
    */
   async markOrderPaidIfPending(
     orderId: string,
     paymentMeta?: { stripeSessionId?: string },
   ): Promise<OrderDto | null> {
-    const o = await this.getOrderById(orderId.trim());
-    if (!o) return null;
-    if (o.status === 'paid') return o; // idempotent — already processed
-    if (o.status !== 'pending') return o;
+    const id = orderId.trim();
+    const pre = await this.getOrderById(id);
+    if (!pre) return null;
+    if (pre.status === 'paid') return pre;
+    if (pre.status === 'refunded') return pre;
+    if (pre.status === 'oversold') {
+      await this.tryRefundOversoldOrder(pre);
+      return this.getOrderById(id);
+    }
+    if (pre.status !== 'pending') return pre;
 
     const now = new Date();
     const sessionId = paymentMeta?.stripeSessionId?.trim() || null;
 
-    await this.db
-      .update(order)
-      .set({
-        status: 'paid',
-        stripeSessionId: sessionId,
-        paidAt: now,
-        updatedAt: now,
-      })
-      .where(eq(order.id, orderId.trim()));
+    let allocationFailures: StockFailure[] | undefined;
+    let outcome: 'paid' | 'oversold' | 'noop' = 'noop';
 
-    // Atomic stock decrement with row-level locking
-    const stockResult = await this.inventoryService.decrementStockForOrder(
-      o.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-    );
+    await this.db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM "order" WHERE id = ${id} FOR UPDATE`);
 
-    if (!stockResult.ok) {
-      // WARNING: Payment captured but stock was insufficient — oversell detected.
-      // The order remains paid (payment is authoritative). Admin must resolve manually.
-      // This should only happen when two users pay for the last unit within milliseconds.
-      console.error(
-        `[InventoryService] OVERSELL_WARNING orderId=${orderId}: ` +
-          `stock insufficient for items after payment. Failures:`,
-        stockResult.failures,
-      );
+      const [locked] = await tx.select().from(order).where(eq(order.id, id));
+      if (!locked) {
+        return;
+      }
+      if (locked.status !== 'pending') {
+        outcome = 'noop';
+        return;
+      }
+
+      const itemRows = await tx
+        .select({
+          productId: orderItem.productId,
+          quantity: orderItem.quantity,
+        })
+        .from(orderItem)
+        .where(eq(orderItem.orderId, id));
+
+      const stockItems = itemRows.map((r) => ({
+        productId: r.productId,
+        quantity: r.quantity,
+      }));
+
+      const stockResult =
+        await this.inventoryService.decrementStockForOrderWithTx(tx, stockItems);
+
+      const stripeSession =
+        sessionId ?? locked.stripeSessionId?.trim() ?? null;
+
+      if (stockResult.ok) {
+        await tx
+          .update(order)
+          .set({
+            status: 'paid',
+            stripeSessionId: stripeSession,
+            paidAt: now,
+            updatedAt: now,
+          })
+          .where(eq(order.id, id));
+        outcome = 'paid';
+        return;
+      }
+
+      allocationFailures = stockResult.failures;
+      await tx
+        .update(order)
+        .set({
+          status: 'oversold',
+          stripeSessionId: stripeSession,
+          paidAt: now,
+          updatedAt: now,
+        })
+        .where(eq(order.id, id));
+      outcome = 'oversold';
+    });
+
+    const updated = await this.getOrderById(id);
+    if (!updated) return null;
+
+    if (outcome === 'noop') {
+      return updated;
     }
 
-    const paidOrder = await this.getOrderById(orderId.trim());
-
-    // Publish email notification to the queue so it has retries and is visible
-    // in the Bull dashboard. This replaces the previous fire-and-forget inline call.
-    if (paidOrder) {
+    if (outcome === 'paid') {
       void this.paymentQueue.add(
         'payment.notify',
-        { orderId: paidOrder.id },
+        { orderId: updated.id },
         {
           attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
@@ -280,9 +326,126 @@ export class OrderService {
           removeOnFail: false,
         },
       );
+      return updated;
     }
 
-    return paidOrder;
+    if (outcome === 'oversold' && allocationFailures?.length) {
+      this.logOversoldAllocationFailed(id, allocationFailures);
+    }
+
+    await this.tryRefundOversoldOrder(updated);
+    return this.getOrderById(id);
+  }
+
+  private logOversoldAllocationFailed(
+    orderId: string,
+    failures: StockFailure[],
+  ): void {
+    console.error(
+      JSON.stringify({
+        event: 'ORDER_STOCK_ALLOCATION_FAILED_AFTER_PAYMENT',
+        severity: 'CRITICAL',
+        orderId,
+        failures,
+        ts: new Date().toISOString(),
+      }),
+    );
+  }
+
+  /**
+   * Auto-refund Stripe Checkout when payment succeeded but stock could not be allocated.
+   * Idempotent: skips if already refunded or stripeRefundId set.
+   */
+  private async tryRefundOversoldOrder(o: OrderDto): Promise<void> {
+    if (o.status !== 'oversold') return;
+    if (o.stripeRefundId) return;
+
+    if (o.totalCents <= 0) {
+      await this.db
+        .update(order)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(order.id, o.id));
+      console.warn(
+        JSON.stringify({
+          event: 'ORDER_OVERSOLD_ZERO_AMOUNT_RESOLVED',
+          orderId: o.id,
+          ts: new Date().toISOString(),
+        }),
+      );
+      return;
+    }
+
+    const sessionId = o.stripeSessionId?.trim();
+    if (!sessionId || !this.stripeService.isConfigured()) {
+      console.error(
+        JSON.stringify({
+          event: 'ORDER_OVERSOLD_REFUND_BLOCKED',
+          orderId: o.id,
+          reason: !sessionId ? 'NO_STRIPE_SESSION' : 'STRIPE_NOT_CONFIGURED',
+          ts: new Date().toISOString(),
+        }),
+      );
+      return;
+    }
+
+    try {
+      const { refundId } = await this.stripeService.createRefundForSession(
+        sessionId,
+        o.totalCents,
+      );
+      const refundTime = new Date();
+      await this.db
+        .update(order)
+        .set({
+          status: 'refunded',
+          stripeRefundId: refundId,
+          refundedAt: refundTime,
+          refundAmountCents: o.totalCents,
+          updatedAt: refundTime,
+        })
+        .where(eq(order.id, o.id));
+      console.warn(
+        JSON.stringify({
+          event: 'ORDER_OVERSOLD_AUTO_REFUND_OK',
+          orderId: o.id,
+          refundId,
+          ts: refundTime.toISOString(),
+        }),
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes('already been refunded') ||
+        msg.includes('Refund already exists')
+      ) {
+        const refundTime = new Date();
+        await this.db
+          .update(order)
+          .set({
+            status: 'refunded',
+            refundedAt: refundTime,
+            refundAmountCents: o.totalCents,
+            updatedAt: refundTime,
+          })
+          .where(eq(order.id, o.id));
+        console.warn(
+          JSON.stringify({
+            event: 'ORDER_OVERSOLD_REFUND_ALREADY_EXISTS',
+            orderId: o.id,
+            ts: refundTime.toISOString(),
+          }),
+        );
+        return;
+      }
+      console.error(
+        JSON.stringify({
+          event: 'ORDER_OVERSOLD_AUTO_REFUND_FAILED',
+          orderId: o.id,
+          error: msg,
+          ts: new Date().toISOString(),
+        }),
+      );
+    }
   }
 
   /**
@@ -299,6 +462,7 @@ export class OrderService {
         [
           'pending',
           'paid',
+          'oversold',
           'shipped',
           'completed',
           'cancelled',
@@ -423,7 +587,7 @@ export class OrderService {
     const sessionId = o.stripeSessionId?.trim();
     const isFreeOrder = o.totalCents <= 0;
 
-    // $0 orders: no Stripe refund needed — just cancel and restock
+    // $0 orders: no Stripe refund needed — just cancel and restock if stock was allocated
     if (isFreeOrder) {
       await this.db
         .update(order)
@@ -436,7 +600,9 @@ export class OrderService {
         })
         .from(orderItem)
         .where(eq(orderItem.orderId, id));
-      await this.inventoryService.incrementStockForOrder(items);
+      if (PAID_STATUSES.includes(o.status as OrderStatus)) {
+        await this.inventoryService.incrementStockForOrder(items);
+      }
       const updated = await this.getOrderById(id);
       return updated
         ? { order: updated, refundId: 'free_order' }
@@ -484,7 +650,9 @@ export class OrderService {
         })
         .from(orderItem)
         .where(eq(orderItem.orderId, id));
-      await this.inventoryService.incrementStockForOrder(items);
+      if (PAID_STATUSES.includes(o.status as OrderStatus)) {
+        await this.inventoryService.incrementStockForOrder(items);
+      }
 
       const updated = await this.getOrderById(id);
       return updated
