@@ -381,10 +381,21 @@ export class CheckoutController {
       });
     }
 
+    let message = 'Payment verified.';
+    if (updated.status === 'paid') {
+      message = 'Payment verified. Order marked as paid.';
+    } else if (updated.status === 'oversold') {
+      message =
+        'Payment received but inventory could not be allocated. Your order is on hold for review; a refund will be processed automatically when possible.';
+    } else if (updated.status === 'refunded') {
+      message =
+        'Payment could not be fulfilled due to inventory. Your payment has been refunded.';
+    }
+
     return {
       success: true,
       data: updated,
-      message: 'Payment verified. Order marked as paid.',
+      message,
     };
   }
 }

@@ -5,6 +5,9 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../database/database-connection';
 import { product } from '../catalog/schema';
 
+/** Executor for inventory mutations (standalone DB or an outer transaction client). */
+export type InventoryDbExecutor = Pick<NodePgDatabase, 'execute'>;
+
 export interface StockFailure {
   productId: string;
   productName: string;
@@ -84,54 +87,13 @@ export class InventoryService {
   ): Promise<StockValidationResult> {
     if (items.length === 0) return { ok: true };
 
-    // Deduplicate and sort by productId (consistent lock order prevents deadlocks)
-    const sorted = [...items].sort((a, b) =>
-      a.productId.localeCompare(b.productId),
-    );
-    const failures: StockFailure[] = [];
-
     try {
       await this.db.transaction(async (tx) => {
-        // Phase 1: Lock rows and read stock atomically
-        for (const item of sorted) {
-          const result = await tx.execute(
-            sql`SELECT id, name, stock_quantity FROM product WHERE id = ${item.productId} FOR UPDATE`,
-          );
-          const row = (
-            result.rows as {
-              id: string;
-              name: string;
-              stock_quantity: number;
-            }[]
-          )[0];
-          const available = row?.stock_quantity ?? 0;
-
-          if (!row || available < item.quantity) {
-            failures.push({
-              productId: item.productId,
-              productName: row?.name ?? 'Unknown product',
-              required: item.quantity,
-              available,
-            });
-          }
-        }
-
-        if (failures.length > 0) {
-          // Throwing inside a Drizzle transaction causes automatic rollback
-          throw new StockInsufficientError(failures);
-        }
-
-        // Phase 2: All checks passed — decrement each row
-        for (const item of sorted) {
-          await tx.execute(
-            sql`UPDATE product
-                SET stock_quantity = stock_quantity - ${item.quantity},
-                    updated_at = NOW()
-                WHERE id = ${item.productId}`,
-          );
+        const result = await this.decrementStockForOrderWithTx(tx, items);
+        if (!result.ok) {
+          throw new StockInsufficientError(result.failures);
         }
       });
-
       return { ok: true };
     } catch (err) {
       if (err instanceof StockInsufficientError) {
@@ -139,6 +101,64 @@ export class InventoryService {
       }
       throw err;
     }
+  }
+
+  /**
+   * Same locking/decrement logic as {@link decrementStockForOrder}, but runs on the
+   * given executor so it can participate in an outer transaction (e.g. order row lock
+   * + stock decrement commit/rollback together).
+   *
+   * On insufficient stock, returns `{ ok: false, failures }` without throwing so the
+   * caller can commit compensating state (e.g. oversold order) in the same transaction.
+   */
+  async decrementStockForOrderWithTx(
+    tx: InventoryDbExecutor,
+    items: { productId: string; quantity: number }[],
+  ): Promise<StockValidationResult> {
+    if (items.length === 0) return { ok: true };
+
+    const sorted = [...items].sort((a, b) =>
+      a.productId.localeCompare(b.productId),
+    );
+    const failures: StockFailure[] = [];
+
+    for (const item of sorted) {
+      const result = await tx.execute(
+        sql`SELECT id, name, stock_quantity FROM product WHERE id = ${item.productId} FOR UPDATE`,
+      );
+      const row = (
+        result.rows as {
+          id: string;
+          name: string;
+          stock_quantity: number;
+        }[]
+      )[0];
+      const available = row?.stock_quantity ?? 0;
+
+      if (!row || available < item.quantity) {
+        failures.push({
+          productId: item.productId,
+          productName: row?.name ?? 'Unknown product',
+          required: item.quantity,
+          available,
+        });
+      }
+    }
+
+    if (failures.length > 0) {
+      return { ok: false, failures };
+    }
+
+    for (const item of sorted) {
+      await tx.execute(
+        sql`UPDATE product
+            SET stock_quantity = stock_quantity - ${item.quantity},
+                updated_at = NOW()
+            WHERE id = ${item.productId}`,
+      );
+    }
+
+    return { ok: true };
   }
 
   /**

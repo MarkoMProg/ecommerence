@@ -174,6 +174,7 @@ export function isValidCountry(code: string): code is SupportedCountry {
 export const ORDER_STATUSES = [
   'pending',
   'paid',
+  'oversold',
   'shipped',
   'completed',
   'cancelled',

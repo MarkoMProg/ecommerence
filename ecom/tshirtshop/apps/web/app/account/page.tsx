@@ -37,6 +37,7 @@ function statusBadge(status: string): string {
   const map: Record<string, string> = {
     pending: "bg-amber-500/20 text-amber-300",
     paid: "bg-emerald-500/20 text-emerald-300",
+    oversold: "bg-orange-500/20 text-orange-200",
     shipped: "bg-blue-500/20 text-blue-300",
     completed: "bg-white/10 text-white/70",
     cancelled: "bg-red-500/20 text-red-300",

@@ -12,8 +12,16 @@ import {
 import { AdminSelect } from "@/components/ui/admin-select";
 import { Button } from "@/components/ui/button";
 
-const STATUS_OPTIONS = ["pending", "paid", "shipped", "completed", "cancelled", "refunded"] as const;
-const REFUNDABLE_STATUSES = ["paid", "shipped", "completed"] as const;
+const STATUS_OPTIONS = [
+  "pending",
+  "paid",
+  "oversold",
+  "shipped",
+  "completed",
+  "cancelled",
+  "refunded",
+] as const;
+const REFUNDABLE_STATUSES = ["paid", "oversold", "shipped", "completed"] as const;
 
 function formatDate(iso: string): string {
   try {

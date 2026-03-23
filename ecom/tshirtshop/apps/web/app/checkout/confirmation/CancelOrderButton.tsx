@@ -15,10 +15,11 @@ export function CancelOrderButton({ orderId, status }: CancelOrderButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  const canCancel = status === "pending" || status === "paid";
+  const canCancel =
+    status === "pending" || status === "paid" || status === "oversold";
   if (!canCancel) return null;
 
-  const isPaid = status === "paid";
+  const showRefundCopy = status === "paid" || status === "oversold";
 
   async function handleCancel() {
     if (loading) return;
@@ -47,7 +48,7 @@ export function CancelOrderButton({ orderId, status }: CancelOrderButtonProps) {
     return (
       <div className="mt-6 flex flex-col items-center gap-3">
         <p className="text-center text-sm text-white/80">
-          {isPaid
+          {showRefundCopy
             ? "This will cancel your order and issue a full refund to your original payment method."
             : "Are you sure you want to cancel this order?"}
         </p>
