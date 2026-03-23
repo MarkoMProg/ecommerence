@@ -31,7 +31,21 @@ COPY --from=builder  /repo/apps/backend/src               ./src
 # db-push.mjs also tries to load .env with dotenv (silently skipped if absent).
 CMD ["node", "scripts/db-push.mjs"]
 
-# ─── Stage 4: Production runner (pruned deps) ──────────────────────────────────
+# ─── Stage 4: Seeder (one-shot database population) ─────────────────────────────
+# Runs seed + populate + create-load-test-user + bootstrap-admin in order.
+# docker compose run --rm seeder
+FROM node:22-alpine AS seeder
+WORKDIR /repo/apps/backend
+COPY --from=deps-all /repo/node_modules                    /repo/node_modules
+COPY --from=deps-all /repo/apps/backend/node_modules       ./node_modules
+COPY --from=builder  /repo/apps/backend/package.json       ./package.json
+COPY --from=builder  /repo/apps/backend/scripts            ./scripts
+# Product catalog JSON + images — copied to a staging dir so the seed script
+# can move them into the uploads volume at runtime.
+COPY apps/backend/public/uploads/products/ ./seed-products/
+CMD ["node", "scripts/docker-seed-all.mjs"]
+
+# ─── Stage 5: Production runner (pruned deps) ──────────────────────────────────
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production

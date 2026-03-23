@@ -1,8 +1,9 @@
+#!/usr/bin/env node
 /**
- * Creates (or resets) a dedicated load-test user using BetterAuth's own
- * hashPassword function so the credentials always work.
+ * Creates (or resets) an admin user directly in the database.
+ * Reads credentials from env vars: ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME.
  *
- * Run: node scripts/create-load-test-user.mjs
+ * Run: node scripts/create-admin-user.mjs
  */
 import { config } from 'dotenv';
 import { resolve, dirname } from 'path';
@@ -15,11 +16,25 @@ import { createCipheriv, createHmac, randomBytes } from 'crypto';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, '..', '.env') });
 
-const EMAIL = 'k6-loadtest@loadtest.invalid';
-const PASSWORD = 'LoadTest1!';
-const NAME = 'k6 Load Test';
+const EMAIL = process.env.ADMIN_EMAIL;
+const PASSWORD = process.env.ADMIN_PASSWORD;
+const NAME = process.env.ADMIN_NAME ?? 'Admin';
 
-// Encrypt a value with AES-256-GCM using ENCRYPTION_KEY from .env
+if (!EMAIL || !PASSWORD) {
+  console.error('Error: ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env / environment.');
+  process.exit(1);
+}
+
+if (!process.env.DATABASE_URL) {
+  console.error('Error: DATABASE_URL not set.');
+  process.exit(1);
+}
+
+if (!process.env.ENCRYPTION_KEY || !process.env.BLIND_INDEX_SECRET) {
+  console.error('Error: ENCRYPTION_KEY and BLIND_INDEX_SECRET must be set.');
+  process.exit(1);
+}
+
 function encrypt(value) {
   const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
   const iv = randomBytes(12);
@@ -32,14 +47,12 @@ function encrypt(value) {
   return Buffer.concat([iv, tag, encrypted]).toString('base64');
 }
 
-// Deterministic HMAC-SHA256 blind index using BLIND_INDEX_SECRET from .env
 function blindIndex(value) {
   return createHmac('sha256', process.env.BLIND_INDEX_SECRET)
     .update(value.toLowerCase().trim())
     .digest('hex');
 }
 
-// BetterAuth stores the blind index as a valid email-format string in the email column
 function blindEmail(value) {
   return `${blindIndex(value)}@blind.index`;
 }
@@ -47,21 +60,18 @@ function blindEmail(value) {
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 async function main() {
-  const emailEncrypted = encrypt(EMAIL);
-  const emailIndex = blindIndex(EMAIL);
-  // BetterAuth looks users up by blind-index email, not plain email
   const emailForDb = blindEmail(EMAIL);
-  const nameEncrypted = encrypt(NAME);
 
-  // Remove existing test user if present (match on blind-index email)
-  const existing = await pool.query(`SELECT id FROM "user" WHERE email = $1`, [
-    emailForDb,
-  ]);
+  // Remove existing admin user if present (idempotent)
+  const existing = await pool.query(
+    `SELECT id FROM "user" WHERE email = $1`,
+    [emailForDb],
+  );
   if (existing.rows.length > 0) {
     const existingId = existing.rows[0].id;
     await pool.query(`DELETE FROM account WHERE user_id = $1`, [existingId]);
     await pool.query(`DELETE FROM "user" WHERE id = $1`, [existingId]);
-    console.log('Removed existing test user.');
+    console.log('Removed existing admin user.');
   }
 
   const userId = generateId();
@@ -69,9 +79,13 @@ async function main() {
   const hashedPassword = await hashPassword(PASSWORD);
   const now = new Date();
 
+  const emailEncrypted = encrypt(EMAIL);
+  const emailIndex = blindIndex(EMAIL);
+  const nameEncrypted = encrypt(NAME);
+
   await pool.query(
-    `INSERT INTO "user" (id, name, email, email_encrypted, email_index, email_verified, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, true, $6, $6)`,
+    `INSERT INTO "user" (id, name, email, email_encrypted, email_index, email_verified, role, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, true, 'admin', $6, $6)`,
     [userId, nameEncrypted, emailForDb, emailEncrypted, emailIndex, now],
   );
 
@@ -81,9 +95,9 @@ async function main() {
     [accountId, userId, userId, hashedPassword, now],
   );
 
-  console.log('✓ Load test user created:');
+  console.log('Admin user created:');
   console.log(`  email   : ${EMAIL}`);
-  console.log(`  password: ${PASSWORD}`);
+  console.log(`  role    : admin`);
   console.log(`  user id : ${userId}`);
 }
 
