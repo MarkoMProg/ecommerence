@@ -8,6 +8,14 @@ import {
 import { DATABASE_CONNECTION } from '../../database/database-connection';
 import { ReviewService } from '../review.service';
 
+// Mock decrypt to pass through plain text (test data is not encrypted)
+jest.mock('../../auth/crypto', () => ({
+  encrypt: (v: string) => v,
+  decrypt: (v: string) => v,
+  blindIndex: (v: string) => v,
+  blindEmail: (v: string) => `${v}@blind.index`,
+}));
+
 /**
  * Creates a thenable chain that mimics Drizzle's query-builder pattern.
  * The final `.then()` resolves to the given value.
