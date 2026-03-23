@@ -28,6 +28,15 @@ import {
 export class ReviewsController {
   constructor(private readonly reviewService: ReviewService) {}
 
+  /** List reviews authored by the current user. Requires auth. */
+  @Get('reviews/mine')
+  @UseGuards(BetterAuthGuard)
+  async listMine(@Req() req: Request) {
+    const user = req.user!;
+    const data = await this.reviewService.listByUser(user.id);
+    return { success: true, data };
+  }
+
   /** List reviews for a product. Public. Sorted by helpfulness (REV-004). */
   @Get('products/:productId/reviews')
   @AllowAnonymous()

@@ -13,6 +13,8 @@ import { DATABASE_CONNECTION } from '../database/database-connection';
 import { review, reviewHelpfulVote } from './schema';
 import { order, orderItem } from '../order/schema';
 import { user } from '../auth/schema';
+import { product } from '../catalog/schema';
+import { decrypt } from '../auth/crypto';
 
 export interface ReviewDto {
   id: string;
@@ -25,6 +27,11 @@ export interface ReviewDto {
   helpfulCount: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface UserReviewDto extends ReviewDto {
+  productName: string;
+  productSlug: string;
 }
 
 @Injectable()
@@ -97,7 +104,7 @@ export class ReviewService {
         id: r.id,
         productId: r.productId,
         userId: r.userId,
-        userName: r.userName,
+        userName: decrypt(r.userName),
         rating: r.rating,
         title: r.title,
         body: r.body,
@@ -154,7 +161,7 @@ export class ReviewService {
       .from(user)
       .where(eq(user.id, userId))
       .limit(1);
-    const userName = userData?.name ?? 'Anonymous';
+    const userName = userData?.name ? decrypt(userData.name) : 'Anonymous';
 
     const id = randomUUID();
     await this.db.insert(review).values({
@@ -175,7 +182,7 @@ export class ReviewService {
       id: created.id,
       productId: created.productId,
       userId: created.userId,
-      userName: created.userName,
+      userName: decrypt(created.userName),
       rating: created.rating,
       title: created.title,
       body: created.body,
@@ -235,7 +242,7 @@ export class ReviewService {
       id: updated.id,
       productId: updated.productId,
       userId: updated.userId,
-      userName: updated.userName,
+      userName: decrypt(updated.userName),
       rating: updated.rating,
       title: updated.title,
       body: updated.body,
@@ -385,7 +392,7 @@ export class ReviewService {
         id: r.id,
         productId: r.productId,
         userId: r.userId,
-        userName: r.userName,
+        userName: decrypt(r.userName),
         rating: r.rating,
         title: r.title,
         body: r.body,
@@ -469,5 +476,36 @@ export class ReviewService {
       });
     }
     return map;
+  }
+
+  /**
+   * List all reviews authored by a specific user, with product info.
+   * Sorted by creation date descending.
+   */
+  async listByUser(userId: string): Promise<UserReviewDto[]> {
+    const rows = await this.db
+      .select({
+        id: review.id,
+        productId: review.productId,
+        userId: review.userId,
+        userName: review.userName,
+        rating: review.rating,
+        title: review.title,
+        body: review.body,
+        helpfulCount: review.helpfulCount,
+        createdAt: review.createdAt,
+        updatedAt: review.updatedAt,
+        productName: product.name,
+        productSlug: product.slug,
+      })
+      .from(review)
+      .innerJoin(product, eq(review.productId, product.id))
+      .where(eq(review.userId, userId))
+      .orderBy(desc(review.createdAt));
+
+    return rows.map((r) => ({
+      ...r,
+      userName: decrypt(r.userName),
+    }));
   }
 }
