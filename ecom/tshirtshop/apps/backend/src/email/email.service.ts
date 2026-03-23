@@ -60,6 +60,7 @@ export class EmailService {
     order: OrderDto,
     recipientEmail: string,
     recipientName?: string,
+    failureReason?: string,
   ): Promise<void> {
     if (!this.resend) return;
 
@@ -74,8 +75,8 @@ export class EmailService {
         from: this.from,
         to: recipientEmail,
         subject,
-        html: buildPaymentFailedHtml(order, recipientName, uiUrl),
-        text: buildPaymentFailedText(order, uiUrl),
+        html: buildPaymentFailedHtml(order, recipientName, uiUrl, failureReason),
+        text: buildPaymentFailedText(order, uiUrl, failureReason),
       });
     } catch (err) {
       console.error('[EmailService] Failed to send payment failed email', {
@@ -294,6 +295,7 @@ function buildPaymentFailedHtml(
   order: OrderDto,
   name?: string,
   uiUrl: string = 'http://localhost:3001',
+  failureReason?: string,
 ): string {
   const orderId = order.id.slice(0, 8).toUpperCase();
   const greeting = name ? `Hi ${name},` : 'Hello,';
@@ -315,6 +317,13 @@ function buildPaymentFailedHtml(
     )
     .join('');
 
+  const reasonBlock = failureReason
+    ? `<div style="background-color:#2a1215;border:1px solid #f87171;border-left:3px solid #ef4444;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 4px;color:#f87171;font-size:10px;text-transform:uppercase;letter-spacing:2px;">What happened</p>
+        <p style="margin:0;color:#fca5a5;font-size:14px;line-height:1.6;">${escapeHtml(failureReason)}</p>
+      </div>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -335,8 +344,9 @@ function buildPaymentFailedHtml(
           <td style="background-color:#1A1A1A;padding:40px;">
             <p style="margin:0 0 6px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Payment Not Completed</p>
             <h2 style="margin:0 0 20px;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;">Your payment was not completed</h2>
+            ${reasonBlock}
             <p style="margin:0 0 28px;color:#cccccc;font-size:15px;line-height:1.7;">
-              ${greeting} Your order #${orderId} is still pending. The payment was not completed — you may have cancelled or encountered an issue.
+              ${greeting} Your order #${orderId} is still pending. The payment was not completed${failureReason ? '' : ' — you may have cancelled or encountered an issue'}.
             </p>
             <p style="margin:0 0 24px;color:#cccccc;font-size:15px;line-height:1.7;">
               You can complete your purchase by returning to checkout. Your cart items are saved.
@@ -379,6 +389,7 @@ function buildPaymentFailedHtml(
 function buildPaymentFailedText(
   order: OrderDto,
   uiUrl: string = 'http://localhost:3001',
+  failureReason?: string,
 ): string {
   const orderId = order.id.slice(0, 8).toUpperCase();
   const checkoutUrl = `${uiUrl}/checkout`;
@@ -387,6 +398,7 @@ function buildPaymentFailedText(
     '=================================',
     '',
     `Your order #${orderId} is still pending. The payment was not completed.`,
+    ...(failureReason ? ['', `Reason: ${failureReason}`] : []),
     '',
     'You can complete your purchase by returning to checkout:',
     checkoutUrl,

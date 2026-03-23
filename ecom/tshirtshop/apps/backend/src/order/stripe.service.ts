@@ -6,6 +6,15 @@ import Stripe from 'stripe';
  * Stripe Checkout integration (PAY-001).
  * Only active when STRIPE_SECRET_KEY is set.
  */
+export type WebhookResult =
+  | { type: 'payment.success'; orderId: string; sessionId: string }
+  | {
+      type: 'payment.failed';
+      orderId: string;
+      sessionId: string;
+      reason: string;
+    };
+
 @Injectable()
 export class StripeService {
   private readonly stripe: Stripe | null = null;
@@ -80,14 +89,11 @@ export class StripeService {
     return session.url;
   }
 
-  /**
-   * Handle Stripe webhook event (PAY-002). Verifies signature and processes checkout.session.completed.
-   * Returns { orderId, sessionId } if payment completed, null for other events (PAY-004).
-   */
+  /** Result from processing a Stripe webhook event. */
   handleWebhookEvent(
     rawBody: Buffer,
     signature: string,
-  ): { orderId: string; sessionId: string } | null {
+  ): WebhookResult | null {
     if (!this.stripe) return null;
 
     const webhookSecret = this.configService
@@ -113,8 +119,39 @@ export class StripeService {
         session.id
       ) {
         return {
+          type: 'payment.success',
           orderId: session.metadata.orderId.trim(),
           sessionId: session.id,
+        };
+      }
+    }
+
+    // Session expired without payment — notify user so they can retry
+    if (event.type === 'checkout.session.expired') {
+      const session = event.data.object;
+      const orderId = session.metadata?.orderId?.trim();
+      if (orderId && session.id) {
+        return {
+          type: 'payment.failed',
+          orderId,
+          sessionId: session.id,
+          reason:
+            'Your checkout session expired before payment was completed. Please place your order again.',
+        };
+      }
+    }
+
+    // Async payment method failed (e.g. bank transfer declined after redirect)
+    if (event.type === 'checkout.session.async_payment_failed') {
+      const session = event.data.object;
+      const orderId = session.metadata?.orderId?.trim();
+      if (orderId && session.id) {
+        return {
+          type: 'payment.failed',
+          orderId,
+          sessionId: session.id,
+          reason:
+            'Your payment method was declined or could not be processed. Please try a different payment method.',
         };
       }
     }

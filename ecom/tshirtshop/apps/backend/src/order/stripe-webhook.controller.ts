@@ -53,7 +53,7 @@ export class StripeWebhookController {
     }
 
     const result = this.stripeService.handleWebhookEvent(rawBody, signature);
-    if (result) {
+    if (result?.type === 'payment.success') {
       await this.paymentQueue.add(
         'payment.success',
         { orderId: result.orderId, sessionId: result.sessionId },
@@ -61,6 +61,21 @@ export class StripeWebhookController {
           attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: { count: 1000 },
+          removeOnFail: false,
+        },
+      );
+    } else if (result?.type === 'payment.failed') {
+      await this.paymentQueue.add(
+        'payment.failed',
+        {
+          orderId: result.orderId,
+          sessionId: result.sessionId,
+          failureReason: result.reason,
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 1000 },
+          removeOnComplete: { count: 500 },
           removeOnFail: false,
         },
       );

@@ -645,15 +645,26 @@ export class OrderService {
   /**
    * Enqueue payment.failed job when user returns from Stripe without completing payment.
    * Call from checkout controller when landing on cancel_url with orderId.
+   * Supports both registered and guest users (guest email retrieved from Stripe session).
    */
-  async enqueuePaymentFailedNotification(orderId: string): Promise<void> {
+  async enqueuePaymentFailedNotification(
+    orderId: string,
+    failureReason?: string,
+  ): Promise<void> {
     const id = orderId.trim();
     const o = await this.getOrderById(id);
-    if (!o || o.status !== 'pending' || !o.userId) return;
+    if (!o || o.status !== 'pending') return;
+    // Need either a registered user or a Stripe session (for guest email)
+    if (!o.userId && !o.stripeSessionId) return;
 
     void this.paymentQueue.add(
       'payment.failed',
-      { orderId: id },
+      {
+        orderId: id,
+        failureReason:
+          failureReason ??
+          'Payment was cancelled before completing. You can return to checkout to try again.',
+      },
       {
         attempts: 3,
         backoff: { type: 'exponential', delay: 1000 },
@@ -665,28 +676,51 @@ export class OrderService {
 
   /**
    * Public entry point for the payment.failed queue job.
-   * Sends failed payment email when user returns from Stripe without completing.
-   * Only sends for registered users (guest orders have no stored email).
+   * Sends failed payment email when user returns from Stripe without completing,
+   * or when Stripe fires a checkout.session.expired / async_payment_failed webhook.
+   * Supports both registered users (email from DB) and guest users (email from Stripe session).
    */
-  async triggerPaymentFailedNotification(orderId: string): Promise<void> {
+  async triggerPaymentFailedNotification(
+    orderId: string,
+    failureReason?: string,
+  ): Promise<void> {
     const pendingOrder = await this.getOrderById(orderId.trim());
     if (!pendingOrder || pendingOrder.status !== 'pending') return;
-    if (!pendingOrder.userId) return; // guest checkout — no email
+    if (!this.emailService.isConfigured()) return;
 
     try {
-      const [userRow] = await this.db
-        .select({ emailEncrypted: user.emailEncrypted, name: user.name })
-        .from(user)
-        .where(eq(user.id, pendingOrder.userId));
+      if (pendingOrder.userId) {
+        // Registered user — fetch encrypted email from DB
+        const [userRow] = await this.db
+          .select({ emailEncrypted: user.emailEncrypted, name: user.name })
+          .from(user)
+          .where(eq(user.id, pendingOrder.userId));
 
-      if (userRow?.emailEncrypted && this.emailService.isConfigured()) {
-        const realEmail = decryptAuth(userRow.emailEncrypted);
-        const realName = userRow.name ? decryptAuth(userRow.name) : undefined;
-        await this.emailService.sendPaymentFailedEmail(
-          pendingOrder,
-          realEmail,
-          realName,
+        if (userRow?.emailEncrypted) {
+          const realEmail = decryptAuth(userRow.emailEncrypted);
+          const realName = userRow.name
+            ? decryptAuth(userRow.name)
+            : undefined;
+          await this.emailService.sendPaymentFailedEmail(
+            pendingOrder,
+            realEmail,
+            realName,
+            failureReason,
+          );
+        }
+      } else if (pendingOrder.stripeSessionId) {
+        // Guest checkout — get email from Stripe session
+        const guestEmail = await this.stripeService.getSessionCustomerEmail(
+          pendingOrder.stripeSessionId,
         );
+        if (guestEmail) {
+          await this.emailService.sendPaymentFailedEmail(
+            pendingOrder,
+            guestEmail,
+            undefined,
+            failureReason,
+          );
+        }
       }
     } catch (err) {
       console.error('[OrderService] Failed to send payment failed email', {

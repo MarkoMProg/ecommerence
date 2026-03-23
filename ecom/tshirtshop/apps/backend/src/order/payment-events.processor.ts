@@ -9,6 +9,8 @@ export { PAYMENT_EVENTS_QUEUE };
 export interface PaymentSuccessJobData {
   orderId: string;
   sessionId?: string;
+  /** Human-readable reason when payment failed (used by payment.failed jobs). */
+  failureReason?: string;
 }
 
 @Processor(PAYMENT_EVENTS_QUEUE)
@@ -44,6 +46,7 @@ export class PaymentEventsProcessor extends WorkerHost {
       );
       await this.orderService.triggerPaymentFailedNotification(
         job.data.orderId,
+        job.data.failureReason,
       );
       this.logger.log(
         `[job:${job.id}] payment.failed completed — orderId=${job.data.orderId}`,
