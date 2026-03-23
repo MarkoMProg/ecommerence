@@ -16,6 +16,14 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## End-to-end tests (Playwright)
+
+See **[e2e/README.md](./e2e/README.md)** for:
+
+- How to install Chromium and run `npm run test:e2e` (from the repo root or `apps/web`)
+- Configuring **`E2E_USER_EMAIL`** / **`E2E_USER_PASSWORD`** for authenticated tests
+- Why the **sign-up** test may be **skipped** when the backend enforces **reCAPTCHA** (`RECAPTCHA_SECRET_KEY`)
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.

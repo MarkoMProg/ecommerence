@@ -59,6 +59,11 @@ yarn exec turbo build --filter=docs
 pnpm exec turbo build --filter=docs
 ```
 
+### Tests
+
+- **Unit tests:** from the repo root, `npm run test` (runs Jest in packages that define `test`, e.g. `apps/backend`).
+- **Playwright E2E (storefront):** `npm run test:e2e` — see **[apps/web/e2e/README.md](apps/web/e2e/README.md)** for run commands, `E2E_USER_*` test account setup, and why sign-up may be skipped when reCAPTCHA is enabled.
+
 ### Develop
 
 To develop all apps and packages, run the following command:
