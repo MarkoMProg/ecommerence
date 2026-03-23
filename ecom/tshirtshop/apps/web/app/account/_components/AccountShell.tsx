@@ -10,6 +10,7 @@ import {
   CreditCard,
   User2,
   ShieldCheck,
+  MessageSquareText,
   Menu,
   X,
   LogOut,
@@ -32,6 +33,7 @@ const accountNavLinks = [
     label: "Payment Methods",
     Icon: CreditCard,
   },
+  { href: "/account/reviews", label: "My Reviews", Icon: MessageSquareText },
   { href: "/account/profile", label: "Profile", Icon: User2 },
   { href: "/account/security", label: "Security", Icon: ShieldCheck },
 ] as const;

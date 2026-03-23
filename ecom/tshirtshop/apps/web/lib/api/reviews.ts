@@ -25,6 +25,11 @@ export interface Review {
   helpfulCount: number;
 }
 
+export interface UserReview extends Review {
+  productName: string;
+  productSlug: string;
+}
+
 export interface ReviewsResponse {
   success: boolean;
   data: Review[];
@@ -122,6 +127,20 @@ export async function voteReviewHelpful(
     return json.success ? json.data : null;
   } catch {
     return null;
+  }
+}
+
+/** Fetch all reviews by the current user. Requires auth. */
+export async function fetchMyReviews(): Promise<UserReview[]> {
+  try {
+    const res = await fetch(`${apiBase()}/api/v1/reviews/mine`, {
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { success: boolean; data: UserReview[] };
+    return json.success ? json.data : [];
+  } catch {
+    return [];
   }
 }
 
