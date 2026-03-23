@@ -27,7 +27,7 @@ export class DeliveryService {
     private readonly db: NodePgDatabase,
   ) {}
 
-  /** Idempotent seed: first run after db:push creates default threshold and Standard/Express options. */
+ 
   async ensureDefaults(): Promise<void> {
     const [cfg] = await this.db
       .select()
