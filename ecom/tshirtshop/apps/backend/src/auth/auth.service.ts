@@ -95,7 +95,20 @@ export class AuthService {
 
   async getSessionUser(headers: Headers) {
     const session = await this.auth.api.getSession({ headers });
-    return session?.user ?? null;
+
+    if (!session) {
+      throw new UnauthorizedException(
+        'No active session found. Please log in.',
+      );
+    }
+
+    if (!session.user) {
+      throw new UnauthorizedException(
+        'Session exists but no user is associated with it. Please log in again.',
+      );
+    }
+
+    return session.user;
   }
 
   async revokeSession(headers: Headers): Promise<void> {
@@ -115,12 +128,12 @@ export class AuthService {
     sessionId?: string,
   ) {
     if (!oldRefreshToken) {
-      return null;
+      throw new UnauthorizedException('No refresh token provided.');
     }
 
     const token = oldRefreshToken.trim();
     if (!token) {
-      return null;
+      throw new UnauthorizedException('Refresh token is empty.');
     }
 
     const tokenHash = this.buildTokenHash(token);
@@ -131,15 +144,21 @@ export class AuthService {
       .limit(1);
 
     if (!existing) {
-      return null;
+      throw new UnauthorizedException(
+        'Refresh token not recognized. Please log in again.',
+      );
     }
 
     if (existing.usedAt) {
-      return null;
+      throw new UnauthorizedException(
+        'Refresh token has already been used. Please log in again.',
+      );
     }
 
     if (existing.expiresAt.getTime() <= Date.now()) {
-      return null;
+      throw new UnauthorizedException(
+        'Refresh token has expired. Please log in again.',
+      );
     }
 
     const [consumed] = await this.db
@@ -158,7 +177,9 @@ export class AuthService {
       });
 
     if (!consumed) {
-      return null;
+      throw new UnauthorizedException(
+        'Refresh token was consumed by another request. Please log in again.',
+      );
     }
 
     const rotatedToken = this.buildRefreshTokenValue();

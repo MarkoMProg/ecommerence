@@ -155,11 +155,12 @@ describe('AuthService', () => {
       expect(result).toEqual(mockUser);
     });
 
-    it('should return null when no session', async () => {
+    it('should throw UnauthorizedException when no session', async () => {
       mockAuth.api.getSession.mockResolvedValue(null);
 
-      const result = await service.getSessionUser(new Headers());
-      expect(result).toBeNull();
+      await expect(service.getSessionUser(new Headers())).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -219,7 +220,7 @@ describe('AuthService', () => {
       expect(result).not.toBe(oldToken);
     });
 
-    it('silently returns null for already-used refresh tokens (non-throwing)', async () => {
+    it('throws UnauthorizedException for already-used refresh tokens', async () => {
       const existing = {
         id: 'rt-1',
         userId: mockUser.id,
@@ -236,13 +237,13 @@ describe('AuthService', () => {
         }),
       });
 
-      const result = await service.rotateRefreshToken('already-used-token');
-
-      expect(result).toBeNull();
+      await expect(
+        service.rotateRefreshToken('already-used-token'),
+      ).rejects.toThrow(UnauthorizedException);
       expect(mockDb.update).not.toHaveBeenCalled();
     });
 
-    it('silently returns null if token not found or consumed (non-throwing)', async () => {
+    it('throws UnauthorizedException if token consumed by race condition', async () => {
       const existing = {
         id: 'rt-1',
         userId: mockUser.id,
@@ -268,9 +269,9 @@ describe('AuthService', () => {
         }),
       });
 
-      const result = await service.rotateRefreshToken('old-token');
-
-      expect(result).toBeNull();
+      await expect(
+        service.rotateRefreshToken('old-token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('enforces single-use rotation and rejects replayed old tokens', async () => {
@@ -347,16 +348,18 @@ describe('AuthService', () => {
       mockDb.insert.mockReturnValue({ values });
 
       const freshTokenB = await service.rotateRefreshToken(freshTokenA);
-      const replayA = await service.rotateRefreshToken(freshTokenA);
+      await expect(
+        service.rotateRefreshToken(freshTokenA),
+      ).rejects.toThrow(UnauthorizedException);
       const freshTokenC = await service.rotateRefreshToken(freshTokenB);
-      const replayB = await service.rotateRefreshToken(freshTokenB);
+      await expect(
+        service.rotateRefreshToken(freshTokenB),
+      ).rejects.toThrow(UnauthorizedException);
 
       expect(freshTokenB).toBeDefined();
       expect(freshTokenC).toBeDefined();
       expect(freshTokenB).not.toBe(freshTokenA);
       expect(freshTokenC).not.toBe(freshTokenB);
-      expect(replayA).toBeNull();
-      expect(replayB).toBeNull();
       expect(mockDb.update).toHaveBeenCalledTimes(2);
       expect(mockDb.insert).toHaveBeenCalledTimes(2);
       expect(values).toHaveBeenCalledTimes(2);
