@@ -35,32 +35,38 @@ export class DeliveryService {
       .where(eq(shopDeliveryConfig.id, CONFIG_ID))
       .limit(1);
     if (!cfg) {
-      await this.db.insert(shopDeliveryConfig).values({
-        id: CONFIG_ID,
-        freeShippingThresholdCents: 7500,
-      });
+      await this.db
+        .insert(shopDeliveryConfig)
+        .values({
+          id: CONFIG_ID,
+          freeShippingThresholdCents: 7500,
+        })
+        .onConflictDoNothing();
     }
 
     const existing = await this.db.select().from(deliveryOption);
     if (existing.length === 0) {
-      await this.db.insert(deliveryOption).values([
-        {
-          id: 'standard',
-          label: 'Standard',
-          priceCents: 599,
-          sortOrder: 0,
-          active: true,
-          isDefault: true,
-        },
-        {
-          id: 'express',
-          label: 'Express',
-          priceCents: 1299,
-          sortOrder: 1,
-          active: true,
-          isDefault: false,
-        },
-      ]);
+      await this.db
+        .insert(deliveryOption)
+        .values([
+          {
+            id: 'standard',
+            label: 'Standard',
+            priceCents: 599,
+            sortOrder: 0,
+            active: true,
+            isDefault: true,
+          },
+          {
+            id: 'express',
+            label: 'Express',
+            priceCents: 1299,
+            sortOrder: 1,
+            active: true,
+            isDefault: false,
+          },
+        ])
+        .onConflictDoNothing();
     }
   }
 
