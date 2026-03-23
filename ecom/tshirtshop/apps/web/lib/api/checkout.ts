@@ -136,8 +136,8 @@ export async function createOrder(
     if (code && PAYMENT_ERROR_CODES.includes(code)) {
       throw new VerifyPaymentError(msg, code);
     }
-    const details = err?.details;
-    throw new Error(details?.length ? `${msg}: ${JSON.stringify(details)}` : msg);
+    const details = err?.details as unknown;
+    throw new Error(details && typeof details === 'object' && Array.isArray(details) && details.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
 
   const json = (await res.json()) as { success: boolean; data: { order: Order; checkoutUrl: string | null } };

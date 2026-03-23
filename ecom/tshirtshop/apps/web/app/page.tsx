@@ -3,6 +3,8 @@ import Image from "next/image";
 import { Star } from "lucide-react";
 import { fetchProducts, fetchCategories } from "@/lib/api/catalog";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   let featuredProducts: Awaited<ReturnType<typeof fetchProducts>>["products"] = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
