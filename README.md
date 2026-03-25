@@ -6,9 +6,9 @@
 
 The platform is organized into **three interconnected projects** (coursework phases):
 
-- **Project 1 (Foundation)** — User authentication, PostgreSQL database, product catalog with search and browse  
-- **Project 2 (Commerce)** — Cart, checkout, Stripe payments, order lifecycle  
-- **Project 3 (Experience)** — Customer-facing UI, admin dashboards, security and performance features  
+- **Project 1 (Foundation)** — User authentication, PostgreSQL database, product catalog with search and browse
+- **Project 2 (Commerce)** — Cart, checkout, Stripe payments, order lifecycle
+- **Project 3 (Experience)** — Customer-facing UI, admin dashboards, security and performance features
 
 | Layer        | Technologies                                         |
 | ------------ | ---------------------------------------------------- |
@@ -26,14 +26,14 @@ The runnable application lives under **`ecom/tshirtshop`**. Unless noted otherwi
 
 Per the **i love shopping** specification and the **testing / review checklist**, this README includes:
 
-| Deliverable | Where |
-| ----------- | ----- |
-| Project overview | Above |
-| **Entity Relationship Diagram** (entities, attributes, relationships, PKs, FKs, cardinality, modality) | [Entity Relationship Diagram](#entity-relationship-diagram) |
-| Setup and installation | [How to run the project](#how-to-run-the-project) |
-| Usage guide | [Usage guide](#usage-guide) |
-| **Performance analysis** (load testing: concurrency, throughput, bottlenecks) | [Performance analysis (load testing)](#performance-analysis-load-testing) |
-| Bonus / additional features | [Additional features](#additional-features-and-bonus-functionality) |
+| Deliverable                                                                                            | Where                                                                     |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Project overview                                                                                       | Above                                                                     |
+| **Entity Relationship Diagram** (entities, attributes, relationships, PKs, FKs, cardinality, modality) | [Entity Relationship Diagram](#entity-relationship-diagram)               |
+| Setup and installation                                                                                 | [How to run the project](#how-to-run-the-project)                         |
+| Usage guide                                                                                            | [Usage guide](#usage-guide)                                               |
+| **Performance analysis** (load testing: concurrency, throughput, bottlenecks)                          | [Performance analysis (load testing)](#performance-analysis-load-testing) |
+| Bonus / additional features                                                                            | [Additional features](#additional-features-and-bonus-functionality)       |
 
 **Automated tests** (run regularly; see sections below):
 
@@ -64,16 +64,16 @@ npm install
 
 Create **`ecom/tshirtshop/apps/backend/.env`** from **`apps/backend/.env.example`**.
 
-| Variable | Required | Purpose |
-| -------- | -------- | ------- |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | Yes | Cookie / token signing |
-| `ENCRYPTION_KEY` | Yes | 64-character hex for PII encryption |
-| `BLIND_INDEX_SECRET` | Yes | Deterministic email lookups (user creation) |
-| `REDIS_URL` | Yes for full stack | e.g. `redis://localhost:6379` |
-| `UI_URL` | Recommended | Storefront origin (e.g. `http://localhost:3001`) |
-| `RESEND_API_KEY` | For email flows | Verification, password reset |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | For real payments | Use [Stripe test keys](https://stripe.com/docs/keys) in development |
+| Variable                                     | Required           | Purpose                                                             |
+| -------------------------------------------- | ------------------ | ------------------------------------------------------------------- |
+| `DATABASE_URL`                               | Yes                | PostgreSQL connection string                                        |
+| `BETTER_AUTH_SECRET`                         | Yes                | Cookie / token signing                                              |
+| `ENCRYPTION_KEY`                             | Yes                | 64-character hex for PII encryption                                 |
+| `BLIND_INDEX_SECRET`                         | Yes                | Deterministic email lookups (user creation)                         |
+| `REDIS_URL`                                  | Yes for full stack | e.g. `redis://localhost:6379`                                       |
+| `UI_URL`                                     | Recommended        | Storefront origin (e.g. `http://localhost:3001`)                    |
+| `RESEND_API_KEY`                             | For email flows    | Verification, password reset                                        |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | For real payments  | Use [Stripe test keys](https://stripe.com/docs/keys) in development |
 
 Generate random secrets:
 
@@ -109,8 +109,8 @@ npm run dev
 
 Typical local URLs:
 
-- **Storefront (Next.js):** http://localhost:3001  
-- **API (NestJS):** http://localhost:3000  
+- **Storefront (Next.js):** http://localhost:3001
+- **API (NestJS):** http://localhost:3000
 
 Ports follow **`PORT`** / **`UI_URL`** in your env files if you change them.
 
@@ -162,11 +162,11 @@ From **`ecom/tshirtshop/apps/web`**:
 npm run test:e2e
 ```
 
-| Command | Purpose |
-| ------- | ------- |
-| `npm run test:e2e` | Default headless run |
-| `npm run test:e2e:ui` | Playwright UI mode (debug, time travel) |
-| `npm run test:e2e:headed` | Visible Chromium |
+| Command                   | Purpose                                 |
+| ------------------------- | --------------------------------------- |
+| `npm run test:e2e`        | Default headless run                    |
+| `npm run test:e2e:ui`     | Playwright UI mode (debug, time travel) |
+| `npm run test:e2e:headed` | Visible Chromium                        |
 
 After a run, open the HTML report:
 
@@ -204,7 +204,7 @@ If **`E2E_USER_EMAIL`** or **`E2E_USER_PASSWORD`** is missing, **`authenticated.
 The spec **`e2e/signup.spec.ts`** calls **`POST /api/auth/sign-up/email`** (no browser reCAPTCHA widget).
 
 - If the backend **does not require reCAPTCHA** on that route (e.g. no **`RECAPTCHA_SECRET_KEY`** in `apps/backend/.env` for local dev), the API can succeed and the test **passes**.
-- If **`RECAPTCHA_SECRET_KEY`** is set, the server typically requires a captcha token on sign-up. The test does not send one, so the API returns an error the test treats as “CAPTCHA required,” and the spec **`test.skip`s** with a message like *“Sign-up requires CAPTCHA…”*. That is intentional: automating real reCAPTCHA in CI is flaky, so the default E2E path **skips** instead of failing.
+- If **`RECAPTCHA_SECRET_KEY`** is set, the server typically requires a captcha token on sign-up. The test does not send one, so the API returns an error the test treats as “CAPTCHA required,” and the spec **`test.skip`s** with a message like _“Sign-up requires CAPTCHA…”_. That is intentional: automating real reCAPTCHA in CI is flaky, so the default E2E path **skips** instead of failing.
 
 **To run the sign-up test green:** use a local backend **without** `RECAPTCHA_SECRET_KEY`, or an environment where sign-up does not enforce CAPTCHA on that endpoint.
 
@@ -220,15 +220,15 @@ The spec **`e2e/signup.spec.ts`** calls **`POST /api/auth/sign-up/email`** (no b
 
 ### E2E environment variables (reference)
 
-| Variable | Purpose |
-| -------- | ------- |
-| `PLAYWRIGHT_BASE_URL` | Override default base URL (must match how you run the app: `http` vs `https`) |
-| `PLAYWRIGHT_SKIP_WEBSERVER` | `1` = you already run `npm run dev` from the monorepo root |
-| `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` | Required for **`authenticated.spec.ts`** |
-| `E2E_RECAPTCHA_SITEKEY` | Override site key for the Playwright process (e.g. Google test key) |
-| `E2E_STRIP_RECAPTCHA` | `1` = clear `NEXT_PUBLIC_RECAPTCHA_SITEKEY` unless `E2E_RECAPTCHA_SITEKEY` is set |
-| `E2E_KEEP_RECAPTCHA` | `1` = legacy: keep `.env.local` reCAPTCHA as loaded (advanced) |
-| `E2E_SKIP_STRIPE_CHECKOUT` | `1` on **backend** (dev): skip Stripe session; confirmation page only. Playwright’s `webServer` may set this automatically. |
+| Variable                               | Purpose                                                                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `PLAYWRIGHT_BASE_URL`                  | Override default base URL (must match how you run the app: `http` vs `https`)                                               |
+| `PLAYWRIGHT_SKIP_WEBSERVER`            | `1` = you already run `npm run dev` from the monorepo root                                                                  |
+| `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` | Required for **`authenticated.spec.ts`**                                                                                    |
+| `E2E_RECAPTCHA_SITEKEY`                | Override site key for the Playwright process (e.g. Google test key)                                                         |
+| `E2E_STRIP_RECAPTCHA`                  | `1` = clear `NEXT_PUBLIC_RECAPTCHA_SITEKEY` unless `E2E_RECAPTCHA_SITEKEY` is set                                           |
+| `E2E_KEEP_RECAPTCHA`                   | `1` = legacy: keep `.env.local` reCAPTCHA as loaded (advanced)                                                              |
+| `E2E_SKIP_STRIPE_CHECKOUT`             | `1` on **backend** (dev): skip Stripe session; confirmation page only. Playwright’s `webServer` may set this automatically. |
 
 Tests **fail** when the catalog is empty, checkout never reaches confirmation, sign-up fails unexpectedly, or the auth page fails to load. **Auth** tests are **skipped** when `E2E_USER_*` are unset. **Sign-up** is **skipped** when the server requires CAPTCHA (see above).
 
@@ -592,10 +592,10 @@ Category trees and listing payloads are read-heavy and change infrequently. Shor
 
 ### Summary
 
-| Question                                   | Answer                                                                                                                   |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| Maximum concurrent users before p95 > 5 s? | **~1 650 VUs** (p95 = 4.67 s) at time of report                                                                           |
-| Expected throughput (stress window)        | **~103 req/s** (160 VU scenario)                                                                                         |
+| Question                                   | Answer                                                                                                                     |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Maximum concurrent users before p95 > 5 s? | **~1 650 VUs** (p95 = 4.67 s) at time of report                                                                            |
+| Expected throughput (stress window)        | **~103 req/s** (160 VU scenario)                                                                                           |
 | What causes latency to grow?               | Connection pool queueing, amplified by heavy catalog reads, N+1 patterns, multi-step cart paths, and missing indexes/cache |
 
 The system degrades **gracefully** under overload — errors stayed at **0%** even at 2 000 VUs in this campaign; the dominant effect was **latency** from queue depth, not hard failure.
@@ -604,15 +604,15 @@ The system degrades **gracefully** under overload — errors stayed at **0%** ev
 
 ## Additional features and bonus functionality
 
-| Feature                       | Description                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------------- |
-| **Stripe payments**           | Checkout Session, webhooks, refunds                                                |
-| **Two-factor authentication** | TOTP (e.g. Google Authenticator), backup codes                                     |
-| **Product reviews**           | Ratings, helpful votes, aggregation                                                |
-| **Guest checkout**            | Checkout without an account                                                        |
-| **Coupon codes**              | e.g. `FRESHP100` for promotions / shipping                                       |
-| **Encryption at rest**        | PII (addresses, email) encrypted in the database                                   |
-| **Local HTTPS**               | Optional self-signed TLS for dev (`USE_HTTPS` / backend TLS scripts)               |
+| Feature                       | Description                                                          |
+| ----------------------------- | -------------------------------------------------------------------- |
+| **Stripe payments**           | Checkout Session, webhooks, refunds                                  |
+| **Two-factor authentication** | TOTP (e.g. Google Authenticator), backup codes                       |
+| **Product reviews**           | Ratings, helpful votes, aggregation                                  |
+| **Guest checkout**            | Checkout without an account                                          |
+| **Coupon codes**              | e.g. `FRESHP100` for promotions / shipping                           |
+| **Encryption at rest**        | PII (addresses, email) encrypted in the database                     |
+| **Local HTTPS**               | Optional self-signed TLS for dev (`USE_HTTPS` / backend TLS scripts) |
 
 ### Security posture (coursework baseline and beyond)
 
@@ -646,25 +646,25 @@ ecommerence/
 
 ### Customer flow
 
-1. **Browse** — View products by category, use faceted search (brand, price), sort by relevance/price/rating  
-2. **Search** — Type in the search bar for dynamic suggestions  
-3. **Cart** — Add items (guest or logged-in). Logged-in carts persist across sessions  
-4. **Checkout** — Enter shipping address, apply a coupon when applicable, complete payment via Stripe  
-5. **Orders** — View order history, cancel eligible orders, track status  
+1. **Browse** — View products by category, use faceted search (brand, price), sort by relevance/price/rating
+2. **Search** — Type in the search bar for dynamic suggestions
+3. **Cart** — Add items (guest or logged-in). Logged-in carts persist across sessions
+4. **Checkout** — Enter shipping address, apply a coupon when applicable, complete payment via Stripe
+5. **Orders** — View order history, cancel eligible orders, track status
 
 ### Account management
 
-- **Register** — Email/password or OAuth (e.g. Google, Facebook). CAPTCHA on sign-up when configured  
-- **Verify email** — Use the verification link before first sign-in where required  
-- **Login** — Session-based auth with refresh rotation. Optional **2FA** (TOTP)  
-- **Password reset** — Request a reset link via email  
+- **Register** — Email/password or OAuth (e.g. Google, Facebook). CAPTCHA on sign-up when configured
+- **Verify email** — Use the verification link before first sign-in where required
+- **Login** — Session-based auth with refresh rotation. Optional **2FA** (TOTP)
+- **Password reset** — Request a reset link via email
 
 ### Admin dashboard
 
-- **Products** — CRUD, bulk upload, archive  
-- **Orders** — View, update status, refunds  
-- **Users** — List, roles, moderation tools  
-- **Reviews** — Moderation  
+- **Products** — CRUD, bulk upload, archive
+- **Orders** — View, update status, refunds
+- **Users** — List, roles, moderation tools
+- **Reviews** — Moderation
 
 Access **`/admin`** (requires admin role). **All admin accounts must use 2FA** per the review checklist.
 
@@ -672,4 +672,4 @@ Access **`/admin`** (requires admin role). **All admin accounts must use 2FA** p
 
 ## License
 
-See repository metadata or `LICENSE` if present.
+This project was completed in collaboration with another student, Giordano Bruno Lugo. The school is aware of this arrangement, as it was approved by Peep/kood of the curriculum team. Additionally, there may be changes in the future allowing this project to be completed either individually or as a group.
