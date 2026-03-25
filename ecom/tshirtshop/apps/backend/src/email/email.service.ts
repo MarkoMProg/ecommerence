@@ -299,7 +299,7 @@ function buildPaymentFailedHtml(
 ): string {
   const orderId = order.id.slice(0, 8).toUpperCase();
   const greeting = name ? `Hi ${name},` : 'Hello,';
-  const checkoutUrl = `${uiUrl}/checkout`;
+  const checkoutUrl = `${uiUrl}/checkout/confirmation?orderId=${encodeURIComponent(order.id)}`;
 
   const itemRows = order.items
     .map(
@@ -392,7 +392,7 @@ function buildPaymentFailedText(
   failureReason?: string,
 ): string {
   const orderId = order.id.slice(0, 8).toUpperCase();
-  const checkoutUrl = `${uiUrl}/checkout`;
+  const checkoutUrl = `${uiUrl}/checkout/confirmation?orderId=${encodeURIComponent(order.id)}`;
   const lines = [
     'DARKLOOM — Payment Not Completed',
     '=================================',
