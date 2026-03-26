@@ -115,6 +115,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_RECAPTCHA_SITEKEY: "6LcLpGcsAAAAALTlJkb33AjGE4an7t8c8RN7rGfK"
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}"
     env_file:
       - apps/web/.env.docker
     volumes:

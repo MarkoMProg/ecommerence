@@ -85,7 +85,7 @@ export interface ShippingAddress {
 
 export interface CreateOrderResponse {
   order: Order;
-  checkoutUrl: string | null;
+  clientSecret: string | null;
 }
 
 /** Create order from cart. Pass cartId (e.g. cart.id) or omit to use cookie. Call from client only. */
@@ -140,7 +140,7 @@ export async function createOrder(
     throw new Error(details && typeof details === 'object' && Array.isArray(details) && details.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
 
-  const json = (await res.json()) as { success: boolean; data: { order: Order; checkoutUrl: string | null } };
+  const json = (await res.json()) as { success: boolean; data: { order: Order; clientSecret: string | null } };
   if (!json.success || !json.data?.order) throw new Error("Invalid response from checkout API");
   return json.data;
 }
@@ -207,26 +207,26 @@ export class VerifyPaymentError extends Error {
   }
 }
 
-/** Get Stripe Checkout URL for an existing pending order. Redirect user to returned URL to complete payment. */
-export async function getPaymentUrlForOrder(orderId: string): Promise<string> {
+/** Get Stripe Embedded Checkout session for an existing pending order. */
+export async function getPaymentSessionForOrder(orderId: string): Promise<string> {
   if (!orderId?.trim()) throw new Error("Order ID is required");
   const res = await fetch(
-    `${apiBase()}/api/v1/checkout/${encodeURIComponent(orderId.trim())}/payment-url`,
+    `${apiBase()}/api/v1/checkout/${encodeURIComponent(orderId.trim())}/payment-session`,
     { method: "POST", credentials: "include" },
   );
   if (!res.ok) {
     const body = await res.json();
     const err = body?.error;
-    const msg = err?.message ?? "Failed to get payment URL";
+    const msg = err?.message ?? "Failed to create payment session";
     const code = err?.code as VerifyPaymentErrorCode | undefined;
     if (code && PAYMENT_ERROR_CODES.includes(code)) {
       throw new VerifyPaymentError(msg, code);
     }
     throw new Error(msg);
   }
-  const json = (await res.json()) as { success: boolean; data: { checkoutUrl: string } };
-  if (!json.success || !json.data?.checkoutUrl) throw new Error("Invalid response from payment URL API");
-  return json.data.checkoutUrl;
+  const json = (await res.json()) as { success: boolean; data: { clientSecret: string } };
+  if (!json.success || !json.data?.clientSecret) throw new Error("Invalid response from payment session API");
+  return json.data.clientSecret;
 }
 
 /** Notify backend that user returned from Stripe without completing payment (cancel_url). */

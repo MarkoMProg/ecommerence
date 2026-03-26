@@ -24,6 +24,8 @@ COPY apps/web/ ./apps/web/
 # into the client bundle.  Pass via docker-compose build.args.
 ARG NEXT_PUBLIC_RECAPTCHA_SITEKEY
 ENV NEXT_PUBLIC_RECAPTCHA_SITEKEY=$NEXT_PUBLIC_RECAPTCHA_SITEKEY
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 # Placeholder URL so the build doesn't crash if a route tries to fetch at
 # static-generation time.  The real value is injected at runtime via env_file.

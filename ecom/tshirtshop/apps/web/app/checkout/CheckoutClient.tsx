@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  EmbeddedCheckoutProvider,
+  EmbeddedCheckout,
+} from "@stripe/react-stripe-js";
 import type { Cart } from "@/lib/api/cart";
 import { fetchCartClient } from "@/lib/api/cart";
 import {
@@ -26,6 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
+);
 
 interface CheckoutClientProps {
   cart: Cart | null;
@@ -142,6 +151,8 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
   const [placeStatus, setPlaceStatus] = useState<"idle" | "loading" | "error">("idle");
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({});
 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -310,7 +321,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
     setPlaceError(null);
     setStockError(null);
     try {
-      const { order, checkoutUrl } = await createOrder(
+      const { order, clientSecret } = await createOrder(
         {
           fullName: address.fullName.trim(),
           line1: address.line1.trim(),
@@ -325,8 +336,9 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
         appliedCoupon,
         selectedDeliveryOptionId
       );
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+      if (clientSecret) {
+        setPlacedOrderId(order.id);
+        setStripeClientSecret(clientSecret);
       } else {
         router.push(`/checkout/confirmation?orderId=${order.id}`);
       }
@@ -348,6 +360,26 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
     } finally {
       setPlaceStatus("idle");
     }
+  }
+
+  if (stripeClientSecret) {
+    return (
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+        <div className="lg:col-span-2">
+          <section className="rounded-lg border border-white/10 bg-white/5 p-6">
+            <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
+              Complete payment
+            </h2>
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret: stripeClientSecret }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          </section>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -535,7 +567,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
                 Expires {String(defaultPaymentMethod.expMonth).padStart(2, "0")}/{defaultPaymentMethod.expYear}
               </p>
               <p className="mt-3 text-xs text-white/40">
-                This card will appear as an option on the Stripe payment page. You can choose a different method there.
+                This card will appear as an option when you proceed to payment.
               </p>
             </div>
           ) : (
@@ -544,7 +576,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
                 Payment is collected securely after you place your order.
               </p>
               <p className="mt-2 text-xs text-white/40">
-                You may be redirected to Stripe Checkout if configured.
+                A secure payment form will appear on this page.
               </p>
             </div>
           )}
@@ -707,7 +739,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
             {placeStatus === "loading" ? "Placing…" : "Place Order"}
           </button>
           <p className="mt-3 text-center text-[10px] text-white/40">
-            Order created as pending. Redirect to Stripe or confirmation.
+            Order created as pending. Secure payment collected on this page.
           </p>
         </section>
       </div>

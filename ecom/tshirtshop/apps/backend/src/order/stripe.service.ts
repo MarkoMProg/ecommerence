@@ -45,8 +45,8 @@ export class StripeService {
   }
 
   /**
-   * Create Stripe Checkout Session for an order.
-   * Returns checkout URL or null if Stripe not configured.
+   * Create Stripe Embedded Checkout Session for an order.
+   * Returns { clientSecret, sessionId } or null if Stripe not configured.
    * Pass customerId to show the customer's saved payment methods at checkout.
    */
   async createCheckoutSession(
@@ -54,11 +54,12 @@ export class StripeService {
     totalCents: number,
     currency: string = 'usd',
     customerId?: string | null,
-  ): Promise<string | null> {
+  ): Promise<{ clientSecret: string; sessionId: string } | null> {
     if (!this.stripe) return null;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
+      ui_mode: 'embedded',
       line_items: [
         {
           price_data: {
@@ -73,8 +74,7 @@ export class StripeService {
         },
       ],
       metadata: { orderId },
-      success_url: `${this.uiUrl}/checkout/confirmation?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${this.uiUrl}/checkout?canceled=1&orderId=${orderId}`,
+      return_url: `${this.uiUrl}/checkout/confirmation?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
     };
 
     // Attach Stripe customer to show saved payment methods and save new ones
@@ -86,7 +86,10 @@ export class StripeService {
     }
 
     const session = await this.stripe.checkout.sessions.create(sessionParams);
-    return session.url;
+    return {
+      clientSecret: session.client_secret!,
+      sessionId: session.id,
+    };
   }
 
   /** Result from processing a Stripe webhook event. */

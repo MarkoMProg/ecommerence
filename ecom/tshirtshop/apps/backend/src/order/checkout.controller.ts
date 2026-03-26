@@ -169,15 +169,16 @@ export class CheckoutController {
       stripeCustomerId = u?.stripeCustomerId ?? null;
     }
 
-    let checkoutUrl: string | null = null;
+    let clientSecret: string | null = null;
     if (this.stripeService.isConfigured() && order.status === 'pending') {
       try {
-        checkoutUrl = await this.stripeService.createCheckoutSession(
+        const session = await this.stripeService.createCheckoutSession(
           order.id,
           order.totalCents,
           'usd',
           stripeCustomerId,
         );
+        clientSecret = session?.clientSecret ?? null;
       } catch (err) {
         const mapped = mapStripeError(err);
         if (mapped) {
@@ -200,9 +201,9 @@ export class CheckoutController {
 
     return {
       success: true,
-      data: { order, checkoutUrl },
-      message: checkoutUrl
-        ? 'Order created. Redirect to Stripe Checkout.'
+      data: { order, clientSecret },
+      message: clientSecret
+        ? 'Order created. Complete payment with embedded checkout.'
         : 'Order created successfully.',
     };
   }
@@ -224,12 +225,12 @@ export class CheckoutController {
   }
 
   /**
-   * Create Stripe Checkout URL for an existing pending order.
+   * Create Stripe Embedded Checkout session for an existing pending order.
    * Used when user returns from Stripe without paying and wants to complete payment.
    */
-  @Post(':orderId/payment-url')
+  @Post(':orderId/payment-session')
   @HttpCode(HttpStatus.OK)
-  async getPaymentUrlForOrder(@Param('orderId') orderId: string) {
+  async getPaymentSessionForOrder(@Param('orderId') orderId: string) {
     const id = orderId?.trim();
     if (!id) {
       throw new BadRequestException({
@@ -273,9 +274,9 @@ export class CheckoutController {
       orderCustomerId = u?.stripeCustomerId ?? null;
     }
 
-    let checkoutUrl: string | null;
+    let session: { clientSecret: string; sessionId: string } | null;
     try {
-      checkoutUrl = await this.stripeService.createCheckoutSession(
+      session = await this.stripeService.createCheckoutSession(
         order.id,
         order.totalCents,
         'usd',
@@ -291,7 +292,7 @@ export class CheckoutController {
       }
       throw err;
     }
-    if (!checkoutUrl) {
+    if (!session) {
       throw new BadRequestException({
         success: false,
         error: {
@@ -302,8 +303,8 @@ export class CheckoutController {
     }
     return {
       success: true,
-      data: { checkoutUrl },
-      message: 'Checkout URL created',
+      data: { clientSecret: session.clientSecret },
+      message: 'Payment session created',
     };
   }
 

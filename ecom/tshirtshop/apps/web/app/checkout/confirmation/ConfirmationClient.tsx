@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  EmbeddedCheckoutProvider,
+  EmbeddedCheckout,
+} from "@stripe/react-stripe-js";
 import type { Order } from "@/lib/api/orders";
 import { fetchOrder } from "@/lib/api/orders";
-import { verifyPayment, getPaymentUrlForOrder, VerifyPaymentError } from "@/lib/api/checkout";
+import { verifyPayment, getPaymentSessionForOrder, VerifyPaymentError } from "@/lib/api/checkout";
 import { CancelOrderButton } from "./CancelOrderButton";
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
+);
 
 function paymentErrorMessage(e: unknown): string {
   if (e instanceof VerifyPaymentError) {
@@ -66,6 +75,7 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,10 +164,11 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
     if (paymentLoading || !orderId) return;
     setPaymentLoading(true);
     try {
-      const url = await getPaymentUrlForOrder(orderId);
-      window.location.href = url;
+      const clientSecret = await getPaymentSessionForOrder(orderId);
+      setPaymentClientSecret(clientSecret);
     } catch (e) {
       setError(paymentErrorMessage(e));
+    } finally {
       setPaymentLoading(false);
     }
   }
@@ -175,7 +186,7 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
         {orderId && (
           <p className="mb-6 font-mono text-sm text-white/60">Order ID: {orderId}</p>
         )}
-        {isPending && (
+        {isPending && !paymentClientSecret && (
           <div className="mb-6 flex flex-col items-center gap-3">
             <button
               type="button"
@@ -183,8 +194,18 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
               disabled={paymentLoading}
               className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-[#FF4D00] px-6 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90 disabled:opacity-50"
             >
-              {paymentLoading ? "Redirecting…" : "Complete payment"}
+              {paymentLoading ? "Loading…" : "Complete payment"}
             </button>
+          </div>
+        )}
+        {paymentClientSecret && (
+          <div className="mb-6 w-full">
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret: paymentClientSecret }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
           </div>
         )}
         {orderId && order && (

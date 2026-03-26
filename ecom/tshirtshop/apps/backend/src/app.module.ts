@@ -37,7 +37,7 @@ const authControllerTokenBucketMiddleware =
 
 const checkoutTokenBucketMiddleware = createTokenBucketRateLimitMiddleware([
   { path: '/api/v1/checkout', capacity: 10, refillTokensPerSecond: 10 / 60 },
-  { path: '/payment-url', capacity: 5, refillTokensPerSecond: 5 / 60 },
+  { path: '/payment-session', capacity: 5, refillTokensPerSecond: 5 / 60 },
   { path: '/verify-payment', capacity: 10, refillTokensPerSecond: 10 / 60 },
 ]);
 
@@ -93,7 +93,7 @@ export class AppModule implements NestModule {
       { path: 'api/v1/checkout', method: RequestMethod.POST },
       { path: 'api/v1/checkout/verify-payment', method: RequestMethod.POST },
       {
-        path: 'api/v1/checkout/:orderId/payment-url',
+        path: 'api/v1/checkout/:orderId/payment-session',
         method: RequestMethod.POST,
       },
     );
