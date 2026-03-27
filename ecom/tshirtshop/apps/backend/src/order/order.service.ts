@@ -389,7 +389,7 @@ export class OrderService {
     }
 
     try {
-      const { refundId } = await this.stripeService.createRefundForSession(
+      const { refundId } = await this.stripeService.createRefundForPaymentIntent(
         sessionId,
         o.totalCents,
       );
@@ -626,7 +626,7 @@ export class OrderService {
     }
 
     try {
-      const { refundId } = await this.stripeService.createRefundForSession(
+      const { refundId } = await this.stripeService.createRefundForPaymentIntent(
         sessionId,
         o.totalCents,
       );
@@ -733,7 +733,7 @@ export class OrderService {
     }
 
     try {
-      const { refundId } = await this.stripeService.createRefundForSession(
+      const { refundId } = await this.stripeService.createRefundForPaymentIntent(
         sessionId,
         o.totalCents,
       );
@@ -878,7 +878,7 @@ export class OrderService {
         }
       } else if (pendingOrder.stripeSessionId) {
         // Guest checkout — get email from Stripe session
-        const guestEmail = await this.stripeService.getSessionCustomerEmail(
+        const guestEmail = await this.stripeService.getPaymentIntentEmail(
           pendingOrder.stripeSessionId,
         );
         if (guestEmail) {
@@ -927,7 +927,7 @@ export class OrderService {
         }
       } else if (order.stripeSessionId) {
         // Guest checkout — get the email the guest entered in Stripe
-        const guestEmail = await this.stripeService.getSessionCustomerEmail(
+        const guestEmail = await this.stripeService.getPaymentIntentEmail(
           order.stripeSessionId,
         );
         if (guestEmail) {

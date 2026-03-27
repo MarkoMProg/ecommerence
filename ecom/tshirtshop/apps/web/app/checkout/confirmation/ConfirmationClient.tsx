@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { loadStripe } from "@stripe/stripe-js";
 import {
-  EmbeddedCheckoutProvider,
-  EmbeddedCheckout,
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
 } from "@stripe/react-stripe-js";
 import type { Order } from "@/lib/api/orders";
 import { fetchOrder } from "@/lib/api/orders";
@@ -15,6 +17,87 @@ import { CancelOrderButton } from "./CancelOrderButton";
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
 );
+
+const stripeAppearance: import("@stripe/stripe-js").Appearance = {
+  theme: "night",
+  variables: {
+    colorPrimary: "#FF4D00",
+    colorBackground: "#0a0a0a",
+    colorText: "#ffffff",
+    colorDanger: "#ef4444",
+    fontFamily: "system-ui, sans-serif",
+    borderRadius: "6px",
+    colorTextSecondary: "#ffffff99",
+    colorTextPlaceholder: "#ffffff66",
+  },
+  rules: {
+    ".Input": {
+      border: "1px solid rgba(255,255,255,0.2)",
+      backgroundColor: "rgba(255,255,255,0.05)",
+    },
+    ".Input:focus": {
+      border: "1px solid #FF4D00",
+      boxShadow: "0 0 0 1px #FF4D00",
+    },
+    ".Label": {
+      fontSize: "11px",
+      fontWeight: "500",
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+      color: "rgba(255,255,255,0.6)",
+    },
+    ".Tab": {
+      border: "1px solid rgba(255,255,255,0.1)",
+      backgroundColor: "rgba(255,255,255,0.05)",
+    },
+    ".Tab--selected": {
+      border: "1px solid #FF4D00",
+      backgroundColor: "rgba(255,77,0,0.1)",
+    },
+  },
+};
+
+function ConfirmationPaymentForm({ orderId }: { orderId: string }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements || paying) return;
+    setPaying(true);
+    setPayError(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/confirmation?orderId=${orderId}`,
+      },
+    });
+
+    if (error) {
+      setPayError(error.message ?? "Payment failed");
+      setPaying(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <PaymentElement />
+      {payError && (
+        <p className="text-sm text-red-400">{payError}</p>
+      )}
+      <button
+        type="submit"
+        disabled={!stripe || paying}
+        className="flex w-full min-h-[48px] items-center justify-center rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90 disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {paying ? "Processing…" : "Pay now"}
+      </button>
+    </form>
+  );
+}
 
 function paymentErrorMessage(e: unknown): string {
   if (e instanceof VerifyPaymentError) {
@@ -76,6 +159,7 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
   const [error, setError] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
+  const [customerSessionSecret, setCustomerSessionSecret] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,8 +248,9 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
     if (paymentLoading || !orderId) return;
     setPaymentLoading(true);
     try {
-      const clientSecret = await getPaymentSessionForOrder(orderId);
-      setPaymentClientSecret(clientSecret);
+      const data = await getPaymentSessionForOrder(orderId);
+      setPaymentClientSecret(data.clientSecret);
+      setCustomerSessionSecret(data.customerSessionClientSecret ?? null);
     } catch (e) {
       setError(paymentErrorMessage(e));
     } finally {
@@ -200,12 +285,18 @@ export function ConfirmationClient({ orderId, sessionId }: ConfirmationClientPro
         )}
         {paymentClientSecret && (
           <div className="mb-6 w-full">
-            <EmbeddedCheckoutProvider
+            <Elements
               stripe={stripePromise}
-              options={{ clientSecret: paymentClientSecret }}
+              options={{
+                clientSecret: paymentClientSecret,
+                appearance: stripeAppearance,
+                ...(customerSessionSecret
+                  ? { customerSessionClientSecret: customerSessionSecret }
+                  : {}),
+              }}
             >
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+              <ConfirmationPaymentForm orderId={orderId} />
+            </Elements>
           </div>
         )}
         {orderId && order && (

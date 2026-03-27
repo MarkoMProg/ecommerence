@@ -3,30 +3,26 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 /**
- * Stripe Checkout integration (PAY-001).
+ * Stripe PaymentIntent integration (PAY-001).
  * Only active when STRIPE_SECRET_KEY is set.
  */
 export type WebhookResult =
-  | { type: 'payment.success'; orderId: string; sessionId: string }
+  | { type: 'payment.success'; orderId: string; paymentIntentId: string }
   | {
       type: 'payment.failed';
       orderId: string;
-      sessionId: string;
+      paymentIntentId: string;
       reason: string;
     };
 
 @Injectable()
 export class StripeService {
   private readonly stripe: Stripe | null = null;
-  private readonly uiUrl: string;
 
   constructor(private readonly configService: ConfigService) {
     const secretKey = this.configService
       .get<string>('STRIPE_SECRET_KEY')
       ?.trim();
-    this.uiUrl =
-      this.configService.get<string>('UI_URL')?.trim() ??
-      'http://localhost:3001';
     if (secretKey?.startsWith('sk_')) {
       this.stripe = new Stripe(secretKey);
     }
@@ -45,51 +41,59 @@ export class StripeService {
   }
 
   /**
-   * Create Stripe Embedded Checkout Session for an order.
-   * Returns { clientSecret, sessionId } or null if Stripe not configured.
-   * Pass customerId to show the customer's saved payment methods at checkout.
+   * Create a Stripe PaymentIntent for an order.
+   * Returns { clientSecret, paymentIntentId } or null if Stripe not configured.
+   * Pass customerId to attach saved payment methods.
    */
-  async createCheckoutSession(
+  async createPaymentIntent(
     orderId: string,
     totalCents: number,
     currency: string = 'usd',
     customerId?: string | null,
-  ): Promise<{ clientSecret: string; sessionId: string } | null> {
+  ): Promise<{ clientSecret: string; paymentIntentId: string } | null> {
     if (!this.stripe) return null;
 
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      mode: 'payment',
-      ui_mode: 'embedded',
-      line_items: [
-        {
-          price_data: {
-            currency,
-            unit_amount: totalCents,
-            product_data: {
-              name: `Order ${orderId}`,
-              description: 'T-shirt shop order',
-            },
-          },
-          quantity: 1,
-        },
-      ],
+    const params: Stripe.PaymentIntentCreateParams = {
+      amount: totalCents,
+      currency,
       metadata: { orderId },
-      return_url: `${this.uiUrl}/checkout/confirmation?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
+      automatic_payment_methods: { enabled: true },
     };
 
-    // Attach Stripe customer to show saved payment methods and save new ones
     if (customerId) {
-      sessionParams.customer = customerId;
-      sessionParams.payment_intent_data = {
-        setup_future_usage: 'off_session',
-      };
+      params.customer = customerId;
+      params.setup_future_usage = 'off_session';
     }
 
-    const session = await this.stripe.checkout.sessions.create(sessionParams);
+    const pi = await this.stripe.paymentIntents.create(params);
     return {
-      clientSecret: session.client_secret!,
-      sessionId: session.id,
+      clientSecret: pi.client_secret!,
+      paymentIntentId: pi.id,
     };
+  }
+
+  /**
+   * Create a Stripe Customer Session so PaymentElement can display saved payment methods.
+   * Returns the customer_session client_secret, or null if Stripe/customer not available.
+   */
+  async createCustomerSession(
+    customerId: string,
+  ): Promise<string | null> {
+    if (!this.stripe) return null;
+    const session = await (this.stripe as any).customerSessions.create({
+      customer: customerId,
+      components: {
+        payment_element: {
+          enabled: true,
+          features: {
+            payment_method_redisplay: 'enabled',
+            payment_method_save: 'enabled',
+            payment_method_remove: 'enabled',
+          },
+        },
+      },
+    });
+    return session.client_secret ?? null;
   }
 
   /** Result from processing a Stripe webhook event. */
@@ -114,46 +118,28 @@ export class StripeService {
       webhookSecret,
     );
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      if (
-        session.payment_status === 'paid' &&
-        session.metadata?.orderId &&
-        session.id
-      ) {
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object;
+      const orderId = pi.metadata?.orderId?.trim();
+      if (orderId && pi.id) {
         return {
           type: 'payment.success',
-          orderId: session.metadata.orderId.trim(),
-          sessionId: session.id,
+          orderId,
+          paymentIntentId: pi.id,
         };
       }
     }
 
-    // Session expired without payment — notify user so they can retry
-    if (event.type === 'checkout.session.expired') {
-      const session = event.data.object;
-      const orderId = session.metadata?.orderId?.trim();
-      if (orderId && session.id) {
+    if (event.type === 'payment_intent.payment_failed') {
+      const pi = event.data.object;
+      const orderId = pi.metadata?.orderId?.trim();
+      if (orderId && pi.id) {
         return {
           type: 'payment.failed',
           orderId,
-          sessionId: session.id,
+          paymentIntentId: pi.id,
           reason:
-            'Your checkout session expired before payment was completed. Please place your order again.',
-        };
-      }
-    }
-
-    // Async payment method failed (e.g. bank transfer declined after redirect)
-    if (event.type === 'checkout.session.async_payment_failed') {
-      const session = event.data.object;
-      const orderId = session.metadata?.orderId?.trim();
-      if (orderId && session.id) {
-        return {
-          type: 'payment.failed',
-          orderId,
-          sessionId: session.id,
-          reason:
+            pi.last_payment_error?.message ??
             'Your payment method was declined or could not be processed. Please try a different payment method.',
         };
       }
@@ -163,34 +149,18 @@ export class StripeService {
   }
 
   /**
-   * Create a full refund for an order paid via Stripe Checkout.
-   * Retrieves the session, gets the PaymentIntent, and creates a refund.
+   * Create a full refund for an order paid via Stripe PaymentIntent.
    * Returns { refundId } on success.
-   * Throws on: Stripe not configured, session not found, payment not captured,
-   * refund already exists, or Stripe API failure.
    */
-  async createRefundForSession(
-    sessionId: string,
+  async createRefundForPaymentIntent(
+    paymentIntentId: string,
     amountCents: number,
   ): Promise<{ refundId: string }> {
     if (!this.stripe) {
       throw new Error('Stripe is not configured');
     }
 
-    const session = await this.stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['payment_intent'],
-    });
-
-    if (session.payment_status !== 'paid') {
-      throw new Error(`Payment not complete: ${session.payment_status}`);
-    }
-
-    const paymentIntent = session.payment_intent;
-    if (!paymentIntent || typeof paymentIntent === 'string') {
-      throw new Error('Session has no PaymentIntent');
-    }
-
-    const pi = paymentIntent;
+    const pi = await this.stripe.paymentIntents.retrieve(paymentIntentId);
     if (pi.status !== 'succeeded') {
       throw new Error(`Payment not captured: ${pi.status}`);
     }
@@ -205,26 +175,32 @@ export class StripeService {
   }
 
   /**
-   * Retrieve the customer email from a completed Stripe Checkout Session.
-   * Returns the email entered by the guest (or logged-in customer) during checkout,
-   * or null if Stripe is not configured / session has no email.
+   * Retrieve the receipt email from a PaymentIntent.
+   * Returns the email from receipt_email or customer, or null.
    */
-  async getSessionCustomerEmail(sessionId: string): Promise<string | null> {
+  async getPaymentIntentEmail(
+    paymentIntentId: string,
+  ): Promise<string | null> {
     if (!this.stripe) return null;
     try {
-      const session = await this.stripe.checkout.sessions.retrieve(sessionId);
-      return session.customer_details?.email ?? session.customer_email ?? null;
+      const pi = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+      if (pi.receipt_email) return pi.receipt_email;
+      if (pi.customer && typeof pi.customer === 'string') {
+        const customer = await this.stripe.customers.retrieve(pi.customer);
+        if (!customer.deleted && customer.email) return customer.email;
+      }
+      return null;
     } catch {
       return null;
     }
   }
 
   /**
-   * Verify Stripe session and return orderId if payment is complete (PAY-002: amount validation).
-   * Throws if session not found, not paid, metadata.orderId mismatch, or amount mismatch.
+   * Verify a PaymentIntent and return orderId if payment succeeded (PAY-002: amount validation).
+   * Throws if PI not found, not succeeded, metadata.orderId mismatch, or amount mismatch.
    */
-  async verifySession(
-    sessionId: string,
+  async verifyPaymentIntent(
+    paymentIntentId: string,
     expectedOrderId?: string,
     expectedTotalCents?: number,
   ): Promise<string> {
@@ -232,25 +208,22 @@ export class StripeService {
       throw new Error('Stripe is not configured');
     }
 
-    const session = await this.stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== 'paid') {
-      throw new Error(`Payment not complete: ${session.payment_status}`);
+    const pi = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+    if (pi.status !== 'succeeded') {
+      throw new Error(`Payment not complete: ${pi.status}`);
     }
 
-    const orderId = session.metadata?.orderId;
+    const orderId = pi.metadata?.orderId;
     if (!orderId?.trim()) {
-      throw new Error('Session has no orderId in metadata');
+      throw new Error('PaymentIntent has no orderId in metadata');
     }
     if (expectedOrderId && orderId.trim() !== expectedOrderId.trim()) {
-      throw new Error('Session orderId does not match');
+      throw new Error('PaymentIntent orderId does not match');
     }
 
-    if (
-      expectedTotalCents != null &&
-      session.amount_total !== expectedTotalCents
-    ) {
+    if (expectedTotalCents != null && pi.amount !== expectedTotalCents) {
       throw new Error(
-        `Payment amount mismatch: expected ${expectedTotalCents} cents, got ${session.amount_total ?? 'null'}`,
+        `Payment amount mismatch: expected ${expectedTotalCents} cents, got ${pi.amount ?? 'null'}`,
       );
     }
 

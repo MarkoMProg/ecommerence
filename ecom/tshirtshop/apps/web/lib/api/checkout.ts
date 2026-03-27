@@ -86,6 +86,7 @@ export interface ShippingAddress {
 export interface CreateOrderResponse {
   order: Order;
   clientSecret: string | null;
+  customerSessionClientSecret?: string | null;
 }
 
 /** Create order from cart. Pass cartId (e.g. cart.id) or omit to use cookie. Call from client only. */
@@ -140,7 +141,7 @@ export async function createOrder(
     throw new Error(details && typeof details === 'object' && Array.isArray(details) && details.length ? `${msg}: ${JSON.stringify(details)}` : msg);
   }
 
-  const json = (await res.json()) as { success: boolean; data: { order: Order; clientSecret: string | null } };
+  const json = (await res.json()) as { success: boolean; data: { order: Order; clientSecret: string | null; customerSessionClientSecret?: string | null } };
   if (!json.success || !json.data?.order) throw new Error("Invalid response from checkout API");
   return json.data;
 }
@@ -207,8 +208,8 @@ export class VerifyPaymentError extends Error {
   }
 }
 
-/** Get Stripe Embedded Checkout session for an existing pending order. */
-export async function getPaymentSessionForOrder(orderId: string): Promise<string> {
+/** Get Stripe PaymentIntent for an existing pending order. */
+export async function getPaymentSessionForOrder(orderId: string): Promise<{ clientSecret: string; customerSessionClientSecret?: string | null }> {
   if (!orderId?.trim()) throw new Error("Order ID is required");
   const res = await fetch(
     `${apiBase()}/api/v1/checkout/${encodeURIComponent(orderId.trim())}/payment-session`,
@@ -224,9 +225,9 @@ export async function getPaymentSessionForOrder(orderId: string): Promise<string
     }
     throw new Error(msg);
   }
-  const json = (await res.json()) as { success: boolean; data: { clientSecret: string } };
+  const json = (await res.json()) as { success: boolean; data: { clientSecret: string; customerSessionClientSecret?: string | null } };
   if (!json.success || !json.data?.clientSecret) throw new Error("Invalid response from payment session API");
-  return json.data.clientSecret;
+  return json.data;
 }
 
 /** Notify backend that user returned from Stripe without completing payment (cancel_url). */
@@ -240,16 +241,16 @@ export async function notifyPaymentCanceled(orderId: string): Promise<void> {
   });
 }
 
-/** Verify Stripe payment and mark order as paid. Call after user returns from Stripe Checkout. */
+/** Verify Stripe payment and mark order as paid. Call after Stripe Elements confirms payment. */
 export async function verifyPayment(
-  sessionId: string,
+  paymentIntentId: string,
   orderId?: string
 ): Promise<Order> {
   const res = await fetch(`${apiBase()}/api/v1/checkout/verify-payment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ session_id: sessionId, orderId: orderId ?? undefined }),
+    body: JSON.stringify({ payment_intent: paymentIntentId, orderId: orderId ?? undefined }),
   });
 
   if (!res.ok) {

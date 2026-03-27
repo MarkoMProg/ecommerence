@@ -18,7 +18,7 @@ describe('OrderService — markOrderPaidIfPending (stock + payment)', () => {
   let mockInventory: { decrementStockForOrderWithTx: jest.Mock };
   let mockStripe: {
     isConfigured: jest.Mock;
-    createRefundForSession: jest.Mock;
+    createRefundForPaymentIntent: jest.Mock;
   };
   let mockQueue: { add: jest.Mock };
 
@@ -88,7 +88,7 @@ describe('OrderService — markOrderPaidIfPending (stock + payment)', () => {
 
     mockStripe = {
       isConfigured: jest.fn().mockReturnValue(true),
-      createRefundForSession: jest.fn().mockResolvedValue({ refundId: 're_xxx' }),
+      createRefundForPaymentIntent: jest.fn().mockResolvedValue({ refundId: 're_xxx' }),
     };
 
     mockQueue = { add: jest.fn().mockResolvedValue(undefined) };
@@ -206,7 +206,7 @@ describe('OrderService — markOrderPaidIfPending (stock + payment)', () => {
       { orderId: 'order-1' },
       expect.any(Object),
     );
-    expect(mockStripe.createRefundForSession).not.toHaveBeenCalled();
+    expect(mockStripe.createRefundForPaymentIntent).not.toHaveBeenCalled();
   });
 
   it('sets oversold when stock fails, logs path, then auto-refunds to refunded', async () => {
@@ -222,7 +222,7 @@ describe('OrderService — markOrderPaidIfPending (stock + payment)', () => {
     });
 
     expect(result?.status).toBe('refunded');
-    expect(mockStripe.createRefundForSession).toHaveBeenCalledWith(
+    expect(mockStripe.createRefundForPaymentIntent).toHaveBeenCalledWith(
       'cs_test_abc',
       2800,
     );
@@ -255,7 +255,7 @@ describe('OrderService — markOrderPaidIfPending (stock + payment)', () => {
       stripeSessionId: 'cs_test_abc',
     });
 
-    expect(mockStripe.createRefundForSession).toHaveBeenCalled();
+    expect(mockStripe.createRefundForPaymentIntent).toHaveBeenCalled();
     expect(result?.status).toBe('refunded');
   });
 
@@ -266,6 +266,6 @@ describe('OrderService — markOrderPaidIfPending (stock + payment)', () => {
 
     expect(result?.status).toBe('refunded');
     expect(mockDb.transaction).not.toHaveBeenCalled();
-    expect(mockStripe.createRefundForSession).not.toHaveBeenCalled();
+    expect(mockStripe.createRefundForPaymentIntent).not.toHaveBeenCalled();
   });
 });

@@ -6,8 +6,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import {
-  EmbeddedCheckoutProvider,
-  EmbeddedCheckout,
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
 } from "@stripe/react-stripe-js";
 import type { Cart } from "@/lib/api/cart";
 import { fetchCartClient } from "@/lib/api/cart";
@@ -35,6 +37,45 @@ import {
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
 );
+
+const stripeAppearance: import("@stripe/stripe-js").Appearance = {
+  theme: "night",
+  variables: {
+    colorPrimary: "#FF4D00",
+    colorBackground: "#0a0a0a",
+    colorText: "#ffffff",
+    colorDanger: "#ef4444",
+    fontFamily: "system-ui, sans-serif",
+    borderRadius: "6px",
+    colorTextSecondary: "#ffffff99",
+    colorTextPlaceholder: "#ffffff66",
+  },
+  rules: {
+    ".Input": {
+      border: "1px solid rgba(255,255,255,0.2)",
+      backgroundColor: "rgba(255,255,255,0.05)",
+    },
+    ".Input:focus": {
+      border: "1px solid #FF4D00",
+      boxShadow: "0 0 0 1px #FF4D00",
+    },
+    ".Label": {
+      fontSize: "11px",
+      fontWeight: "500",
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+      color: "rgba(255,255,255,0.6)",
+    },
+    ".Tab": {
+      border: "1px solid rgba(255,255,255,0.1)",
+      backgroundColor: "rgba(255,255,255,0.05)",
+    },
+    ".Tab--selected": {
+      border: "1px solid #FF4D00",
+      backgroundColor: "rgba(255,77,0,0.1)",
+    },
+  },
+};
 
 interface CheckoutClientProps {
   cart: Cart | null;
@@ -140,6 +181,48 @@ function validateAddress(a: ShippingAddress): Partial<Record<keyof ShippingAddre
   return errors;
 }
 
+function PaymentForm({ orderId }: { orderId: string }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements || paying) return;
+    setPaying(true);
+    setPayError(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/confirmation?orderId=${orderId}`,
+      },
+    });
+
+    if (error) {
+      setPayError(error.message ?? "Payment failed");
+      setPaying(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <PaymentElement />
+      {payError && (
+        <p className="text-sm text-red-400">{payError}</p>
+      )}
+      <button
+        type="submit"
+        disabled={!stripe || paying}
+        className="flex w-full min-h-[48px] items-center justify-center rounded-md bg-[#FF4D00] py-4 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-[#FF4D00]/90 disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {paying ? "Processing…" : "Pay now"}
+      </button>
+    </form>
+  );
+}
+
 export function CheckoutClient({ cart, canceled = false, orderId = null }: CheckoutClientProps) {
   const router = useRouter();
   const { session } = useAuth();
@@ -152,6 +235,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [stockError, setStockError] = useState<string | null>(null);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [customerSessionSecret, setCustomerSessionSecret] = useState<string | null>(null);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({});
 
@@ -321,7 +405,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
     setPlaceError(null);
     setStockError(null);
     try {
-      const { order, clientSecret } = await createOrder(
+      const { order, clientSecret, customerSessionClientSecret } = await createOrder(
         {
           fullName: address.fullName.trim(),
           line1: address.line1.trim(),
@@ -339,6 +423,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
       if (clientSecret) {
         setPlacedOrderId(order.id);
         setStripeClientSecret(clientSecret);
+        setCustomerSessionSecret(customerSessionClientSecret ?? null);
       } else {
         router.push(`/checkout/confirmation?orderId=${order.id}`);
       }
@@ -362,7 +447,7 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
     }
   }
 
-  if (stripeClientSecret) {
+  if (stripeClientSecret && placedOrderId) {
     return (
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div className="lg:col-span-2">
@@ -370,12 +455,18 @@ export function CheckoutClient({ cart, canceled = false, orderId = null }: Check
             <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-white">
               Complete payment
             </h2>
-            <EmbeddedCheckoutProvider
+            <Elements
               stripe={stripePromise}
-              options={{ clientSecret: stripeClientSecret }}
+              options={{
+                clientSecret: stripeClientSecret,
+                appearance: stripeAppearance,
+                ...(customerSessionSecret
+                  ? { customerSessionClientSecret: customerSessionSecret }
+                  : {}),
+              }}
             >
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+              <PaymentForm orderId={placedOrderId} />
+            </Elements>
           </section>
         </div>
       </div>

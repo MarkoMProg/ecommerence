@@ -170,15 +170,20 @@ export class CheckoutController {
     }
 
     let clientSecret: string | null = null;
+    let customerSessionClientSecret: string | null = null;
     if (this.stripeService.isConfigured() && order.status === 'pending') {
       try {
-        const session = await this.stripeService.createCheckoutSession(
+        const pi = await this.stripeService.createPaymentIntent(
           order.id,
           order.totalCents,
           'usd',
           stripeCustomerId,
         );
-        clientSecret = session?.clientSecret ?? null;
+        clientSecret = pi?.clientSecret ?? null;
+        if (stripeCustomerId) {
+          customerSessionClientSecret =
+            await this.stripeService.createCustomerSession(stripeCustomerId);
+        }
       } catch (err) {
         const mapped = mapStripeError(err);
         if (mapped) {
@@ -188,7 +193,7 @@ export class CheckoutController {
           });
         }
         const detail =
-          err instanceof Error ? err.message : 'Stripe Checkout session failed';
+          err instanceof Error ? err.message : 'Stripe payment intent failed';
         throw new BadRequestException({
           success: false,
           error: {
@@ -201,9 +206,9 @@ export class CheckoutController {
 
     return {
       success: true,
-      data: { order, clientSecret },
+      data: { order, clientSecret, customerSessionClientSecret },
       message: clientSecret
-        ? 'Order created. Complete payment with embedded checkout.'
+        ? 'Order created. Complete payment with Stripe Elements.'
         : 'Order created successfully.',
     };
   }
@@ -225,8 +230,8 @@ export class CheckoutController {
   }
 
   /**
-   * Create Stripe Embedded Checkout session for an existing pending order.
-   * Used when user returns from Stripe without paying and wants to complete payment.
+   * Create Stripe PaymentIntent for an existing pending order.
+   * Used when user wants to complete payment on a pending order.
    */
   @Post(':orderId/payment-session')
   @HttpCode(HttpStatus.OK)
@@ -274,14 +279,19 @@ export class CheckoutController {
       orderCustomerId = u?.stripeCustomerId ?? null;
     }
 
-    let session: { clientSecret: string; sessionId: string } | null;
+    let pi: { clientSecret: string; paymentIntentId: string } | null;
+    let customerSessionClientSecret: string | null = null;
     try {
-      session = await this.stripeService.createCheckoutSession(
+      pi = await this.stripeService.createPaymentIntent(
         order.id,
         order.totalCents,
         'usd',
         orderCustomerId,
       );
+      if (orderCustomerId) {
+        customerSessionClientSecret =
+          await this.stripeService.createCustomerSession(orderCustomerId);
+      }
     } catch (err) {
       const mapped = mapStripeError(err);
       if (mapped) {
@@ -292,7 +302,7 @@ export class CheckoutController {
       }
       throw err;
     }
-    if (!session) {
+    if (!pi) {
       throw new BadRequestException({
         success: false,
         error: {
@@ -303,26 +313,28 @@ export class CheckoutController {
     }
     return {
       success: true,
-      data: { clientSecret: session.clientSecret },
+      data: { clientSecret: pi.clientSecret, customerSessionClientSecret },
       message: 'Payment session created',
     };
   }
 
   /**
    * Verify Stripe payment and mark order as paid (PAY-001).
-   * Call after user returns from Stripe Checkout with session_id.
+   * Call after Stripe Elements confirms payment with payment_intent.
    */
   @Post('verify-payment')
   @HttpCode(HttpStatus.OK)
-  async verifyPayment(@Body() body: { session_id?: string; orderId?: string }) {
-    const sessionId = body.session_id?.trim();
+  async verifyPayment(
+    @Body() body: { payment_intent?: string; session_id?: string; orderId?: string },
+  ) {
+    const paymentIntentId = body.payment_intent?.trim() || body.session_id?.trim();
     const orderId = body.orderId?.trim();
-    if (!sessionId) {
+    if (!paymentIntentId) {
       throw new BadRequestException({
         success: false,
         error: {
           code: 'SESSION_ID_REQUIRED',
-          message: 'session_id is required',
+          message: 'payment_intent is required',
         },
       });
     }
@@ -334,8 +346,8 @@ export class CheckoutController {
 
     let verifiedOrderId: string;
     try {
-      verifiedOrderId = await this.stripeService.verifySession(
-        sessionId,
+      verifiedOrderId = await this.stripeService.verifyPaymentIntent(
+        paymentIntentId,
         orderId,
         expectedTotalCents,
       );
@@ -352,7 +364,7 @@ export class CheckoutController {
       let code = 'PAYMENT_VERIFICATION_FAILED';
       if (msg.includes('Payment not complete')) code = 'PAYMENT_NOT_COMPLETE';
       else if (
-        msg.includes('Session has no orderId') ||
+        msg.includes('has no orderId') ||
         msg.includes('does not match')
       )
         code = 'INVALID_SESSION';
@@ -361,7 +373,7 @@ export class CheckoutController {
         msg.includes('Payment amount')
       )
         code = 'AMOUNT_MISMATCH';
-      else if (msg.includes('No such checkout.session'))
+      else if (msg.includes('No such payment_intent'))
         code = 'SESSION_NOT_FOUND';
       throw new BadRequestException({
         success: false,
@@ -372,7 +384,7 @@ export class CheckoutController {
     const updated = await this.orderService.markOrderPaidIfPending(
       verifiedOrderId,
       {
-        stripeSessionId: sessionId,
+        stripeSessionId: paymentIntentId,
       },
     );
     if (!updated) {

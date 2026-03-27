@@ -56,7 +56,7 @@ export class StripeWebhookController {
     if (result?.type === 'payment.success') {
       await this.paymentQueue.add(
         'payment.success',
-        { orderId: result.orderId, sessionId: result.sessionId },
+        { orderId: result.orderId, sessionId: result.paymentIntentId },
         {
           attempts: 5,
           backoff: { type: 'exponential', delay: 2000 },
@@ -69,7 +69,7 @@ export class StripeWebhookController {
         'payment.failed',
         {
           orderId: result.orderId,
-          sessionId: result.sessionId,
+          sessionId: result.paymentIntentId,
           failureReason: result.reason,
         },
         {

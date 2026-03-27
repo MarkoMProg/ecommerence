@@ -9,11 +9,11 @@ export const metadata = {
 export default async function CheckoutConfirmationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orderId?: string; session_id?: string }>;
+  searchParams: Promise<{ orderId?: string; session_id?: string; payment_intent?: string }>;
 }) {
   const params = await searchParams;
   const orderId = params.orderId?.trim() ?? "";
-  const sessionId = params.session_id?.trim() ?? null;
+  const sessionId = params.payment_intent?.trim() ?? params.session_id?.trim() ?? null;
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-16">

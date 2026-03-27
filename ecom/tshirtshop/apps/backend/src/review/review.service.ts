@@ -14,7 +14,15 @@ import { review, reviewHelpfulVote } from './schema';
 import { order, orderItem } from '../order/schema';
 import { user } from '../auth/schema';
 import { product } from '../catalog/schema';
-import { decrypt } from '../auth/crypto';
+import { decrypt, encrypt } from '../auth/crypto';
+
+function safeDecrypt(value: string): string {
+  try {
+    return decrypt(value);
+  } catch {
+    return value;
+  }
+}
 
 export interface ReviewDto {
   id: string;
@@ -104,7 +112,7 @@ export class ReviewService {
         id: r.id,
         productId: r.productId,
         userId: r.userId,
-        userName: decrypt(r.userName),
+        userName: safeDecrypt(r.userName),
         rating: r.rating,
         title: r.title,
         body: r.body,
@@ -161,7 +169,7 @@ export class ReviewService {
       .from(user)
       .where(eq(user.id, userId))
       .limit(1);
-    const userName = userData?.name ? decrypt(userData.name) : 'Anonymous';
+    const userName = userData?.name ?? encrypt('Anonymous');
 
     const id = randomUUID();
     await this.db.insert(review).values({
@@ -182,7 +190,7 @@ export class ReviewService {
       id: created.id,
       productId: created.productId,
       userId: created.userId,
-      userName: decrypt(created.userName),
+      userName: safeDecrypt(created.userName),
       rating: created.rating,
       title: created.title,
       body: created.body,
@@ -242,7 +250,7 @@ export class ReviewService {
       id: updated.id,
       productId: updated.productId,
       userId: updated.userId,
-      userName: decrypt(updated.userName),
+      userName: safeDecrypt(updated.userName),
       rating: updated.rating,
       title: updated.title,
       body: updated.body,
@@ -392,7 +400,7 @@ export class ReviewService {
         id: r.id,
         productId: r.productId,
         userId: r.userId,
-        userName: decrypt(r.userName),
+        userName: safeDecrypt(r.userName),
         rating: r.rating,
         title: r.title,
         body: r.body,
@@ -505,7 +513,7 @@ export class ReviewService {
 
     return rows.map((r) => ({
       ...r,
-      userName: decrypt(r.userName),
+      userName: safeDecrypt(r.userName),
     }));
   }
 }
