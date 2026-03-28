@@ -112,6 +112,8 @@ describe('AppController (e2e)', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.order).toHaveProperty('id');
       expect(res.body.data.order.status).toBe('pending');
+      expect(res.body.data).toHaveProperty('clientSecret');
+      expect(res.body.data).toHaveProperty('customerSessionClientSecret');
       orderId = res.body.data.order.id;
     });
 

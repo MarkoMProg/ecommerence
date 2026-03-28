@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /** Open the first product card on the shop listing (expects at least one product). */
 export async function openFirstShopProduct(page: Page): Promise<void> {
@@ -68,6 +68,123 @@ export function waitForCartItemAdded(page: Page): Promise<Response> {
       r.url().includes("/api/v1/cart/items") &&
       r.ok(),
     { timeout: 30_000 },
+  );
+}
+
+/**
+ * After "Place order" succeeds: either redirect to confirmation (no Stripe, or
+ * E2E_SKIP_STRIPE_CHECKOUT=1 so PaymentIntent is skipped), or stay on /checkout
+ * with Stripe Elements ("Complete payment").
+ */
+export async function waitForCheckoutConfirmationOrPaymentStep(
+  page: Page,
+  timeout = 60_000,
+): Promise<void> {
+  await Promise.race([
+    page.waitForURL(/\/checkout\/confirmation(\?|$)/, { timeout }),
+    page
+      .getByRole("heading", { name: /Complete payment/i })
+      .waitFor({ state: "visible", timeout }),
+  ]);
+}
+
+/**
+ * Guest: open first product, add to cart, fill US address on /checkout, click Place Order.
+ * Returns the POST /api/v1/checkout response (body not consumed).
+ */
+export async function guestCheckoutThroughPlaceOrder(page: Page): Promise<Response> {
+  await openFirstProductForE2E(page);
+  await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
+  await selectSizeIfRequired(page);
+  const added = waitForCartItemAdded(page);
+  await page.getByRole("button", { name: /Add to Cart/i }).click();
+  await added;
+
+  await page.keyboard.press("Escape");
+  await page.goto("/checkout", { waitUntil: "load" });
+  await page.waitForLoadState("load");
+
+  await expect(page.getByRole("heading", { name: /Checkout/i })).toBeVisible();
+  await expect(page.getByText("Your cart is empty")).not.toBeVisible();
+  await expect(page.locator("#checkout-form")).toBeVisible();
+
+  await expect(page.locator("#checkout-fullName")).toBeEditable({ timeout: 15_000 });
+
+  await page.fill("#checkout-fullName", "E2E Test User");
+  await page.fill("#checkout-line1", "123 Test Street");
+  await page.fill("#checkout-city", "Austin");
+  await page.fill("#checkout-state", "TX");
+
+  await page.locator("#checkout-form").getByRole("combobox").click();
+  await page.getByRole("option", { name: "United States" }).click();
+  await expect(page.locator("#checkout-country")).toContainText(/United States/i);
+
+  await page.fill("#checkout-postal", "78701");
+  await page.fill("#checkout-phone", "5551234567");
+
+  await page.getByRole("heading", { name: /Order summary/i }).click();
+
+  const placeBtn = page.getByRole("button", { name: /Place Order/i });
+  await expect(placeBtn).toBeEnabled({ timeout: 15_000 });
+
+  const checkoutPost = page.waitForResponse(
+    (r) => {
+      if (r.request().method() !== "POST") return false;
+      try {
+        return new URL(r.url()).pathname === "/api/v1/checkout";
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 60_000 },
+  );
+  await placeBtn.click();
+  return await checkoutPost;
+}
+
+/**
+ * Fill Stripe Payment Element with test card 4242… (see Stripe testing docs).
+ * BRITTLE: Depends on Stripe iframe layout; adjust if Stripe.js changes.
+ */
+export async function fillStripePaymentElementTestCard(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /Pay now/i }).waitFor({
+    state: "visible",
+    timeout: 60_000,
+  });
+
+  const cardTab = page.getByRole("tab", { name: /^Card$/i });
+  if (await cardTab.isVisible().catch(() => false)) {
+    await cardTab.click();
+  }
+
+  const secureIframes = page.locator('iframe[title*="Secure payment"]');
+  await expect(secureIframes.first()).toBeVisible({ timeout: 45_000 });
+  const n = await secureIframes.count();
+
+  if (n >= 3) {
+    const f = (i: number) =>
+      page.frameLocator('iframe[title*="Secure payment"]').nth(i);
+    await f(0).locator("input").first().fill("4242424242424242");
+    await f(1).locator("input").first().fill("1234");
+    await f(2).locator("input").first().fill("123");
+    return;
+  }
+
+  if (n === 1) {
+    const fl = page.frameLocator('iframe[title*="Secure payment"]').first();
+    const inputs = fl.locator("input");
+    await expect(inputs.first()).toBeVisible({ timeout: 15_000 });
+    const ic = await inputs.count();
+    if (ic >= 3) {
+      await inputs.nth(0).fill("4242424242424242");
+      await inputs.nth(1).fill("1234");
+      await inputs.nth(2).fill("123");
+      return;
+    }
+  }
+
+  throw new Error(
+    "Could not fill Stripe Payment Element (unexpected iframe layout).",
   );
 }
 

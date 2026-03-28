@@ -4,8 +4,11 @@ test.describe("Smoke", () => {
   test("home page loads and links to shop", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /Forged in Shadow/i })).toBeVisible();
-    await page.getByRole("link", { name: /Shop Now/i }).click();
-    await expect(page).toHaveURL(/\/shop/, { timeout: 30_000 });
+    const shopNow = page.getByRole("link", { name: "Shop Now", exact: true });
+    await Promise.all([
+      page.waitForURL(/\/shop/, { timeout: 30_000 }),
+      shopNow.click(),
+    ]);
   });
 
   test("auth page loads", async ({ page }) => {

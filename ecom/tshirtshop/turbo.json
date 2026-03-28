@@ -15,7 +15,8 @@
     "E2E_KEEP_RECAPTCHA",
     "E2E_RECAPTCHA_SITEKEY",
     "E2E_STRIP_RECAPTCHA",
-    "E2E_SKIP_STRIPE_CHECKOUT"
+    "E2E_SKIP_STRIPE_CHECKOUT",
+    "E2E_FULL_STRIPE_CHECKOUT"
   ],
   "tasks": {
     "build": {
@@ -28,6 +29,9 @@
     },
     "test": {},
     "test:e2e": {
+      "cache": false
+    },
+    "test:e2e:stripe-full": {
       "cache": false
     },
     "check-types": {

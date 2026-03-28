@@ -54,6 +54,9 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost:3001";
  */
 const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
 
+/** When "1", do not force E2E_SKIP_STRIPE_CHECKOUT — use with `npm run test:e2e:stripe-full` + test keys. */
+const stripeFullMode = process.env.E2E_FULL_STRIPE_CHECKOUT === "1";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -91,8 +94,10 @@ export default defineConfig({
           ...process.env,
           // Non-interactive Turbo (avoid TUI blocking Playwright).
           TURBO_UI: "0",
-          // Guest checkout E2E: skip Stripe session creation in dev (invalid keys → 500).
-          E2E_SKIP_STRIPE_CHECKOUT: "1",
+          // Guest E2E: skip PaymentIntent unless running full Stripe flow (test:e2e:stripe-full).
+          ...(stripeFullMode
+            ? {}
+            : { E2E_SKIP_STRIPE_CHECKOUT: "1" }),
           ...(process.env.E2E_KEEP_RECAPTCHA === "1"
             ? {}
             : process.env.E2E_STRIP_RECAPTCHA === "1"

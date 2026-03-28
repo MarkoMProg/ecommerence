@@ -10,6 +10,7 @@
     "lint": "eslint --max-warnings 50",
     "check-types": "next typegen && tsc --noEmit",
     "test:e2e": "playwright test",
+    "test:e2e:stripe-full": "node ./scripts/run-stripe-full-e2e.mjs",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
   },

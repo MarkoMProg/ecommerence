@@ -31,12 +31,12 @@ export default async function HomePage() {
           loop
           playsInline
           preload="metadata"
-          className="absolute inset-0 h-full w-full object-cover opacity-40"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40"
           aria-hidden
         >
           <source src="/dragon-hero.webm" type="video/webm" />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
         <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-8 text-center sm:px-6">
           <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-[#FF4D00] sm:mb-4 sm:text-xs sm:tracking-[0.3em]">
             New Drop — Infernal Collection
