@@ -1,139 +1,63 @@
-# Turborepo starter
+# Tshirtshop (Darkloom)
 
-This Turborepo starter is maintained by the Turborepo core team.
+Monorepo for the B2C e-commerce storefront: a **Next.js** web app, a **NestJS** API, and shared tooling (Turborepo).
 
-## Using this example
+## Repository layout
 
-Run the following command:
+| Path | Description |
+|------|-------------|
+| [`apps/web`](apps/web) | Storefront (App Router, Better Auth, Stripe Elements, Playwright E2E) |
+| [`apps/backend`](apps/backend) | REST API, Drizzle ORM, payments, catalog |
+| [`packages/eslint-config`](packages/eslint-config) | Shared ESLint config |
+| [`packages/typescript-config`](packages/typescript-config) | Shared TypeScript bases |
 
-```sh
-npx create-turbo@latest
+## Prerequisites
+
+- **Node.js** ≥ 18 (see root `package.json` `engines`)
+- **PostgreSQL** and **Redis** for local API usage
+
+## Quick start
+
+From this directory (`ecom/tshirtshop`):
+
+```bash
+npm install
 ```
 
-## What's inside?
+Create environment files from each app’s `.env.example` (e.g. `apps/backend/.env`, `apps/web/.env.local`). Apply the database schema, then start everything:
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `backend`: a [NestJS](https://nestjs.com/) API
-- `web`: a [Next.js](https://nextjs.org/) app using [shadcn/ui](https://ui.shadcn.com/)
-- `@repo/eslint-config`: shared ESLint configurations
-- `@repo/typescript-config`: shared TypeScript configurations
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```bash
+cd apps/backend && npm run db:push && cd ../..
+npm run dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+- **Storefront:** `https://localhost:3001` (Next.js dev server uses HTTPS with certs under `apps/backend/certs/`)
+- **API:** `http://localhost:3000` by default (`PORT` in `apps/backend/.env`), or HTTPS when `USE_HTTPS` and certs are configured
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+For a fuller onboarding checklist (required env vars, troubleshooting), see **[docs/07-DEVOPS/environment-setup.md](../../docs/07-DEVOPS/environment-setup.md)** (repo root) and each app’s `.env.example`.
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+**Catalog data:** seed or load products from the backend, e.g. `npm run db:seed` or `npm run db:populate-from-json` in `apps/backend` (see that package’s scripts).
 
-### Tests
+## Root scripts
 
-- **Unit tests:** from the repo root, `npm run test` (runs Jest in packages that define `test`, e.g. `apps/backend`).
-- **Playwright E2E (storefront):** `npm run test:e2e` — see **[apps/web/e2e/README.md](apps/web/e2e/README.md)** for run commands, `E2E_USER_*` test account setup, and why sign-up may be skipped when reCAPTCHA is enabled.
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Run all `dev` tasks via Turbo (web + backend, etc.) |
+| `npm run build` | Production build |
+| `npm run lint` | Lint |
+| `npm run test` | Unit tests (e.g. backend Jest) |
+| `npm run test:e2e` | Playwright E2E for `apps/web` |
+| `npm run test:e2e:stripe-full` | Opt-in full Stripe Elements checkout E2E |
+| `npm run format` | Prettier |
+| `npm run check-types` | Typecheck |
 
-### Develop
+Build or develop a single app: `npx turbo dev --filter=web` / `npx turbo build --filter=backend` (see [Turborepo filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)).
 
-To develop all apps and packages, run the following command:
+## Tests
 
-```
-cd my-turborepo
+- **Unit:** `npm run test` from the repo root (runs configured packages, e.g. `apps/backend`).
+- **Storefront E2E (Playwright):** `npm run test:e2e` — prerequisites, env vars, Stripe skip mode, and optional full Stripe run are documented in **[apps/web/e2e/README.md](apps/web/e2e/README.md)**.
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+## Turborepo
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+This repo uses [Turborepo](https://turborepo.dev/) for task orchestration and caching. Remote caching is optional (e.g. [linking a Vercel account](https://turborepo.dev/docs/core-concepts/remote-caching)); local caching works out of the box.
