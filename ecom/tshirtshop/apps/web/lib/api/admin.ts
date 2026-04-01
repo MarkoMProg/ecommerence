@@ -541,6 +541,8 @@ export interface AdminReview {
   helpfulCount: number;
   createdAt: string;
   updatedAt: string;
+  productName?: string;
+  productSlug?: string;
 }
 
 /** List all reviews (admin). Returns null on error. */

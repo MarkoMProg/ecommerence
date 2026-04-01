@@ -35,6 +35,8 @@ export interface ReviewDto {
   helpfulCount: number;
   createdAt: Date;
   updatedAt: Date;
+  productName?: string;
+  productSlug?: string;
 }
 
 export interface UserReviewDto extends ReviewDto {
@@ -382,8 +384,22 @@ export class ReviewService {
 
     const [data, countResult] = await Promise.all([
       this.db
-        .select()
+        .select({
+          id: review.id,
+          productId: review.productId,
+          userId: review.userId,
+          userName: review.userName,
+          rating: review.rating,
+          title: review.title,
+          body: review.body,
+          helpfulCount: review.helpfulCount,
+          createdAt: review.createdAt,
+          updatedAt: review.updatedAt,
+          productName: product.name,
+          productSlug: product.slug,
+        })
         .from(review)
+        .innerJoin(product, eq(review.productId, product.id))
         .where(where)
         .orderBy(desc(review.createdAt))
         .limit(safeLimit)
@@ -407,6 +423,8 @@ export class ReviewService {
         helpfulCount: r.helpfulCount,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
+        productName: r.productName,
+        productSlug: r.productSlug,
       })),
       pagination: { page: safePage, limit: safeLimit, total },
     };

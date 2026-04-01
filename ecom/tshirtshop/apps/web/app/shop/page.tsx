@@ -1,10 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
-import { Star } from "lucide-react";
 import { fetchProducts, fetchCategories, fetchBrands } from "@/lib/api/catalog";
 import { ShopSearchInput } from "@/components/shop-search-input";
 import { ShopFiltersForm } from "@/components/shop-filters-form";
+import { ShopProductGrid } from "@/components/shop-product-grid";
 
 export const metadata = {
   title: "Shop | Darkloom",
@@ -150,46 +149,7 @@ export default async function ShopPage({
         ))}
       </div>
 
-      {/* Product Grid */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4">
-        {products.map((product) => (
-          <Link
-            key={product.id}
-            href={`/shop/${product.slug}`}
-            className="group block"
-          >
-            <div className="relative aspect-square overflow-hidden bg-[#1A1A1A]">
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover:bg-black/40 group-hover:opacity-100">
-                <span className="rounded-md border border-white px-6 py-2 text-sm font-medium uppercase tracking-wider text-white">
-                  View
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 sm:mt-4">
-              <p className="truncate text-xs font-medium text-white sm:text-base">{product.name}</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-[#E6C068] sm:text-sm">${product.price}</p>
-                {product.reviewCount != null && product.reviewCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-white/60">
-                    <Star className="size-3.5 fill-[#E6C068] text-[#E6C068]" />
-                    {product.averageRating?.toFixed(1)}
-                    <span>({product.reviewCount})</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {products.length === 0 && (
+      {products.length === 0 ? (
         <p className="py-20 text-center text-white/60">
           {apiUnreachable
             ? "Catalog API unreachable. Is the backend running? Start it with: cd apps/backend && npm run dev"
@@ -197,6 +157,8 @@ export default async function ShopPage({
               ? `No products found for "${searchQuery}".`
               : "No products in this category."}
         </p>
+      ) : (
+        <ShopProductGrid products={products} />
       )}
     </div>
   );

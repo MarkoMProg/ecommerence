@@ -124,8 +124,8 @@ export default function AdminReviewsPage() {
                       <StarRating rating={r.rating} />
                     </td>
                     <td className="px-4 py-3 text-white/80">{r.userName}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-white/50">
-                      {r.productId.slice(0, 8)}…
+                    <td className="px-4 py-3 text-xs text-white/80">
+                      {r.productName ?? r.productId.slice(0, 8) + "…"}
                     </td>
                     <td className="max-w-xs px-4 py-3">
                       {r.title && (
